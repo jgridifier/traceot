@@ -81,10 +81,24 @@ Machine: 8 logical CPUs, x86_64, Python 3.13.5, rayon threads: default (all core
   features in parallel, or using a smaller chunk, should cut setup time at 10⁶ rows. This is not done yet.
 
 
+## ADOPT audit paths (release build)
+
+Measured by `python benchmarks/adopt_audit/run_audit.py` on this machine: 4 CPUs, x86_64, Python 3.12.3, release wheel, 11 October 2026. The task is one backfitting fit, p = 2, q = 12, 3 iterations, fixed bandwidth, smooth location truth. `bins=32` is the equal-width histogram smoother. Holdout W2² on a 5×5 midpoint grid stays within about 5% of the dense fit at every n below (both near 2.7×10⁻⁴).
+
+| n | dense seconds | binned seconds | dense / binned |
+|---:|---:|---:|---:|
+| 200 | 0.00288 | 0.00146 | 2.0 |
+| 400 | 0.00883 | 0.00213 | 4.1 |
+| 800 | 0.0257 | 0.00363 | 7.1 |
+| 1600 | 0.0987 | 0.00739 | 13.4 |
+
+From n = 200 to n = 1600 (8× rows) dense time grew 34× and binned time grew 5.1×. Step to step, dense growth from 800 to 1600 was 3.83 (quadratic scaling is 4) and binned growth was 2.03 (linear scaling is 2). Full JSON: `benchmarks/results/adopt_audit.json`.
+
 ## Re-running
 
 ```bash
 cargo bench -p traceot-core                  # criterion; HTML report in target/criterion
 python benchmarks/scale_bench.py             # 1e4..1e7 rows x 10/100 features, about 1.6 GB peak
 python docs/build_docs.py                    # refreshes the table above and the scaling figure
+python benchmarks/adopt_audit/run_audit.py   # order, centering, convergence, monotone, scaling, boundary
 ```

@@ -19,14 +19,18 @@ __all__ = [
     "adopt_w2_component",
     "adopt_w2_fit",
     "adopt_w2_predict",
+    "adopt_w2_predict_averaged",
     "bin_column",
     "bin_edges_from_sorted",
+    "binned_smooth",
     "collapse_knots",
     "coords_to_spd",
     "global_frechet_weights",
     "histogram",
     "histograms",
     "local_linear_weights",
+    "local_linear_weights_weighted",
+    "reflected_local_linear_weights",
     "pava",
     "pava_rows",
     "pinball_grad_location_scale",
@@ -90,18 +94,88 @@ def local_linear_weights(x_train, x_eval, h, kernel="gaussian"):
     )
 
 
+def reflected_local_linear_weights(x_train, x_eval, h, kernel="gaussian"):
+    return _core.reflected_local_linear_weights(
+        _f(np.ravel(x_train), 1), _f(np.ravel(x_eval), 1), float(h), kernel
+    )
+
+
+def local_linear_weights_weighted(x_train, multiplicity, x_eval, h, kernel="gaussian"):
+    return _core.local_linear_weights_weighted(
+        _f(np.ravel(x_train), 1),
+        _f(np.ravel(multiplicity), 1),
+        _f(np.ravel(x_eval), 1),
+        float(h),
+        kernel,
+    )
+
+
+def binned_smooth(x_train, y, h, x_eval, n_bins, kernel="gaussian"):
+    return _core.binned_smooth(
+        _f(np.ravel(x_train), 1),
+        _f(np.atleast_2d(y), 2),
+        float(h),
+        _f(np.ravel(x_eval), 1),
+        int(n_bins),
+        kernel,
+    )
+
+
 def global_frechet_weights(X_train, X_eval):
     return _core.global_frechet_weights(_f(np.atleast_2d(X_train), 2), _f(np.atleast_2d(X_eval), 2))
 
 
-def adopt_w2_fit(X, Y, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None):
+def adopt_w2_fit(
+    X,
+    Y,
+    h,
+    kernel="gaussian",
+    tol=1e-10,
+    max_iter=200,
+    lower=None,
+    upper=None,
+    damping=1.0,
+    certificate=False,
+    composition="given",
+    centering="frechet",
+    project_prediction=False,
+    bins=None,
+    boundary="none",
+):
     X, Y = _f(np.atleast_2d(X), 2), _f(np.atleast_2d(Y), 2)
     return _core.adopt_w2_fit(
-        X, Y, _h(h, X.shape[1]), kernel, float(tol), int(max_iter), lower, upper
+        X,
+        Y,
+        _h(h, X.shape[1]),
+        kernel,
+        float(tol),
+        int(max_iter),
+        lower,
+        upper,
+        float(damping),
+        bool(certificate),
+        composition,
+        centering,
+        bool(project_prediction),
+        bins,
+        boundary,
     )
 
 
-def adopt_w2_predict(X_train, P, M, mu, h, X_new, kernel="gaussian", lower=None, upper=None):
+def adopt_w2_predict(
+    X_train,
+    P,
+    M,
+    mu,
+    h,
+    X_new,
+    kernel="gaussian",
+    lower=None,
+    upper=None,
+    project_prediction=False,
+    bins=None,
+    boundary="none",
+):
     X_train = _f(np.atleast_2d(X_train), 2)
     return _core.adopt_w2_predict(
         X_train,
@@ -113,10 +187,44 @@ def adopt_w2_predict(X_train, P, M, mu, h, X_new, kernel="gaussian", lower=None,
         kernel,
         lower,
         upper,
+        bool(project_prediction),
+        bins,
+        boundary,
     )
 
 
-def adopt_w2_component(X_train, P_j, h_j, x_eval, kernel="gaussian", lower=None, upper=None):
+def adopt_w2_predict_averaged(
+    X_train,
+    orders,
+    mu,
+    h,
+    X_new,
+    kernel="gaussian",
+    lower=None,
+    upper=None,
+    project_prediction=False,
+    bins=None,
+    boundary="none",
+):
+    X_train = _f(np.atleast_2d(X_train), 2)
+    return _core.adopt_w2_predict_averaged(
+        X_train,
+        orders,
+        _f(mu, 1),
+        _h(h, X_train.shape[1]),
+        _f(np.atleast_2d(X_new), 2),
+        kernel,
+        lower,
+        upper,
+        bool(project_prediction),
+        bins,
+        boundary,
+    )
+
+
+def adopt_w2_component(
+    X_train, P_j, h_j, x_eval, kernel="gaussian", lower=None, upper=None, bins=None, boundary="none"
+):
     return _core.adopt_w2_component(
         _f(np.ravel(X_train), 1),
         _f(P_j, 2),
@@ -125,15 +233,41 @@ def adopt_w2_component(X_train, P_j, h_j, x_eval, kernel="gaussian", lower=None,
         kernel,
         lower,
         upper,
+        bins,
+        boundary,
     )
 
 
-def additive_euclid_fit(X, Z, h, kernel="gaussian", tol=1e-10, max_iter=200):
+def additive_euclid_fit(
+    X,
+    Z,
+    h,
+    kernel="gaussian",
+    tol=1e-10,
+    max_iter=200,
+    damping=1.0,
+    certificate=False,
+    bins=None,
+    boundary="none",
+):
     X, Z = _f(np.atleast_2d(X), 2), _f(np.atleast_2d(Z), 2)
-    return _core.additive_euclid_fit(X, Z, _h(h, X.shape[1]), kernel, float(tol), int(max_iter))
+    return _core.additive_euclid_fit(
+        X,
+        Z,
+        _h(h, X.shape[1]),
+        kernel,
+        float(tol),
+        int(max_iter),
+        float(damping),
+        bool(certificate),
+        bins,
+        boundary,
+    )
 
 
-def additive_euclid_predict(X_train, P, M, mu, h, X_new, kernel="gaussian"):
+def additive_euclid_predict(
+    X_train, P, M, mu, h, X_new, kernel="gaussian", bins=None, boundary="none"
+):
     X_train = _f(np.atleast_2d(X_train), 2)
     return _core.additive_euclid_predict(
         X_train,
@@ -143,6 +277,8 @@ def additive_euclid_predict(X_train, P, M, mu, h, X_new, kernel="gaussian"):
         _h(h, X_train.shape[1]),
         _f(np.atleast_2d(X_new), 2),
         kernel,
+        bins,
+        boundary,
     )
 
 

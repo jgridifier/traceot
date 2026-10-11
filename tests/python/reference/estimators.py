@@ -10,8 +10,13 @@ from __future__ import annotations
 import numpy as np
 
 from .additive import additive_euclid_fit, additive_euclid_predict
-from .adopt import adopt_w2_component, adopt_w2_fit, adopt_w2_predict
-from .smoother import global_frechet_weights, local_linear_weights
+from .adopt import adopt_w2_component, adopt_w2_fit, adopt_w2_predict, adopt_w2_predict_averaged
+from .smoother import (
+    binned_smooth,
+    global_frechet_weights,
+    local_linear_weights,
+    reflected_local_linear_weights,
+)
 from .w2 import pava_rows, transport_apply
 
 _MASK = (1 << 64) - 1
@@ -54,11 +59,48 @@ def column_ranges(X):
     return np.where(r > 0, r, 1.0)
 
 
-def fit(method, space, X, Z, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None):
+def fit(
+    method,
+    space,
+    X,
+    Z,
+    h,
+    kernel="gaussian",
+    tol=1e-10,
+    max_iter=200,
+    lower=None,
+    upper=None,
+    damping=1.0,
+    certificate=False,
+    composition="given",
+    centering="frechet",
+    project_prediction=False,
+    bins=None,
+    boundary="none",
+):
+    opts = dict(
+        damping=damping,
+        certificate=certificate,
+        bins=bins,
+        boundary=boundary,
+    )
     if method == "adopt" and space == "wasserstein":
-        f = adopt_w2_fit(X, Z, h, kernel, tol, max_iter, lower, upper)
+        f = adopt_w2_fit(
+            X,
+            Z,
+            h,
+            kernel,
+            tol,
+            max_iter,
+            lower,
+            upper,
+            composition=composition,
+            centering=centering,
+            project_prediction=project_prediction,
+            **opts,
+        )
     else:
-        f = additive_euclid_fit(X, Z, h, kernel, tol, max_iter)
+        f = additive_euclid_fit(X, Z, h, kernel, tol, max_iter, **opts)
     return {
         "method": method,
         "space": space,
@@ -67,31 +109,113 @@ def fit(method, space, X, Z, h, kernel="gaussian", tol=1e-10, max_iter=200, lowe
         "kernel": kernel,
         "lower": lower,
         "upper": upper,
+        "composition": composition,
+        "centering": centering,
+        "project_prediction": project_prediction,
+        "bins": bins,
+        "boundary": boundary,
         **f,
     }
 
 
+def _smooth_component(m, j, x):
+    xj = m["X"][:, j]
+    if m.get("bins") is not None:
+        return binned_smooth(xj, m["P"][j], m["h"][j], x, m["bins"], m["kernel"])
+    if m.get("boundary") == "reflect":
+        return reflected_local_linear_weights(xj, x, m["h"][j], m["kernel"]) @ m["P"][j]
+    return local_linear_weights(xj, x, m["h"][j], m["kernel"]) @ m["P"][j]
+
+
 def predict(m, X_new):
-    args = (m["X"], m["P"], m["M"], m["mu"], m["h"], X_new, m["kernel"])
+    comp = m.get("composition", "given")
+    if (
+        m["method"] == "adopt"
+        and m["space"] == "wasserstein"
+        and comp == "average"
+        and m.get("orders")
+    ):
+        return adopt_w2_predict_averaged(
+            m["X"],
+            m["orders"],
+            m["mu"],
+            m["h"],
+            X_new,
+            m["kernel"],
+            m["lower"],
+            m["upper"],
+            m.get("project_prediction", False),
+            m.get("bins"),
+            m.get("boundary", "none"),
+        )
+    if m["method"] == "adopt" and m["space"] == "wasserstein" and comp == "tangent":
+        raw = additive_euclid_predict(
+            m["X"],
+            m["P"],
+            m["M"],
+            m["mu"],
+            m["h"],
+            X_new,
+            m["kernel"],
+            m.get("bins"),
+            m.get("boundary", "none"),
+        )
+        return pava_rows(raw, m["lower"], m["upper"])
     if m["method"] == "adopt" and m["space"] == "wasserstein":
-        return adopt_w2_predict(*args, m["lower"], m["upper"])
-    raw = additive_euclid_predict(*args)
+        return adopt_w2_predict(
+            m["X"],
+            m["P"],
+            m["M"],
+            m["mu"],
+            m["h"],
+            X_new,
+            m["kernel"],
+            m["lower"],
+            m["upper"],
+            m.get("project_prediction", False),
+            m.get("bins"),
+            m.get("boundary", "none"),
+        )
+    raw = additive_euclid_predict(
+        m["X"],
+        m["P"],
+        m["M"],
+        m["mu"],
+        m["h"],
+        X_new,
+        m["kernel"],
+        m.get("bins"),
+        m.get("boundary", "none"),
+    )
     if m["method"] == "l2additive":
         return pava_rows(raw, m["lower"], m["upper"])
     return raw
 
 
 def component(m, j, x):
-    if m["method"] == "adopt" and m["space"] == "wasserstein":
+    if (
+        m["method"] == "adopt"
+        and m["space"] == "wasserstein"
+        and m.get("composition", "given") != "tangent"
+    ):
         return adopt_w2_component(
-            m["X"][:, j], m["P"][j], m["h"][j], x, m["kernel"], m["lower"], m["upper"]
+            m["X"][:, j],
+            m["P"][j],
+            m["h"][j],
+            x,
+            m["kernel"],
+            m["lower"],
+            m["upper"],
+            m.get("bins"),
+            m.get("boundary", "none"),
         )
-    return local_linear_weights(m["X"][:, j], x, m["h"][j], m["kernel"]) @ m["P"][j]
+    return _smooth_component(m, j, x)
 
 
 def transport(m, j, x0, v):
     g = component(m, j, np.array([x0]))[0]
-    if m["method"] == "adopt" and m["space"] == "wasserstein":
+    tangent = m.get("composition") == "tangent"
+    if m["method"] == "adopt" and m["space"] == "wasserstein" and not tangent:
         return transport_apply(m["M"][j], g, v)
     return v + g - m["M"][j]
 
@@ -109,16 +233,41 @@ def select_bandwidth_cv(
     max_iter=200,
     lower=None,
     upper=None,
+    damping=1.0,
+    certificate=False,
+    composition="given",
+    centering="frechet",
+    project_prediction=False,
+    bins=None,
+    boundary="none",
 ):
     n = X.shape[0]
     folds = kfold_indices(n, k, seed)
-    ranges = column_ranges(X)
     errs = np.zeros(len(grid))
     for g, c in enumerate(grid):
-        h = c * ranges
         for test in folds:
             train = np.setdiff1d(np.arange(n), test)
-            m = fit(method, space, X[train], Z[train], h, kernel, tol, max_iter, lower, upper)
+            # Training-fold ranges only: the held-out fold must not set the scale of h.
+            h = c * column_ranges(X[train])
+            m = fit(
+                method,
+                space,
+                X[train],
+                Z[train],
+                h,
+                kernel,
+                tol,
+                max_iter,
+                lower,
+                upper,
+                damping,
+                certificate,
+                composition,
+                centering,
+                project_prediction,
+                bins,
+                boundary,
+            )
             errs[g] += float(np.sum(dist_sq_rows(space, predict(m, X[test]), Z[test])))
     errs /= n
     best = int(np.argmin(errs))

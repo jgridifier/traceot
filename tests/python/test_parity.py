@@ -127,6 +127,111 @@ def test_logcholesky(backends, rng):
     close(R.coords_to_spd(z, 4), P.coords_to_spd(z, 4))
 
 
+def test_reflected_weighted_and_binned(backends, rng):
+    R, P = backends
+    x = np.linspace(0.0, 1.0, 40)
+    xe = np.array([0.0, 0.02, 0.5, 0.97, 1.0, -0.2])
+    for kernel in ("gaussian", "epanechnikov"):
+        close(
+            R.reflected_local_linear_weights(x, xe, 0.2, kernel),
+            P.reflected_local_linear_weights(x, xe, 0.2, kernel),
+        )
+    ones = np.ones_like(x)
+    close(
+        R.local_linear_weights_weighted(x, ones, xe, 0.15),
+        P.local_linear_weights(x, xe, 0.15),
+    )
+    mult = rng.integers(0, 5, size=x.shape[0]).astype(float)
+    close(
+        R.local_linear_weights_weighted(x, mult, xe, 0.15),
+        P.local_linear_weights_weighted(x, mult, xe, 0.15),
+    )
+    y = np.column_stack([x, x**2])
+    close(R.binned_smooth(x, y, 0.2, xe, 8), P.binned_smooth(x, y, 0.2, xe, 8))
+    # A single occupied bin repeats its mean.
+    close(
+        R.binned_smooth(np.zeros(6), y[:6], 0.3, xe, 4),
+        P.binned_smooth(np.zeros(6), y[:6], 0.3, xe, 4),
+    )
+
+
+def _opt_close(fr, fp):
+    assert fr["n_iter"] == fp["n_iter"]
+    assert fr["converged"] == fp["converged"]
+    assert fr["n_rejected"] == fp["n_rejected"]
+    for k in ("mu", "G", "M", "P", "fitted", "history"):
+        close(fr[k], fp[k])
+    assert len(fr["orders"]) == len(fp["orders"])
+    for a, b in zip(fr["orders"], fp["orders"], strict=True):
+        close(np.asarray(a["perm"], float), np.asarray(b["perm"], float), 0)
+        close(a["G"], b["G"])
+        close(a["M"], b["M"])
+        close(a["P"], b["P"])
+
+
+def test_adopt_option_paths(backends, rng):
+    R, P = backends
+    X, Y = _w2_data(rng, n=26, q=10)
+    X, h = X[:, :2], np.array([0.22, 0.28])
+    specs = [
+        dict(damping=0.5, max_iter=6, tol=1e-8),
+        dict(certificate=True, max_iter=5, tol=1e-6),
+        dict(centering="pushforward", max_iter=5, tol=1e-6),
+        dict(composition="average", max_iter=3, tol=1e-4),
+        dict(composition="tangent", max_iter=5, tol=1e-6),
+        dict(project_prediction=True, max_iter=4, tol=1e-5),
+        dict(bins=6, max_iter=4, tol=1e-5),
+        dict(boundary="reflect", max_iter=4, tol=1e-5),
+        dict(centering="pushforward", damping=0.7, certificate=True, bins=5, max_iter=3, tol=1e-4),
+    ]
+    Xn = rng.uniform(size=(4, 2))
+    for spec in specs:
+        fr = R.adopt_w2_fit(X, Y, h, **spec)
+        fp = P.adopt_w2_fit(X, Y, h, **spec)
+        _opt_close(fr, fp)
+        pred_kw = dict(
+            bins=spec.get("bins"),
+            boundary=spec.get("boundary", "none"),
+            project_prediction=spec.get("project_prediction", False),
+        )
+        if spec.get("composition") == "average":
+            close(
+                R.adopt_w2_predict_averaged(X, fr["orders"], fr["mu"], h, Xn, **pred_kw),
+                P.adopt_w2_predict_averaged(X, fp["orders"], fp["mu"], h, Xn, **pred_kw),
+            )
+        elif spec.get("composition") != "tangent":
+            close(
+                R.adopt_w2_predict(X, fr["P"], fr["M"], fr["mu"], h, Xn, **pred_kw),
+                P.adopt_w2_predict(X, fp["P"], fp["M"], fp["mu"], h, Xn, **pred_kw),
+            )
+            ckw = dict(bins=pred_kw["bins"], boundary=pred_kw["boundary"])
+            close(
+                R.adopt_w2_component(X[:, 0], fr["P"][0], h[0], Xn[:, 0], **ckw),
+                P.adopt_w2_component(X[:, 0], fp["P"][0], h[0], Xn[:, 0], **ckw),
+            )
+
+
+def test_additive_option_paths(backends, rng):
+    R, P = backends
+    X = rng.uniform(size=(28, 2))
+    Z = np.column_stack([np.sin(3 * X[:, 0]) + X[:, 1], X[:, 0] - X[:, 1] ** 2])
+    h = np.array([0.2, 0.25])
+    Xn = rng.uniform(size=(5, 2))
+    for spec in (
+        dict(damping=0.4, certificate=True, max_iter=6, tol=1e-8),
+        dict(bins=5, max_iter=4, tol=1e-5),
+        dict(boundary="reflect", max_iter=4, tol=1e-5),
+    ):
+        fr = R.additive_euclid_fit(X, Z, h, **spec)
+        fp = P.additive_euclid_fit(X, Z, h, **spec)
+        _opt_close(fr, fp)
+        kw = dict(bins=spec.get("bins"), boundary=spec.get("boundary", "none"))
+        close(
+            R.additive_euclid_predict(X, fr["P"], fr["M"], fr["mu"], h, Xn, **kw),
+            P.additive_euclid_predict(X, fp["P"], fp["M"], fp["mu"], h, Xn, **kw),
+        )
+
+
 def test_rust_errors_are_value_errors(backends, rng):
     R, _ = backends
     X, Y = _w2_data(rng, n=10, q=5)

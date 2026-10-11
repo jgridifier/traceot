@@ -84,6 +84,10 @@ class L2AdditiveQuantileRegressor(AdditiveFitMixin):
         max_iter: int = 200,
         bounds=None,
         random_state: int = 0,
+        damping: float = 1.0,
+        certificate: bool = False,
+        bins=None,
+        boundary: str = "none",
     ):
         self.bandwidth = bandwidth
         self.bandwidth_grid = bandwidth_grid
@@ -93,6 +97,10 @@ class L2AdditiveQuantileRegressor(AdditiveFitMixin):
         self.max_iter = max_iter
         self.bounds = bounds
         self.random_state = random_state
+        self.damping = damping
+        self.certificate = certificate
+        self.bins = bins
+        self.boundary = boundary
 
     def _space_name(self) -> str:
         return "wasserstein"

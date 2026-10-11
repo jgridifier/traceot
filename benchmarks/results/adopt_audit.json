@@ -1,0 +1,146 @@
+{
+  "order": {
+    "counterexample_y0": {
+      "f_then_g": 0.25,
+      "g_then_f": 0.5
+    },
+    "order_disagreement_w2": {
+      "given": 0.000284572954018587,
+      "average": 0.0,
+      "tangent": 1.9640073449054647e-16
+    },
+    "location_holdout_w2": {
+      "given": 0.0008843983726333981,
+      "average": 0.0008843981573054866,
+      "tangent": 0.0008843983726333969
+    },
+    "noncommute_holdout_w2": {
+      "given": 4.512435115709859e-05,
+      "average": 0.00012350556320140952,
+      "tangent": 0.00015506067162184166
+    }
+  },
+  "centering": {
+    "identity_gap_max_abs": 6.661338147750939e-16,
+    "duplicate_component_asymmetry": {
+      "given": 0.20055842204376767,
+      "average": 0.0,
+      "pushforward": 0.2005584220437674
+    },
+    "duplicate_holdout_w2": {
+      "given": 4.534451590782842e-31,
+      "average": 4.534451590782842e-31,
+      "pushforward": 1.4916307357508887e-30
+    }
+  },
+  "convergence": {
+    "undamped_insample_loss": [
+      0.0009504797952128851,
+      0.0022157579851732273,
+      0.0033652135297671274,
+      0.004269325965759754,
+      0.00493690628425336,
+      0.005415021654426902,
+      0.0057530761214198605,
+      0.005991794112328608
+    ],
+    "loss_increments": [
+      0.0012652781899603423,
+      0.0011494555445939,
+      0.0009041124359926269,
+      0.0006675803184936057,
+      0.0004781153701735423,
+      0.00033805446699295815,
+      0.00023871799090874769
+    ],
+    "certificate_insample_loss": 0.000950479795212885,
+    "n_rejected": 27,
+    "certificate_n_iter": 1,
+    "tol_sensitivity": {
+      "1e-02": {
+        "n_iter": 3,
+        "holdout_w2": 0.0003199204425058632
+      },
+      "1e-04": {
+        "n_iter": 4,
+        "holdout_w2": 0.0003378877104165542
+      },
+      "1e-08": {
+        "n_iter": 6,
+        "holdout_w2": 0.0003411297003936459
+      },
+      "1e-12": {
+        "n_iter": 9,
+        "holdout_w2": 0.00034120097608188584
+      }
+    },
+    "location_holdout_w2": {
+      "given": 0.00034119074803575975,
+      "damped_certificate": 0.00034921411237182455
+    }
+  },
+  "monotone": {
+    "analytic_crossing_decreases": 12,
+    "tangent_raw_decreases": 60,
+    "tangent_projected_decreases": 0,
+    "given_decreases": 0,
+    "extension_endpoints": [
+      -0.998263888888889,
+      1.9184027777777781
+    ]
+  },
+  "scaling": {
+    "200": {
+      "dense_seconds": 0.002879174000099738,
+      "binned_seconds": 0.001457227999708266,
+      "dense_holdout_w2": 0.0002846019322469997,
+      "binned_holdout_w2": 0.0002696199004340233
+    },
+    "400": {
+      "dense_seconds": 0.008830110999952012,
+      "binned_seconds": 0.0021347010001591116,
+      "dense_holdout_w2": 0.0002607695475031369,
+      "binned_holdout_w2": 0.0002680904120395588,
+      "dense_growth": 3.066890364960967,
+      "binned_growth": 1.464905286328889
+    },
+    "800": {
+      "dense_seconds": 0.025740202000179124,
+      "binned_seconds": 0.003630756000347901,
+      "dense_holdout_w2": 0.00027036478298172404,
+      "binned_holdout_w2": 0.0002759191136380011,
+      "dense_growth": 2.915048519811247,
+      "binned_growth": 1.70082648580634
+    },
+    "1600": {
+      "dense_seconds": 0.09871164099968155,
+      "binned_seconds": 0.007385933000023215,
+      "dense_holdout_w2": 0.000266630779316251,
+      "binned_holdout_w2": 0.0002688932515991676,
+      "dense_growth": 3.8349209924224614,
+      "binned_growth": 2.034268620451358
+    },
+    "growth_200_to_1600": {
+      "dense": 34.2847083907614,
+      "binned": 5.0684813917258404
+    }
+  },
+  "boundary": {
+    "line_max_abs_error": {
+      "local_linear": 6.661338147750939e-16,
+      "reflect": 0.4110357808498344
+    },
+    "exp_mse": {
+      "nw_edge": 12.145395175458297,
+      "nw_mid": 0.45918263113231583,
+      "ll_edge": 0.39227575825014516,
+      "ll_mid": 0.4697453944509641,
+      "ref_edge": 11.474097164260716,
+      "ref_mid": 0.5139079720301506
+    },
+    "n": 80,
+    "h": 0.18,
+    "replicates": 16
+  },
+  "wall_seconds": 0.19311630399988644
+}

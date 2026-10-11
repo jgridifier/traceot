@@ -94,3 +94,132 @@ def global_frechet_weights(X_train: np.ndarray, X_eval: np.ndarray) -> np.ndarra
     S = C.T @ C / n
     A = np.linalg.solve(S, (X_eval - xbar).T)  # (p, m)
     return (1.0 + (C @ A).T) / n
+
+
+def reflected_local_linear_weights(
+    x_train: np.ndarray, x_eval: np.ndarray, h: float, kernel: str = "gaussian"
+) -> np.ndarray:
+    """Local linear weights with both reflections through the sample endpoints.
+
+    Each training point contributes itself and the two ghosts ``2*lo - x`` and
+    ``2*hi - x``. Ghosts share the parent's response, so their kernel mass is
+    folded back into that column. Rows sum to one.
+    """
+    x = np.asarray(x_train, dtype=float).ravel()
+    xe = np.asarray(x_eval, dtype=float).ravel()
+    if not h > 0:
+        raise ValueError("bandwidth h must be > 0")
+    n = x.shape[0]
+    if n == 0:
+        raise ValueError("x_train is empty")
+    lo, hi = float(np.min(x)), float(np.max(x))
+    if not hi > lo:
+        return local_linear_weights(x, xe, h, kernel)
+    locs = np.concatenate([x, 2.0 * lo - x, 2.0 * hi - x])
+    W = np.zeros((xe.shape[0], n))
+    for r, x0 in enumerate(xe):
+        d = locs - x0
+        K = kernel_values(d / h, kernel)
+        u0 = float(np.sum(K))
+        u1 = float(np.sum(K * d))
+        u2 = float(np.sum(K * d * d))
+        ok = u0 > 0.0 and u2 > 0.0 and (1.0 - (u1 * u1) / (u0 * u2)) > DEGENERACY_RTOL
+        if ok:
+            s = K * (u2 - u1 * d)
+            tot = float(np.sum(s))
+            folded = s[:n] + s[n : 2 * n] + s[2 * n :]
+            W[r] = folded / tot if tot != 0.0 else folded
+        elif u0 > 0.0:
+            folded = K[:n] + K[n : 2 * n] + K[2 * n :]
+            W[r] = folded / u0
+        else:
+            W[r, int(np.argmin(np.abs(x - x0)))] = 1.0
+    return W
+
+
+def local_linear_weights_weighted(
+    x_train: np.ndarray,
+    multiplicity: np.ndarray,
+    x_eval: np.ndarray,
+    h: float,
+    kernel: str = "gaussian",
+) -> np.ndarray:
+    """Local linear weights with a multiplicity on each training location.
+
+    Unit multiplicities reproduce :func:`local_linear_weights`. Non-positive
+    multiplicities are ignored.
+    """
+    x = np.asarray(x_train, dtype=float).ravel()
+    c = np.asarray(multiplicity, dtype=float).ravel()
+    xe = np.asarray(x_eval, dtype=float).ravel()
+    if not h > 0:
+        raise ValueError("bandwidth h must be > 0")
+    if x.shape[0] != c.shape[0]:
+        raise ValueError("multiplicity must have one entry per training point")
+    n = x.shape[0]
+    W = np.zeros((xe.shape[0], n))
+    for r, x0 in enumerate(xe):
+        d = x - x0
+        K = np.where(c > 0.0, c * kernel_values(d / h, kernel), 0.0)
+        u0 = float(np.sum(K))
+        u1 = float(np.sum(K * d))
+        u2 = float(np.sum(K * d * d))
+        ok = u0 > 0.0 and u2 > 0.0 and (1.0 - (u1 * u1) / (u0 * u2)) > DEGENERACY_RTOL
+        if ok:
+            s = K * (u2 - u1 * d)
+            tot = float(np.sum(s))
+            W[r] = s / tot if tot != 0.0 else s
+        elif u0 > 0.0:
+            W[r] = K / u0
+        else:
+            active = np.flatnonzero(c > 0.0)
+            if active.size:
+                j = active[int(np.argmin(np.abs(d[active])))]
+                W[r, j] = 1.0
+    return W
+
+
+def binned_smooth(
+    x_train: np.ndarray,
+    y: np.ndarray,
+    h: float,
+    x_eval: np.ndarray,
+    n_bins: int,
+    kernel: str = "gaussian",
+) -> np.ndarray:
+    """Equal-width histogram smoother: bin means, then local-linear on the centres.
+
+    Cost is linear in the number of training rows. ``n_bins`` equal-width bins
+    cover ``[min x, max x]``; the right endpoint falls in the last bin.
+    """
+    x = np.asarray(x_train, dtype=float).ravel()
+    y = np.atleast_2d(np.asarray(y, dtype=float))
+    xe = np.asarray(x_eval, dtype=float).ravel()
+    if y.shape[0] != x.shape[0]:
+        raise ValueError("y must have one row per training point")
+    if n_bins < 1:
+        raise ValueError("n_bins must be >= 1")
+    lo, hi = float(np.min(x)), float(np.max(x))
+    if hi > lo:
+        width = (hi - lo) / n_bins
+        bin_of = np.floor((x - lo) / width).astype(int)
+        bin_of = np.clip(bin_of, 0, n_bins - 1)
+    else:
+        width = 1.0
+        bin_of = np.zeros(x.shape[0], dtype=int)
+    counts = np.bincount(bin_of, minlength=n_bins).astype(float)
+    centers: list[float] = []
+    mult: list[float] = []
+    means: list[np.ndarray] = []
+    for b in range(n_bins):
+        if counts[b] > 0.0:
+            centers.append(lo + (b + 0.5) * width)
+            mult.append(float(counts[b]))
+            means.append(y[bin_of == b].mean(axis=0))
+    if not centers:
+        raise ValueError("no occupied bins")
+    means_a = np.vstack(means)
+    if len(centers) == 1:
+        return np.repeat(means_a, xe.shape[0], axis=0)
+    W = local_linear_weights_weighted(np.asarray(centers), np.asarray(mult), xe, h, kernel)
+    return W @ means_a

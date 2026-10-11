@@ -34,6 +34,24 @@ class ADOPTRegressor(AdditiveFitMixin):
         Optional support bounds applied in the isotonic projection (wasserstein only).
     random_state : int
         Seed for the CV fold assignment (SplitMix64 shuffle in the Rust core).
+    damping : float in (0, 1]
+        Step length of each Gauss–Seidel update. ``1`` is the paper's full step.
+    certificate : bool
+        If true, accept a cycle only when the in-sample mean squared distance does not
+        increase; otherwise halve ``damping`` and retry.
+    composition : {"given", "average", "tangent"}
+        ``"given"`` is the paper's feature order. ``"average"`` averages composed
+        predictions over feature permutations. ``"tangent"`` fits additive components
+        in the L2 tangent space at the barycenter and projects the prediction.
+    centering : {"frechet", "pushforward"}
+        ``"frechet"`` is the paper's anchor (eq. 11). ``"pushforward"`` recenters so
+        the average pushforward of the barycenter is the barycenter.
+    project_prediction : bool
+        Project the composed prediction onto monotone quantile functions.
+    bins : int or None
+        Equal-width bins per predictor. ``None`` is the paper's dense smoother.
+    boundary : {"none", "reflect"}
+        ``"reflect"`` folds kernel mass reflected through the sample endpoints.
 
     Attributes
     ----------
@@ -57,6 +75,13 @@ class ADOPTRegressor(AdditiveFitMixin):
         max_iter: int = 200,
         bounds=None,
         random_state: int = 0,
+        damping: float = 1.0,
+        certificate: bool = False,
+        composition: str = "given",
+        centering: str = "frechet",
+        project_prediction: bool = False,
+        bins=None,
+        boundary: str = "none",
     ):
         self.space = space
         self.bandwidth = bandwidth
@@ -67,3 +92,10 @@ class ADOPTRegressor(AdditiveFitMixin):
         self.max_iter = max_iter
         self.bounds = bounds
         self.random_state = random_state
+        self.damping = damping
+        self.certificate = certificate
+        self.composition = composition
+        self.centering = centering
+        self.project_prediction = project_prediction
+        self.bins = bins
+        self.boundary = boundary
