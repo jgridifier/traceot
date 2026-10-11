@@ -82,7 +82,7 @@
 <p>Each cycle smooths <code>n</code> residual distributions at <code>n</code> points for each of <code>p</code> inputs: about <code>n² · p · q</code> operations for <code>q</code> percentiles (the paper's Supplement C says the same). That is fine for hundreds or thousands of distributions, and too slow for millions of rows. See section 5.</p>
 
 <h2 id="results">4. Our reproduction of the paper's simulations</h2>
-<p>There is no public code, so we re-implemented ADOPT from the paper: once in plain numpy as a readable reference, and once in Rust for speed. Tests check that the two agree (to within 1e-9; in practice about 1e-14). We then re-ran the paper's two simulation designs with fixed seeds and B = {{REPS}} replicates per setting. Every guess we had to make is listed in <a href="https://github.com/jgridifier/traceot/blob/main/docs/REPRODUCTION_NOTES.md">REPRODUCTION_NOTES.md</a>.</p>
+<p>There is no public code, so we re-implemented ADOPT from the paper: All computation runs in a Rust core. A separate plain-numpy version, used only by the tests, checks every Rust result (agreement within 1e-9, in practice about 1e-14). We then re-ran the paper's two simulation designs with fixed seeds and B = {{REPS}} replicates per setting. Every guess we had to make is listed in <a href="https://github.com/jgridifier/traceot/blob/main/docs/REPRODUCTION_NOTES.md">REPRODUCTION_NOTES.md</a>.</p>
 <p>The metric is MISE: the squared W2 (or log-Cholesky) error of the predicted distribution, averaged over the unit cube of inputs and over replicates. Lower is better. "Paper" columns are copied verbatim from the published tables. "Ours" are our runs.</p>
 <div class="scroll">{{TABLE1}}</div>
 <div class="scroll">{{TABLE2}}</div>
