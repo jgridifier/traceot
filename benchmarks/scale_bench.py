@@ -37,9 +37,8 @@ OUT = Path(__file__).resolve().parent / "results" / "scale_bench.json"
 def one(n: int, p: int) -> dict:
     from statistics import NormalDist
 
-    from traceot import get_backend
+    from traceot import primitives as be
 
-    be = get_backend("rust")
     rng = np.random.default_rng(12345)
     t = {}
     codes = np.empty((p, n), dtype=np.uint8)
