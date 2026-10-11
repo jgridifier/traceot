@@ -11,7 +11,7 @@ Two uses:
    ADOPT paper): backfit quantile functions as vectors and project predictions onto
    monotone functions afterwards.
 
-The iteration mirrors :func:`traceot.reference.adopt.adopt_w2_fit` exactly
+The iteration mirrors :func:`reference.adopt.adopt_w2_fit` exactly
 (Gauss-Seidel order, centring, stopping rule), with translations in place of maps.
 """
 

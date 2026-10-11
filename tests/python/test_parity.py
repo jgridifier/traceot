@@ -3,17 +3,16 @@
 import numpy as np
 import pytest
 
+import reference
 from conftest import random_quantiles
-from traceot._backend import HAVE_RUST, get_backend
-
-pytestmark = pytest.mark.skipif(not HAVE_RUST, reason="Rust extension not built")
+from traceot import primitives
 
 ATOL = 1e-10
 
 
 @pytest.fixture(scope="module")
 def backends():
-    return get_backend("rust"), get_backend("reference")
+    return primitives, reference
 
 
 def close(a, b, atol=ATOL):

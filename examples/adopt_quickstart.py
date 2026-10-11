@@ -8,8 +8,7 @@ its quantile function). x1 shifts the distribution (non-linearly), x2 widens it,
 
 import numpy as np
 
-from traceot import ADOPTRegressor, GlobalFrechetRegressor
-from traceot.reference import quantile_grid
+from traceot import ADOPTRegressor, GlobalFrechetRegressor, quantile_grid
 
 rng = np.random.default_rng(0)
 n, q = 200, 50

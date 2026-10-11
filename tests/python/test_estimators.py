@@ -3,14 +3,15 @@
 import numpy as np
 import pytest
 
+import reference
+import reference.estimators as ref
 from traceot import (
-    HAVE_RUST,
     ADOPTRegressor,
     FrechetMeanRegressor,
     GlobalFrechetRegressor,
     L2AdditiveQuantileRegressor,
+    quantile_grid,
 )
-from traceot.reference import quantile_grid
 
 
 def w2_data(rng, n=60, q=30):
@@ -63,14 +64,72 @@ def test_component_transport_consistency_single_feature(rng):
     assert comp["g"].shape == (2, Y.shape[1]) and comp["center"].shape == (Y.shape[1],)
 
 
-@pytest.mark.skipif(not HAVE_RUST, reason="Rust extension not built")
-def test_backends_agree_through_estimator(rng):
+def _ref_cv_fit(method, space, X, Z, grid, k, seed, **kw):
+    cv = ref.select_bandwidth_cv(method, space, X, Z, grid, k, seed, **kw)
+    h = cv["best_fraction"] * ref.column_ranges(X)
+    return cv, ref.fit(method, space, X, Z, h, **kw)
+
+
+def test_kfold_matches_reference():
+    from traceot import _core
+
+    for n, k, seed in [(10, 2, 0), (23, 5, 7), (101, 5, 2**63 + 5)]:
+        a, b = _core.kfold_indices(n, k, seed), ref.kfold_indices(n, k, seed)
+        assert all(np.array_equal(x, y) for x, y in zip(a, b, strict=True))
+
+
+@pytest.mark.parametrize(
+    "cls,method,space,bounds",
+    [
+        (ADOPTRegressor, "adopt", "wasserstein", None),
+        (ADOPTRegressor, "adopt", "wasserstein", (-2.0, 2.0)),
+        (L2AdditiveQuantileRegressor, "l2additive", "wasserstein", None),
+    ],
+)
+def test_estimator_matches_reference_w2(rng, cls, method, space, bounds):
     X, Y = w2_data(rng, n=40, q=15)
-    kw = dict(bandwidth_grid=[0.15, 0.4], cv=4)
-    a = ADOPTRegressor(backend="rust", **kw).fit(X, Y)
-    b = ADOPTRegressor(backend="reference", **kw).fit(X, Y)
-    assert np.allclose(a.cv_results_["mean_dist_sq"], b.cv_results_["mean_dist_sq"], atol=1e-10)
-    assert np.allclose(a.predict(X), b.predict(X), atol=1e-9)
+    grid = [0.08, 0.15, 0.4]
+    est = cls(bandwidth_grid=grid, cv=4, random_state=11, bounds=bounds).fit(X, Y)
+    lo, hi = bounds if bounds else (None, None)
+    cv, m = _ref_cv_fit(method, space, X, Y, grid, 4, 11, lower=lo, upper=hi)
+    assert np.allclose(est.cv_results_["mean_dist_sq"], cv["mean_dist_sq"], rtol=0, atol=1e-10)
+    assert est.cv_results_["best_fraction"] == cv["best_fraction"]
+    Xn = rng.uniform(size=(7, 2))
+    assert np.allclose(est.predict(Xn), ref.predict(m, Xn), atol=1e-9)
+    assert np.allclose(
+        est.component(1, [0.2, 0.7])["g"], ref.component(m, 1, np.array([0.2, 0.7])), atol=1e-9
+    )
+    v = np.sort(rng.normal(size=15))
+    assert np.allclose(est.transport(0, 0.3, v), ref.transport(m, 0, 0.3, v), atol=1e-9)
+    assert np.isclose(
+        est.score(X, Y), ref.frechet_r2(space, ref.predict(m, X), Y, m["mu"]), atol=1e-10
+    )
+
+
+def test_estimator_matches_reference_logcholesky(rng):
+    X, S = spd_data(rng, n=40)
+    est = ADOPTRegressor(space="logcholesky", bandwidth_grid=[0.1, 0.3], cv=4).fit(X, S)
+    Z = reference.spd_to_coords(S)
+    cv, m = _ref_cv_fit("adopt", "logcholesky", X, Z, [0.1, 0.3], 4, 0)
+    assert np.allclose(est.cv_results_["mean_dist_sq"], cv["mean_dist_sq"], atol=1e-10)
+    assert np.allclose(est.predict_encoded(X), ref.predict(m, X), atol=1e-9)
+
+
+@pytest.mark.parametrize("space", ["wasserstein", "logcholesky"])
+def test_global_frechet_matches_reference(rng, space):
+    if space == "wasserstein":
+        X, Y = w2_data(rng)
+        Z = Y
+    else:
+        X, Y = spd_data(rng)
+        Z = reference.spd_to_coords(Y)
+    gf = GlobalFrechetRegressor(space=space).fit(X, Y)
+    Xn = rng.uniform(size=(5, 2))
+    assert np.allclose(
+        gf.predict_encoded(Xn), ref.global_frechet_predict(space, X, Z, Xn), atol=1e-10
+    )
+    fm = FrechetMeanRegressor(space=space).fit(X, Y)
+    assert np.allclose(fm.mean_, Z.mean(axis=0), atol=1e-12)
 
 
 def test_logcholesky_space(rng):

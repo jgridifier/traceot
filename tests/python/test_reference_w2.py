@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from conftest import random_quantiles
-from traceot.reference import collapse_knots, pava, pava_rows, quantile_grid, transport_apply, w2_sq
+from reference import collapse_knots, pava, pava_rows, quantile_grid, transport_apply, w2_sq
 
 
 def brute_isotonic(y):

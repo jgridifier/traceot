@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from traceot.reference import global_frechet_weights, kernel_values, local_linear_weights
+from reference import global_frechet_weights, kernel_values, local_linear_weights
 
 
 @pytest.mark.parametrize("kernel", ["gaussian", "epanechnikov"])

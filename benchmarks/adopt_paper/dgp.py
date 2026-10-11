@@ -5,7 +5,8 @@ https://proceedings.mlr.press/v300/song26c.html . Settings are transcribed from
 Sections 5.1 and 5.2 of the paper; interpretive choices are listed in
 docs/REPRODUCTION_NOTES.md and flagged ``# CHOICE`` below.
 
-Requires scipy (``pip install traceot[sim]``).
+Requires scipy (``pip install traceot[sim]``). This is benchmark code that generates
+simulated data; it is not part of the ``traceot`` runtime package.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ import numpy as np
 from scipy.special import betaincinv
 from scipy.stats import norm
 
-from ..reference.w2 import quantile_grid
+from traceot import quantile_grid
 
 #: Predictor correlation of V ~ N3(0, Sigma), X = Phi(V) (both sections).
 SIGMA = np.array([[1.0, 0.5, 0.3], [0.5, 1.0, 0.5], [0.3, 0.5, 1.0]])

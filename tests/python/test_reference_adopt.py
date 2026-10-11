@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from traceot.reference import (
+from reference import (
     additive_euclid_fit,
     additive_euclid_predict,
     adopt_w2_fit,
@@ -14,7 +14,7 @@ from traceot.reference import (
     transport_apply,
     w2_sq,
 )
-from traceot.reference.adopt import fitted_values, partial_residuals
+from reference.adopt import fitted_values, partial_residuals
 
 
 def toy(rng, n=60, q=25):

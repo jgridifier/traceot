@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import platform
 import time
 from multiprocessing import get_context
@@ -22,15 +23,18 @@ from pathlib import Path
 
 import numpy as np
 
-import traceot
-from traceot import (
+# Several worker processes run in parallel; keep each one single-threaded.
+os.environ.setdefault("RAYON_NUM_THREADS", "1")
+
+import dgp  # noqa: E402  (benchmarks/adopt_paper/dgp.py, the paper's designs)
+import traceot  # noqa: E402
+from traceot import (  # noqa: E402
     ADOPTRegressor,
     FrechetMeanRegressor,
     GlobalFrechetRegressor,
     L2AdditiveQuantileRegressor,
 )
-from traceot.reference import quantile_grid
-from traceot.simulations import adopt_paper as dgp
+from traceot.primitives import coords_to_spd, quantile_grid  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "benchmarks" / "results"
@@ -107,8 +111,6 @@ def run_one(task):
 
 
 def dgp_spd_matrices(Z, m):
-    from traceot.reference.logchol import coords_to_spd
-
     return coords_to_spd(Z, m)
 
 
@@ -146,7 +148,7 @@ def main():
             "q": Q,
             "mise_grid_per_axis": GRID_PER_AXIS,
             "traceot_version": traceot.__version__,
-            "backend": traceot.get_backend("auto").name,
+            "backend": "rust",
             "python": platform.python_version(),
             "wall_seconds": wall,
             "workers": args.workers,

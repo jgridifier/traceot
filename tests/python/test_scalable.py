@@ -3,11 +3,9 @@
 import numpy as np
 import pytest
 
-from traceot._backend import HAVE_RUST, get_backend
-from traceot.reference import scalable as sc
-
-P = get_backend("reference")
-rust = pytest.mark.skipif(not HAVE_RUST, reason="Rust extension not built")
+import reference as P
+from reference import scalable as sc
+from traceot import primitives as R
 
 
 def test_sketch_exact_when_small(rng):
@@ -57,9 +55,7 @@ def test_pinball_gradient_matches_dense(rng):
     assert np.isclose(loss, np.mean((y[:, None] - Q) * r))
 
 
-@rust
 def test_sketch_parity(rng):
-    R = get_backend("rust")
     for k, n in [(64, 50), (64, 5_000), (128, 40_000)]:
         x = rng.normal(size=n)
         x[::31] = np.nan
@@ -79,10 +75,8 @@ def test_sketch_parity(rng):
         assert np.array_equal(a.quantiles(lv), b.quantiles(lv))
 
 
-@rust
 @pytest.mark.parametrize("max_bins", [8, 255, 1000])
 def test_binning_parity(rng, max_bins):
-    R = get_backend("rust")
     x = np.round(rng.normal(size=20_000), 2)  # many ties
     x[::53] = np.nan
     xs = np.sort(x[~np.isnan(x)])
@@ -92,10 +86,8 @@ def test_binning_parity(rng, max_bins):
     assert c1.dtype == c2.dtype and np.array_equal(c1, c2)
 
 
-@rust
 @pytest.mark.parametrize("dtype,n_bins", [(np.uint8, 256), (np.uint16, 700)])
 def test_histogram_parity(rng, dtype, n_bins):
-    R = get_backend("rust")
     n = 150_000  # > 2 chunks
     cols = rng.integers(0, n_bins, size=(4, n)).astype(dtype)
     g = rng.normal(size=(3, n))
@@ -109,9 +101,7 @@ def test_histogram_parity(rng, dtype, n_bins):
         R.histograms(cols, g, 3)
 
 
-@rust
 def test_pinball_parity(rng):
-    R = get_backend("rust")
     n, K = 140_000, 19
     y = rng.normal(size=n)
     loc, scale = 0.1 * rng.normal(size=n), np.exp(0.2 * rng.normal(size=n))
@@ -123,9 +113,7 @@ def test_pinball_parity(rng):
     assert np.allclose(G1, G2, atol=1e-10) and np.isclose(l1, l2, rtol=1e-10)
 
 
-@rust
 def test_sketch_chunked_parity(rng):
-    R = get_backend("rust")
     x = rng.normal(size=30_000)
     a, b = R.QuantileSketch(128), sc.QuantileSketch(128)
     a.update_chunked(x, 4_000)

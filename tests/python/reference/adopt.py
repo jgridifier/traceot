@@ -3,7 +3,7 @@
 Implements Algorithm 1 of Song & Müller, "ADOPT: Additive Optimal Transport
 Regression", AISTATS 2026 (PMLR v300, https://proceedings.mlr.press/v300/song26c.html)
 for responses in the 1-D Wasserstein space, using the quantile-grid geometry of
-:mod:`traceot.reference.w2`. Every interpretive choice is recorded in
+:mod:`reference.w2`. Every interpretive choice is recorded in
 docs/REPRODUCTION_NOTES.md.
 
 Representation of the fitted model

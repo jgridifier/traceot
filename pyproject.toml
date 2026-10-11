@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-sim = ["scipy>=1.10"]
+sim = ["scipy>=1.10"]  # benchmarks/adopt_paper (paper simulation designs)
 docs = ["scipy>=1.10", "matplotlib>=3.7"]
 dev = ["pytest>=7", "ruff>=0.5", "scipy>=1.10", "maturin>=1.7,<2"]
 
@@ -47,4 +47,4 @@ select = ["E", "F", "W", "I", "B", "UP", "NPY"]
 ignore = ["E741"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["traceot", "conftest"]
+known-first-party = ["traceot", "conftest", "reference", "dgp"]

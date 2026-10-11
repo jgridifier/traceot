@@ -25,8 +25,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from traceot import ADOPTRegressor  # noqa: E402
-from traceot.reference import quantile_grid  # noqa: E402
+from traceot import (
+    ADOPTRegressor,  # noqa: E402
+    quantile_grid,  # noqa: E402
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "benchmarks" / "results"
