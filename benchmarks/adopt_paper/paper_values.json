@@ -1,0 +1,30 @@
+{
+  "source": "Song, W. and Mueller, H.-G. (2026). ADOPT: Additive Optimal Transport Regression. Proceedings of AISTATS 2026, PMLR v300:1558-1566. https://proceedings.mlr.press/v300/song26c.html (PDF sha256 f4fc35cf2b7a2c44ec7b86e3ba656a258d096ec57e94d2d8158281328f1b43b0)",
+  "note": "Numbers transcribed verbatim from Table 1 (p. 6) and Table 2 (p. 7) of the PMLR PDF, including their printed precision. Format: [mean, standard error]. Do not edit.",
+  "table1": {
+    "scale": 1e-3,
+    "caption_summary": "MISE (x1e-3), W2 distributional responses",
+    "methods": ["ADOPT", "GF", "ADR", "FM"],
+    "rows": {
+      "I/100":  {"ADOPT": ["0.317", "0.010"], "GF": ["0.591", "0.008"], "ADR": ["0.761", "0.008"], "FM": ["11.019", "0.068"]},
+      "I/300":  {"ADOPT": ["0.181", "0.004"], "GF": ["0.499", "0.003"], "ADR": ["0.586", "0.004"], "FM": ["11.119", "0.040"]},
+      "II/100": {"ADOPT": ["1.685", "0.057"], "GF": ["6.636", "0.057"], "ADR": ["80.411", "0.702"], "FM": ["207.205", "1.681"]},
+      "II/300": {"ADOPT": ["1.121", "0.041"], "GF": ["6.701", "0.037"], "ADR": ["81.951", "0.455"], "FM": ["211.297", "1.080"]}
+    }
+  },
+  "table2": {
+    "scale": 1e-2,
+    "caption_summary": "MISE (x1e-2), SPD responses, log-Cholesky metric, B = 200",
+    "methods": ["ADOPT", "GF", "FM"],
+    "rows": {
+      "I/10/100":  {"ADOPT": ["2.769", "0.025"], "GF": ["9.495", "0.060"], "FM": ["135.344", "0.647"]},
+      "I/10/300":  {"ADOPT": ["1.655", "0.012"], "GF": ["9.714", "0.037"], "FM": ["136.122", "0.366"]},
+      "I/20/100":  {"ADOPT": ["5.712", "0.070"], "GF": ["14.110", "0.102"], "FM": ["192.688", "0.92"]},
+      "I/20/300":  {"ADOPT": ["3.788", "0.048"], "GF": ["14.254", "0.063"], "FM": ["193.796", "0.521"]},
+      "II/10/100": {"ADOPT": ["4.146", "0.088"], "GF": ["18.507", "0.090"], "FM": ["96.562", "0.490"]},
+      "II/10/300": {"ADOPT": ["2.702", "0.036"], "GF": ["18.808", "0.052"], "FM": ["97.047", "0.303"]},
+      "II/20/100": {"ADOPT": ["8.921", "0.167"], "GF": ["28.237", "0.14"], "FM": ["143.382", "0.706"]},
+      "II/20/300": {"ADOPT": ["6.435", "0.100"], "GF": ["28.512", "0.078"], "FM": ["144.088", "0.437"]}
+    }
+  }
+}
