@@ -54,6 +54,8 @@ def _vendor(n: int, seed: int):
 
 
 def _trace_row(x_tr, y_tr, x_te, y_te, **kw) -> dict:
+    # Raw fit uses every training row. Calibrated fit holds out the last 25%,
+    # the same cut the EBM residual quantiles use, and is scored separately.
     t0 = time.perf_counter()
     model = TraceRegressor(**kw).fit(x_tr, y_tr)
     fit_s = time.perf_counter() - t0
@@ -61,6 +63,15 @@ def _trace_row(x_tr, y_tr, x_te, y_te, **kw) -> dict:
     score = checks.score_quantiles(y_te, q, model.u_)
     score = {k: float(v) for k, v in score.items()}
     score["fit_seconds"] = fit_s
+    score["rounds"] = [int(v) for v in np.asarray(model.model_.bag_rounds)]
+    cut = max(int(0.75 * len(y_tr)), len(y_tr) - max(len(y_tr) // 4, 1))
+    if cut >= len(y_tr) - 5:
+        cut = len(y_tr) // 2
+    cal = TraceRegressor(**kw).fit(x_tr[:cut], y_tr[:cut])
+    cal.calibrate(x_tr[cut:], y_tr[cut:])
+    q_cal = cal.predict(x_te, calibrated=True)
+    calibrated = checks.score_quantiles(y_te, q_cal, cal.u_)
+    score["calibrated"] = {k: float(v) for k, v in calibrated.items()}
     c0, _ = model.effect(0)
     idx = np.arange(1, np.asarray(c0).shape[0])
     sl = np.asarray(c0)[1:, 0]
@@ -76,7 +87,8 @@ def _conformal_quantiles(pred_te, resid, u):
     order = np.argsort(resid)
     ranked = np.asarray(resid, dtype=np.float64)[order]
     n = ranked.shape[0]
-    # Same rank rule as the Rust empirical quantile: floor(u * n), clipped.
+    # v0 residual rank, kept so this column is the same procedure as the first comparison.
+    # TRACE's own calibration uses ceil((n+1)*u)-1 in Rust, not this index.
     idx = np.minimum(np.floor(u * n).astype(np.int64), n - 1)
     q_resid = ranked[idx]
     return pred_te[:, None] + q_resid[None, :]
@@ -154,12 +166,14 @@ def run_case(name, x, y, trace_kw):
 
 
 def main():
+    # Defaults chosen on the separate tuning simulation (seed 101), not on these cells.
     kw = dict(
         n_channels=3,
         max_bins=16,
-        learning_rate=0.35,
+        learning_rate=1.0,
         max_rounds=40,
         patience=8,
+        min_rounds=20,
         val_frac=0.2,
         n_bags=1,
         max_interactions=0,
@@ -175,7 +189,7 @@ def main():
     xs = rng.uniform(size=(n, 8))
     z = _z(rng.random(n))
     ys = 1.2 * xs[:, 0] + (0.4 + 1.2 * xs[:, 1]) * z + 0.12 * xs[:, 2] * (z**3 - 3 * z)
-    s1 = run_case("s1_period2", xs, ys, {**kw, "u_levels": 31, "max_rounds": 60, "seed": 11})
+    s1 = run_case("s1_period2", xs, ys, {**kw, "u_levels": 31, "seed": 11})
     # A modest scale cell. 1e7 is the TRACE timing suite, not an EBM fit.
     rng = np.random.default_rng(0)
     n, p = 20_000, 10
@@ -185,7 +199,7 @@ def main():
         "s4_style_n2e4_p10",
         x4,
         y4,
-        {**kw, "max_rounds": 3, "patience": 0, "val_frac": 0.0, "max_bins": 32},
+        {**kw, "max_bins": 32},
     )
     payload = {"vendor_spend": vendor, "s1_period2": s1, "scale_small": scale}
     OUT.parent.mkdir(parents=True, exist_ok=True)

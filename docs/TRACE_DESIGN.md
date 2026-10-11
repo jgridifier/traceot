@@ -42,42 +42,71 @@ ADOPT composes transport maps, and composition does not commute, so the feature 
 
 `fit_codes` does not reorder. It trusts the caller to pass columns in a fixed index order (used when two periods must share bin edges). Order invariance is a property of dense `fit`.
 
-Bin updates are centered by their count-weighted mean, so a feature cannot move the sample-mean quantile. That global level stays in `Q0`. Dropped features are zeroed after bag coefficients are averaged. The per-bin standard deviation is the sample standard deviation across bags, computed before that zeroing.
+Each feature's bin update is centered by its count-weighted mean, so one feature cannot sneak a sample-wide shift into its own table. The average of those removed channel means, over features that had positive weight, is added **once** to the working quantile level and folded into the stored `Q0`. A common scale or shape correction (every bin wants the marginal band narrower) therefore survives centering, and it is not added once per feature. Dropped features are zeroed after bag coefficients are averaged. The per-bin standard deviation is the sample standard deviation across bags, computed before that zeroing.
 
 ## Algorithm
 
 ```
 bin each column (code 0 = non-finite; else 1 + count of edges <= x)
-Q0 <- empty
 for bag in bags:
-    mask <- train / validation / out-of-bag   # SplitMix64, see below
-    q0_bag <- empirical quantile of the training outcomes
+    mask <- train / validation    # SplitMix64; out-of-bag when bags > 1, see below
+    level <- empirical quantile of the in-bag outcomes   # lower pinball endpoint
     theta <- 0
-    best <- zeros
+    best <- zeros, and the starting level
     for round in 1..max_rounds:
-        G, row_loss <- pinball subgradient of Q0 + theta  # once
+        G, row_loss <- pinball subgradient of level + theta  # once
         for feature j in canonical order:
             for each bin with count >= min_count:
                 delta[bin, m] <- lr * sum(G[m] in bin) / (count * K)
-            center delta by the count-weighted mean
-            add delta to the coefficient and to every row's theta
-        if validation improved by more than tol:
-            save coefficients; reset patience
+            center delta; remember the removed channel means
+            add the centered delta to the coefficient and to every row's theta
+        add the average removed mean, once, into level
+        if early stopping is on and round <= min_rounds:
+            this round becomes the checkpoint
+        else if validation improved by more than tol:
+            save coefficients and level; reset patience
         else if patience exhausted:
-            restore the best coefficients (zeros if the null model won)
+            restore the best coefficients and level
             break
-    record held-out pinball gain of each feature (loss with that feature zeroed, minus the full loss)
-average q0 and coefficients across bags
+    if patience is 0: keep the last round
+    record overall pinball gain and tail-weighted shape-channel gain
+average q0 (the learned level) and coefficients across bags
 drop features selected in fewer than select_frac of the bags that voted
-screen pairs on a subsample of residual gradients; boost the selected pairs the same way
-report train and validation pinball on a fresh split of the full sample
+screen pairs; boost them; purify both margins into the main effects
+report train and validation pinball
 ```
 
-Masks. `n_bags = 1` and `bag_frac = 1` uses one shuffle, seed `seed + 20011 * (bag + 1)`, and marks `round(val_frac * n)` rows as validation (Rust `f64::round`, half away from zero). Otherwise a shuffle with seed `seed + 10007 * (bag + 1)` draws the bag, then a second shuffle holds out the validation rows. The report split uses seed `seed + 20011`. Shuffles are Fisher–Yates driven by SplitMix64. A feature is selected in a bag when its gain is strictly above `gain_threshold`. Bags with no validation split do not vote and do not drop features. A feature is kept when `votes = 0` or `count + 1e-12 >= select_frac * votes` (default `select_frac = 0.7`).
+`Q0`. The marginal piece is the exact lower pinball minimiser. Sort the finite training outcomes. The index is `clamp(ceil(u * n) - 1, 0, n - 1)`. When `u * n` is an integer the pinball minimisers are the closed interval between order statistics `y_(u n)` and `y_(u n + 1)` (1-based); the lower end is `sorted[u*n - 1]` and the upper end is `sorted[u*n]`, which is what `floor(u * n)` returns. The two agree whenever `u * n` is not an integer. TRACE stores the lower end, then adds the learned channel correction described above. Example: `n = 4`, outcomes `1, 2, 3, 4`, `u = 0.5` returns `2`, and the upper convention would return `3`.
 
-Interactions. Eligible features are the ones that were kept, visited in canonical order. On a training subsample of size at most `screen_rows` (shuffled with seed `seed + 42042`, then sorted so the accumulation order is fixed), each pair gets a score `sum over cells of count * ||mean(G) / K||^2`. Positive scores are sorted by score descending (`total_cmp`), then by canonical position, and truncated to `max_interactions`. Pair tables are centered by their grand mean only. They are not purified into pure interactions; a pair can still carry an additive margin. That is an open identifiability gap, recorded in the risks below.
+The step is not divided by the number of channels or by `p`. A bin whose residuals are entirely one-sided moves its location channel by about `lr / 2`. Mixed residuals move less. Round logs on bag 0 (`round_train`, `round_val`, `round_step`, `round_center_kept`) record the pinball before round 1 and after every round, the mean absolute post-center location step, and the fraction of location L2 that centering kept. The restored model is the checkpoint, which can be earlier than the last logged round.
 
-Early stopping. It runs only when `patience > 0`, `val_frac > 0` and the split actually produced validation rows. The search starts from the null model. Strict improvement is `loss < best - tol`. `bag_rounds` is how many rounds ran, not which round was restored.
+Masks. `n_bags = 1` and `bag_frac = 1` uses one shuffle, seed `seed + 20011 * (bag + 1)`, and marks `round(val_frac * n)` rows as validation (Rust `f64::round`, half away from zero). When `n_bags > 1` and `bag_frac < 1`, there is no second shuffle: seed `seed + 10007 * (bag + 1)` draws `round(bag_frac * n)` in-bag rows (clamped so the complement is nonempty when `n >= 4`), and the complement is the validation set. That is a true holdout for that bag. `bag_frac = 1` with several bags has no complement, so it keeps the older path (draw the bag, then carve `val_frac` inside it). The report split is bag 0's out-of-bag mask in the out-of-bag mode, and otherwise a fresh split with seed `seed + 20011`. Bag 0's out-of-bag rows may have trained in another bag, so the reported validation loss is a holdout for bag 0 only. Shuffles are Fisher–Yates driven by SplitMix64.
+
+Feature screen. On the validation rows, the overall gain is the pinball with that feature zeroed, minus the full pinball. The shape gain uses weights `w(u) ∝ (u - 0.5)^2`, normalised to sum to 1, and zeroes only channel 2 (the `He3` channel). It is zero when `M < 3`. A feature is kept when either gain is strictly above `gain_threshold`. If the checkpoint round is below `min_rounds`, the screen keeps every feature. Bags with no validation split do not vote and do not drop features. A feature is kept across bags when `votes = 0` or `count + 1e-12 >= select_frac * votes` (default `select_frac = 0.7`).
+
+Interactions. Eligible features are the ones that were kept, visited in canonical order. On a training subsample of size at most `screen_rows` (shuffled with seed `seed + 42042`, then sorted so the accumulation order is fixed), each pair gets a score `sum over cells of count * ||mean(G) / K||^2`. Positive scores are sorted by score descending (`total_cmp`), then by canonical position, and truncated to `max_interactions`. During the pair rounds each table is grand-mean centered and the average of the active pairs' means is added once to the level, the same rule as the main effects. After the pair checkpoint is restored, both margins are removed into the main effects. Histogram counts are not an outer product, so the one-shot formula `cell - row mean - column mean + grand mean` leaves a residual margin. Alternating weighted centering (at most 24 passes, stop when every margin is below `1e-12`) does zero them. Each removed row mean is added to the left feature and each removed column mean to the right feature. The grand mean travels with those margins, so the level is not given a second copy. Predictions are unchanged by the purification. Empty cells stay zero.
+
+Early stopping. It runs when `patience > 0` and the mask has validation rows, which requires `val_frac > 0` or the out-of-bag mode. While the round index is at most `min_rounds`, that round becomes the checkpoint and the stale counter resets, so a restored model has at least `min_rounds` updates whenever `max_rounds` allows it. After that, strict improvement is `loss < best - tol`. `patience = 0` keeps the last round. `bag_rounds` is how many rounds ran, not which round was restored. Pair boosting uses the same early-stopping switch and does not force `min_rounds`.
+
+Calibration. Optional, and off unless `calibrate` is called. On a held-out slice, the residual at level `u` is `y - Q_projected(u | x)`. The offset is the conformal quantile of those residuals: sort them and take index `clamp(ceil((n + 1) * u) - 1, 0, n - 1)`. When that rank would pass `n`, the largest residual is used, and there is no finite-sample coverage claim above `n / (n + 1)`. This index is not the pinball index used for `Q0`. `predict(..., calibrated=True)` adds the offsets and runs PAV again, so the delivered curve can sit slightly off the raw offset. `score` reports the raw pinball, CRPS, coverage and MSE. When a calibration vector is present it also reports the same quantities with a `_calibrated` suffix. The two are not mixed.
+
+## Defaults
+
+Chosen on a separate homoscedastic draw (seed 101, `n = 4000`, `p = 5`, `y = 3(x0-0.5) + 1.2(x1-0.5) + 0.25 N(0,1)`, last 30% held out), never on the vendor, S1, or `n = 2e4` cells. The grid is `benchmarks/results/trace_tune_grid.json`. The rule was the lowest held-out median MSE; ties go to the setting that stops sooner. `min_rounds = 20` matches that MSE at learning rate 1 and keeps the shape screen from dropping a feature before the checkpoint has had those rounds.
+
+| Knob | Default |
+|---|---|
+| `learning_rate` | 1.0 |
+| `max_rounds` | 40 |
+| `patience` | 8 |
+| `tol` | 0 |
+| `min_rounds` | 20 |
+| `val_frac` | 0.2 |
+| `max_bins` | 32 |
+| `u_levels` | 19 |
+| `n_channels` | 3 |
+| `n_bags` | 1 |
+| `gain_threshold` | 0 |
 
 ## Checks
 
@@ -116,8 +145,8 @@ For feature `j` and channel `m`, the binned coefficient is the contribution of t
 
 ## Open risks
 
-- Pair tables are only grand-mean centered, so they can absorb main-effect margins. Purification (a two-way ANOVA removal of the additive part) is not done in v0.
-- With `n_bags > 1`, the report split's validation rows may have been training rows in some bags, so `val_loss` is slightly optimistic. `n_bags = 1` with `val_frac > 0` is a genuine holdout (the report split matches that bag's split).
-- `Q0` uses rank `floor(u * n)`, which is not the exact pinball minimiser on every grid. The leftover is `O(1/n)` and is not corrected by the centered feature updates.
-- A pure scale or shape effect is identified only up to `Q0`. Coefficients are on the RMS-normalised basis, so they are not the raw multipliers in a simulation formula. Recovery tests use energy ratios and correlations, not those multipliers.
+- The location, scale and shape bases are not orthogonal on the pinball loss. A strong scale feature leaks into the `He3` channel. A weak planted tail can then lose the shape-energy comparison even when the feature is kept. S1 is the measured case; the criterion was not relaxed.
+- With `n_bags > 1`, bag 0's out-of-bag rows can still have trained in another bag, so the single reported `val_loss` is a holdout for bag 0 only. `n_bags = 1` with `val_frac > 0` is a genuine holdout of that one fit.
+- A pure scale or shape effect is identified only up to the learned `Q0`. Coefficients are on the RMS-normalised basis, so they are not the raw multipliers in a simulation formula. Recovery tests use energy ratios and correlations, not those multipliers.
 - The shape channel can make `Q(u)` decrease in `u` before the projection. The projection then hides part of an interaction. That blur is measured; it is not removed.
+- Calibration is a per-level additive correction, then a second PAV. It is not a single two-sided CQR score, and the second projection can move the curve off the exact residual quantile. Coverage above `n / (n + 1)` is not guaranteed when the conformal rank is clamped.

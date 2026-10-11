@@ -161,11 +161,17 @@ def run_s1() -> dict:
         "scale_correlation": corrs["x_scale_scale"] > 0.7,
         "shape_correlation": corrs["x_shape_shape"] > 0.7,
     }
+    # Period-2 screen evidence. Not a criterion. The locked checks above are unchanged.
     return {
         "energy": energy,
         "correlation": corrs,
         "checks": checks_out,
         "pass": all(checks_out.values()),
+        "period2_rounds": [int(v) for v in np.asarray(m2.model_.bag_rounds)],
+        "period2_gains": [float(v) for v in np.asarray(m2.gains_)],
+        "period2_shape_gains": [float(v) for v in np.asarray(m2.shape_gains_)],
+        "period2_selected": [bool(v) for v in np.asarray(m2.selected_)],
+        "feature_names": names,
     }
 
 

@@ -135,11 +135,32 @@ def quantile_basis(n_levels: int, n_channels: int):
     return u, basis
 
 
+def pinball_quantile_index(u: float, n: int) -> int:
+    """Lower pinball endpoint: clamp(ceil(u * n) - 1, 0, n - 1)."""
+    u = float(u)
+    if n <= 0 or u <= 0.0:
+        return 0
+    if u >= 1.0:
+        return n - 1
+    ceil_un = math.ceil(u * float(n))
+    idx = max(0.0, float(ceil_un) - 1.0)
+    return min(int(idx), n - 1)
+
+
 def empirical_quantile(y: np.ndarray, u: np.ndarray) -> np.ndarray:
     ys = np.sort(np.asarray(y, dtype=np.float64))
     n = ys.shape[0]
-    idx = np.minimum(np.floor(np.asarray(u, dtype=np.float64) * n).astype(np.int64), n - 1)
+    idx = np.array([pinball_quantile_index(float(ui), n) for ui in np.asarray(u)], dtype=np.int64)
     return ys[idx]
+
+
+def conformal_quantile(y: np.ndarray, u: float) -> float:
+    """Split-conformal rank ceil((n + 1) * u) - 1, clamped."""
+    ys = np.sort(np.asarray(y, dtype=np.float64).reshape(-1))
+    n = int(ys.shape[0])
+    rank = math.ceil((n + 1.0) * float(u))
+    idx = int(min(max(rank - 1.0, 0.0), n - 1))
+    return float(ys[idx])
 
 
 def pinball_grad_channels(y, theta, q0, basis, u):
@@ -197,11 +218,26 @@ def _split_mask(n, seed, val_frac):
     return mask
 
 
+def _oob_mode(cfg) -> bool:
+    return cfg["n_bags"] > 1 and cfg["bag_frac"] < 1.0 - 1e-15
+
+
 def _bag_mask(n, cfg, bag):
     full = cfg["n_bags"] == 1 and cfg["bag_frac"] >= 1.0 - 1e-15
     seed = cfg["seed"]
     if full:
         return _split_mask(n, _u64(seed + 20_011 * (bag + 1)), cfg["val_frac"])
+    if _oob_mode(cfg):
+        perm = list(range(n))
+        fisher_yates(perm, SplitMix64(_u64(seed + 10_007 * (bag + 1))))
+        m = min(n, max(2, rust_round(cfg["bag_frac"] * n)))
+        if n >= 4:
+            m = min(m, n - 1)
+        perm = perm[:m]
+        mask = np.full(n, 2, dtype=np.uint8)
+        for i in perm:
+            mask[i] = 1
+        return mask
     perm = list(range(n))
     fisher_yates(perm, SplitMix64(_u64(seed + 10_007 * (bag + 1))))
     m = min(n, max(2, rust_round(cfg["bag_frac"] * n)))
@@ -216,6 +252,41 @@ def _bag_mask(n, cfg, bag):
     for t, i in enumerate(perm):
         mask[i] = 2 if t < n_val else 1
     return mask
+
+
+def _center_2d(delta, counts, min_count, weight):
+    m_ch = delta.shape[1]
+    means = np.zeros(m_ch)
+    if weight <= 0.0:
+        return 1.0, means
+    before = 0.0
+    for b in range(delta.shape[0]):
+        if counts[b] >= min_count:
+            v = float(delta[b, 0])
+            before += v * v
+    for m in range(m_ch):
+        mean = 0.0
+        for b in range(delta.shape[0]):
+            if counts[b] >= min_count:
+                mean += float(delta[b, m]) * float(counts[b])
+        means[m] = mean / weight
+        for b in range(delta.shape[0]):
+            if counts[b] >= min_count:
+                delta[b, m] -= means[m]
+    after = 0.0
+    for b in range(delta.shape[0]):
+        if counts[b] >= min_count:
+            v = float(delta[b, 0])
+            after += v * v
+    kept = 1.0 if before <= 0.0 else math.sqrt(after / before)
+    return kept, means
+
+
+def _add_channel_step(level, basis, step):
+    m_ch = basis.shape[1]
+    for kk in range(len(level)):
+        for m in range(m_ch):
+            level[kk] += float(step[m]) * float(basis[kk, m])
 
 
 def _feature_delta(codes, grad, mask, n_bins, k, lr, min_count):
@@ -238,17 +309,8 @@ def _feature_delta(codes, grad, mask, n_bins, k, lr, min_count):
             inv = scale / float(counts[b])
             for m in range(m_ch):
                 delta[b, m] = float(sums[b, m]) * inv
-    if weight > 0.0:
-        for m in range(m_ch):
-            mean = 0.0
-            for b in range(n_bins):
-                if counts[b] >= min_count:
-                    mean += float(delta[b, m]) * float(counts[b])
-            mean /= weight
-            for b in range(n_bins):
-                if counts[b] >= min_count:
-                    delta[b, m] -= mean
-    return delta
+    _kept, means = _center_2d(delta, counts, min_count, weight)
+    return delta, means, weight > 0.0
 
 
 def _apply_delta(theta, coef, codes, delta):
@@ -280,7 +342,15 @@ def _rebuild(theta, codes, order, coef, pairs):
                 theta[i, m] += float(pc[base + m])
 
 
-def _loss_on_rows(y, theta, q0, basis, u, rows):
+def _tail_weights(u):
+    w = np.array([(float(ui) - 0.5) ** 2 for ui in u], dtype=np.float64)
+    s = float(w.sum())
+    if s > 0.0:
+        w /= s
+    return w
+
+
+def _loss_on_rows(y, theta, q0, basis, u, rows, weights=None):
     if not rows:
         return math.nan
     k = len(u)
@@ -296,16 +366,22 @@ def _loss_on_rows(y, theta, q0, basis, u, rows):
                 q += float(th[m]) * float(b[m])
             res = float(y[i]) - q
             r = (float(u[kk]) - 1.0) if res < 0.0 else float(u[kk])
-            acc += res * r
-        total += acc / k
+            pin = res * r
+            acc += pin * float(weights[kk]) if weights is not None else pin / k
+        total += acc
     return total / len(rows)
 
 
-def _feature_gains(y, theta, q0, basis, u, codes, coef, val_rows, threshold):
+def _feature_gains(
+    y, theta, q0, basis, u, codes, coef, val_rows, threshold, kept_round, min_rounds
+):
     p = len(coef)
     m_ch = theta.shape[1]
     base = _loss_on_rows(y, theta, q0, basis, u, val_rows)
+    weights = _tail_weights(u)
+    base_shape = _loss_on_rows(y, theta, q0, basis, u, val_rows, weights) if m_ch >= 3 else 0.0
     gains = np.zeros(p)
+    shape_gains = np.zeros(p)
     selected = np.zeros(p, dtype=bool)
     for j in range(p):
         col = codes[j]
@@ -316,40 +392,70 @@ def _feature_gains(y, theta, q0, basis, u, codes, coef, val_rows, threshold):
                 theta[i, m] -= float(cf[b, m])
         loss_j = _loss_on_rows(y, theta, q0, basis, u, val_rows)
         gains[j] = loss_j - base
-        selected[j] = gains[j] > threshold
         for i in val_rows:
             b = int(col[i])
             for m in range(m_ch):
                 theta[i, m] += float(cf[b, m])
-    return gains, selected
+        if m_ch >= 3:
+            for i in val_rows:
+                b = int(col[i])
+                theta[i, 2] -= float(cf[b, 2])
+            loss_s = _loss_on_rows(y, theta, q0, basis, u, val_rows, weights)
+            shape_gains[j] = loss_s - base_shape
+            for i in val_rows:
+                b = int(col[i])
+                theta[i, 2] += float(cf[b, 2])
+        selected[j] = gains[j] > threshold or shape_gains[j] > threshold
+    if kept_round < min_rounds:
+        selected[:] = True
+    return gains, shape_gains, selected
 
 
 def _boost_main_nb(codes, n_bins, order, y, mask, q0, basis, u, cfg):
     m_ch = basis.shape[1]
     k = len(u)
     p = len(codes)
+    level = np.array(q0, dtype=np.float64, copy=True)
     coef = [np.zeros((n_bins[j], m_ch)) for j in range(p)]
     theta = np.zeros((y.shape[0], m_ch))
-    grad, row_loss = pinball_grad_channels(y, theta, q0, basis, u)
+    grad, row_loss = pinball_grad_channels(y, theta, level, basis, u)
     _, val0, _, n_val = _masked_means(row_loss, mask)
-    use_es = cfg["patience"] > 0 and n_val > 0 and cfg["val_frac"] > 0.0
+    use_es = cfg["patience"] > 0 and n_val > 0 and (cfg["val_frac"] > 0.0 or _oob_mode(cfg))
     best_val = val0
     best_coef = [c.copy() for c in coef]
+    best_level = level.copy()
+    best_round = 0
     stale = 0
     rounds = 0
+    min_rounds = int(cfg.get("min_rounds", 0))
     for _r in range(cfg["max_rounds"]):
+        mean_sum = np.zeros(m_ch)
+        n_used = 0.0
         for j in order:
-            delta = _feature_delta(
+            delta, means, active = _feature_delta(
                 codes[j], grad, mask, n_bins[j], k, cfg["learning_rate"], cfg["min_count"]
             )
+            if active:
+                mean_sum += means
+                n_used += 1.0
             _apply_delta(theta, coef[j], codes[j], delta)
-        grad, row_loss = pinball_grad_channels(y, theta, q0, basis, u)
+        if n_used > 0.0:
+            _add_channel_step(level, basis, mean_sum / n_used)
+        grad, row_loss = pinball_grad_channels(y, theta, level, basis, u)
         _, val_loss, _, _ = _masked_means(row_loss, mask)
         rounds += 1
-        if use_es:
+        if use_es and min_rounds > 0 and rounds <= min_rounds:
+            best_val = val_loss
+            best_coef = [c.copy() for c in coef]
+            best_level = level.copy()
+            best_round = rounds
+            stale = 0
+        elif use_es:
             if val_loss < best_val - cfg["tol"]:
                 best_val = val_loss
                 best_coef = [c.copy() for c in coef]
+                best_level = level.copy()
+                best_round = rounds
                 stale = 0
             else:
                 stale += 1
@@ -357,7 +463,10 @@ def _boost_main_nb(codes, n_bins, order, y, mask, q0, basis, u, cfg):
                     break
     if use_es:
         coef = best_coef
-    return coef, rounds
+        level = best_level
+    else:
+        best_round = rounds
+    return coef, rounds, level, best_round
 
 
 def _pair_delta(left, right, grad, mask, nb_l, nb_r, k, lr, min_count):
@@ -381,17 +490,18 @@ def _pair_delta(left, right, grad, mask, nb_l, nb_r, k, lr, min_count):
             inv = scale / float(counts[c])
             for m in range(m_ch):
                 delta[c * m_ch + m] = float(sums[c, m]) * inv
+    means = np.zeros(m_ch)
     if weight > 0.0:
         for m in range(m_ch):
             mean = 0.0
             for c in range(n_cells):
                 if counts[c] >= min_count:
                     mean += float(delta[c * m_ch + m]) * float(counts[c])
-            mean /= weight
+            means[m] = mean / weight
             for c in range(n_cells):
                 if counts[c] >= min_count:
-                    delta[c * m_ch + m] -= mean
-    return delta
+                    delta[c * m_ch + m] -= means[m]
+    return delta, means, weight > 0.0
 
 
 def _pair_score(left, right, grad, rows, nb_l, nb_r, k):
@@ -462,13 +572,15 @@ def _boost_pairs(codes, n_bins, order, y, mask, q0, basis, u, coef, selected, cf
                 "score": score,
             }
         )
-    use_es = cfg["patience"] > 0 and n_val > 0 and cfg["val_frac"] > 0.0
+    level = np.array(q0, dtype=np.float64, copy=True)
+    use_es = cfg["patience"] > 0 and n_val > 0 and (cfg["val_frac"] > 0.0 or _oob_mode(cfg))
     best_val = val0
     best_pairs = [{**p, "coef": p["coef"].copy()} for p in pairs]
+    best_level = level.copy()
     stale = 0
     rounds = 0
     for _r in range(cfg["interaction_rounds"]):
-        deltas = [
+        packed = [
             _pair_delta(
                 codes[pair["left"]],
                 codes[pair["right"]],
@@ -482,6 +594,14 @@ def _boost_pairs(codes, n_bins, order, y, mask, q0, basis, u, coef, selected, cf
             )
             for pair in pairs
         ]
+        mean_sum = np.zeros(m_ch)
+        n_used = 0.0
+        deltas = []
+        for delta, means, active in packed:
+            if active:
+                mean_sum += means
+                n_used += 1.0
+            deltas.append(delta)
         for pair, delta in zip(pairs, deltas, strict=True):
             pair["coef"] += delta
             cl, cr = codes[pair["left"]], codes[pair["right"]]
@@ -490,13 +610,16 @@ def _boost_pairs(codes, n_bins, order, y, mask, q0, basis, u, coef, selected, cf
                 base = (int(cl[i]) * nb_r + int(cr[i])) * m_ch
                 for m in range(m_ch):
                     theta[i, m] += float(delta[base + m])
-        grad, row_loss = pinball_grad_channels(y, theta, q0, basis, u)
+        if n_used > 0.0:
+            _add_channel_step(level, basis, mean_sum / n_used)
+        grad, row_loss = pinball_grad_channels(y, theta, level, basis, u)
         _, val_loss, _, _ = _masked_means(row_loss, mask)
         rounds += 1
         if use_es:
             if val_loss < best_val - cfg["tol"]:
                 best_val = val_loss
                 best_pairs = [{**p, "coef": p["coef"].copy()} for p in pairs]
+                best_level = level.copy()
                 stale = 0
             else:
                 stale += 1
@@ -504,14 +627,77 @@ def _boost_pairs(codes, n_bins, order, y, mask, q0, basis, u, coef, selected, cf
                     break
     if use_es:
         pairs = best_pairs
+        level = best_level
+    _purify_pairs(pairs, coef, codes, mask)
+    q0[:] = level
     return pairs, rounds
+
+
+def _purify_pairs(pairs, coef, codes, mask):
+    n = mask.shape[0]
+    for pair in pairs:
+        nb_l = pair["n_bins_left"]
+        nb_r = pair["n_bins_right"]
+        left = codes[pair["left"]]
+        right = codes[pair["right"]]
+        m_ch = coef[0].shape[1]
+        counts = np.zeros(nb_l * nb_r, dtype=np.int64)
+        for i in range(n):
+            if mask[i] != 1:
+                continue
+            counts[int(left[i]) * nb_r + int(right[i])] += 1
+        row_w = np.zeros(nb_l)
+        col_w = np.zeros(nb_r)
+        for i in range(nb_l):
+            for j in range(nb_r):
+                c = float(counts[i * nb_r + j])
+                row_w[i] += c
+                col_w[j] += c
+        pc = pair["coef"]
+        for _pass in range(24):
+            moved = 0.0
+            for m in range(m_ch):
+                for i in range(nb_l):
+                    if row_w[i] <= 0.0:
+                        continue
+                    total = 0.0
+                    for j in range(nb_r):
+                        c = float(counts[i * nb_r + j])
+                        total += float(pc[(i * nb_r + j) * m_ch + m]) * c
+                    mean = total / float(row_w[i])
+                    moved = max(moved, abs(mean))
+                    if mean == 0.0:
+                        continue
+                    for j in range(nb_r):
+                        if counts[i * nb_r + j] == 0:
+                            continue
+                        pc[(i * nb_r + j) * m_ch + m] -= mean
+                    coef[pair["left"]][i, m] += mean
+                for j in range(nb_r):
+                    if col_w[j] <= 0.0:
+                        continue
+                    total = 0.0
+                    for i in range(nb_l):
+                        c = float(counts[i * nb_r + j])
+                        total += float(pc[(i * nb_r + j) * m_ch + m]) * c
+                    mean = total / float(col_w[j])
+                    moved = max(moved, abs(mean))
+                    if mean == 0.0:
+                        continue
+                    for i in range(nb_l):
+                        if counts[i * nb_r + j] == 0:
+                            continue
+                        pc[(i * nb_r + j) * m_ch + m] -= mean
+                    coef[pair["right"]][j, m] += mean
+            if moved < 1e-12:
+                break
 
 
 def default_config(**overrides):
     cfg = {
         "n_channels": 3,
         "max_bins": 32,
-        "learning_rate": 0.3,
+        "learning_rate": 1.0,
         "max_rounds": 40,
         "patience": 8,
         "tol": 0.0,
@@ -526,6 +712,7 @@ def default_config(**overrides):
         "min_count": 1,
         "u_levels": 19,
         "seed": 0,
+        "min_rounds": 20,
     }
     cfg.update(overrides)
     return cfg
@@ -562,23 +749,37 @@ def fit_trace(x, y, **overrides):
         mask = _bag_mask(n, cfg, b)
         train_y = y[mask == 1]
         q0 = empirical_quantile(train_y, u)
-        coef, rounds = _boost_main_nb(codes, n_bins, order, y, mask, q0, basis, u, cfg)
+        coef, rounds, q0, kept_round = _boost_main_nb(
+            codes, n_bins, order, y, mask, q0, basis, u, cfg
+        )
         theta = np.zeros((n, m_ch))
         _rebuild(theta, codes, order, coef, [])
         val_rows = [i for i in range(n) if mask[i] == 2]
         had_val = len(val_rows) > 0
         if had_val:
-            gains, selected = _feature_gains(
-                y, theta, q0, basis, u, codes, coef, val_rows, cfg["gain_threshold"]
+            gains, shape_gains, selected = _feature_gains(
+                y,
+                theta,
+                q0,
+                basis,
+                u,
+                codes,
+                coef,
+                val_rows,
+                cfg["gain_threshold"],
+                kept_round,
+                int(cfg.get("min_rounds", 0)),
             )
         else:
             gains = np.zeros(p)
+            shape_gains = np.zeros(p)
             selected = np.ones(p, dtype=bool)
         bags.append(
             {
                 "coef": coef,
                 "q0": q0,
                 "gains": gains,
+                "shape_gains": shape_gains,
                 "selected": selected,
                 "had_val": had_val,
                 "rounds": rounds,
@@ -587,14 +788,17 @@ def fit_trace(x, y, **overrides):
     votes = sum(1 for bag in bags if bag["had_val"])
     select_counts = np.zeros(p, dtype=np.int64)
     gain_sum = np.zeros(p)
+    shape_sum = np.zeros(p)
     for bag in bags:
         if bag["had_val"]:
             select_counts += bag["selected"].astype(np.int64)
             gain_sum += bag["gains"]
+            shape_sum += bag["shape_gains"]
     selected = np.array(
         [_frequency_keeps(int(select_counts[j]), votes, cfg["select_frac"]) for j in range(p)]
     )
     gains = gain_sum / votes if votes else np.zeros(p)
+    shape_gains = shape_sum / votes if votes else np.zeros(p)
     coef = [np.zeros((n_bins[j], m_ch)) for j in range(p)]
     std = [np.zeros((n_bins[j], m_ch)) for j in range(p)]
     n_bags_f = float(cfg["n_bags"])
@@ -617,7 +821,11 @@ def fit_trace(x, y, **overrides):
     for bag in bags:
         q0 += bag["q0"]
     q0 /= n_bags_f
-    report = _split_mask(n, _u64(cfg["seed"] + 20_011), cfg["val_frac"])
+    report = (
+        _bag_mask(n, cfg, 0)
+        if _oob_mode(cfg)
+        else _split_mask(n, _u64(cfg["seed"] + 20_011), cfg["val_frac"])
+    )
     pairs, interaction_rounds = _boost_pairs(
         codes, n_bins, order, y, report, q0, basis, u, coef, selected, cfg
     )
@@ -636,6 +844,7 @@ def fit_trace(x, y, **overrides):
         "std": std,
         "selected": selected,
         "gains": gains,
+        "shape_gains": shape_gains,
         "select_counts": select_counts,
         "pairs": pairs,
         "train_loss": train_loss,

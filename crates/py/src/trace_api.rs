@@ -44,6 +44,7 @@ fn config_from(
     min_count: u64,
     u_levels: usize,
     seed: u64,
+    min_rounds: usize,
 ) -> TraceConfig {
     TraceConfig {
         n_channels,
@@ -63,6 +64,7 @@ fn config_from(
         min_count,
         u_levels,
         seed,
+        min_rounds,
     }
 }
 
@@ -97,9 +99,10 @@ impl PyTraceModel {
     /// Fit from a dense row-major ``X`` of shape ``(n, p)`` and a finite ``y``.
     #[staticmethod]
     #[pyo3(signature = (
-        x, y, n_channels=3, max_bins=32, learning_rate=0.3, max_rounds=40, patience=8, tol=0.0,
+        x, y, n_channels=3, max_bins=32, learning_rate=1.0, max_rounds=40, patience=8, tol=0.0,
         val_frac=0.2, n_bags=1, bag_frac=1.0, gain_threshold=0.0, select_frac=0.7,
-        max_interactions=0, interaction_rounds=15, screen_rows=4096, min_count=1, u_levels=19, seed=0
+        max_interactions=0, interaction_rounds=15, screen_rows=4096, min_count=1, u_levels=19, seed=0,
+        min_rounds=20
     ))]
     #[allow(clippy::too_many_arguments)]
     fn fit(
@@ -123,6 +126,7 @@ impl PyTraceModel {
         min_count: u64,
         u_levels: usize,
         seed: u64,
+        min_rounds: usize,
     ) -> PyResult<Self> {
         let (n, p) = x.as_array().dim();
         let (xs, ys) = (slice2(&x)?, slice1(&y)?);
@@ -144,6 +148,7 @@ impl PyTraceModel {
             min_count,
             u_levels,
             seed,
+            min_rounds,
         );
         let inner = py.detach(|| fit_trace(xs, n, p, ys, &cfg)).map_err(err)?;
         Ok(Self { inner })
@@ -151,9 +156,10 @@ impl PyTraceModel {
 
     #[staticmethod]
     #[pyo3(signature = (
-        codes, edges, y, n_channels=3, max_bins=32, learning_rate=0.3, max_rounds=40, patience=8,
+        codes, edges, y, n_channels=3, max_bins=32, learning_rate=1.0, max_rounds=40, patience=8,
         tol=0.0, val_frac=0.2, n_bags=1, bag_frac=1.0, gain_threshold=0.0, select_frac=0.7,
-        max_interactions=0, interaction_rounds=15, screen_rows=4096, min_count=1, u_levels=19, seed=0
+        max_interactions=0, interaction_rounds=15, screen_rows=4096, min_count=1, u_levels=19, seed=0,
+        min_rounds=20
     ))]
     #[allow(clippy::too_many_arguments)]
     fn fit_codes_u8(
@@ -178,6 +184,7 @@ impl PyTraceModel {
         min_count: u64,
         u_levels: usize,
         seed: u64,
+        min_rounds: usize,
     ) -> PyResult<Self> {
         let (p, n) = codes.as_array().dim();
         let cs = codes
@@ -203,6 +210,7 @@ impl PyTraceModel {
             min_count,
             u_levels,
             seed,
+            min_rounds,
         );
         let inner = py
             .detach(|| fit_codes_u8(cs, n, p, edges, ys, &cfg))
@@ -212,9 +220,10 @@ impl PyTraceModel {
 
     #[staticmethod]
     #[pyo3(signature = (
-        codes, edges, y, n_channels=3, max_bins=32, learning_rate=0.3, max_rounds=40, patience=8,
+        codes, edges, y, n_channels=3, max_bins=32, learning_rate=1.0, max_rounds=40, patience=8,
         tol=0.0, val_frac=0.2, n_bags=1, bag_frac=1.0, gain_threshold=0.0, select_frac=0.7,
-        max_interactions=0, interaction_rounds=15, screen_rows=4096, min_count=1, u_levels=19, seed=0
+        max_interactions=0, interaction_rounds=15, screen_rows=4096, min_count=1, u_levels=19, seed=0,
+        min_rounds=20
     ))]
     #[allow(clippy::too_many_arguments)]
     fn fit_codes_u16(
@@ -239,6 +248,7 @@ impl PyTraceModel {
         min_count: u64,
         u_levels: usize,
         seed: u64,
+        min_rounds: usize,
     ) -> PyResult<Self> {
         let (p, n) = codes.as_array().dim();
         let cs = codes
@@ -264,6 +274,7 @@ impl PyTraceModel {
             min_count,
             u_levels,
             seed,
+            min_rounds,
         );
         let inner = py
             .detach(|| fit_codes_u16(cs, n, p, edges, ys, &cfg))
@@ -276,7 +287,7 @@ impl PyTraceModel {
         py: Python<'py>,
         x: PyReadonlyArray2<'_, f64>,
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        self.predict_flag(py, x, true)
+        self.predict_flag(py, x, true, false)
     }
 
     fn predict_raw<'py>(
@@ -284,7 +295,28 @@ impl PyTraceModel {
         py: Python<'py>,
         x: PyReadonlyArray2<'_, f64>,
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        self.predict_flag(py, x, false)
+        self.predict_flag(py, x, false, false)
+    }
+
+    #[pyo3(signature = (x, project=true))]
+    fn predict_calibrated<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+        project: bool,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        self.predict_flag(py, x, project, true)
+    }
+
+    fn calibrate(
+        &mut self,
+        py: Python<'_>,
+        x: PyReadonlyArray2<'_, f64>,
+        y: PyReadonlyArray1<'_, f64>,
+    ) -> PyResult<()> {
+        let (n, _) = x.as_array().dim();
+        let (xs, ys) = (slice2(&x)?, slice1(&y)?);
+        py.detach(|| self.inner.calibrate(xs, n, ys)).map_err(err)
     }
 
     fn permutation_importance<'py>(
@@ -312,6 +344,27 @@ impl PyTraceModel {
         let (n, _) = x.as_array().dim();
         let (xs, ys) = (slice2(&x)?, slice1(&y)?);
         let s = py.detach(|| self.inner.score(xs, n, ys)).map_err(err)?;
+        let d = PyDict::new(py);
+        d.set_item("pinball", s.pinball)?;
+        d.set_item("crps", s.crps)?;
+        d.set_item("cover80", s.cover80)?;
+        d.set_item("cover90", s.cover90)?;
+        d.set_item("mse_median", s.mse_median)?;
+        d.set_item("mse_mean", s.mse_mean)?;
+        Ok(d)
+    }
+
+    fn score_calibrated<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+        y: PyReadonlyArray1<'_, f64>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let (n, _) = x.as_array().dim();
+        let (xs, ys) = (slice2(&x)?, slice1(&y)?);
+        let s = py
+            .detach(|| self.inner.score_calibrated(xs, n, ys))
+            .map_err(err)?;
         let d = PyDict::new(py);
         d.set_item("pinball", s.pinball)?;
         d.set_item("crps", s.crps)?;
@@ -391,6 +444,16 @@ impl PyTraceModel {
     }
 
     #[getter]
+    fn shape_gains<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        Array1::from_vec(self.inner.shape_gains.clone()).into_pyarray(py)
+    }
+
+    #[getter]
+    fn calibration<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        Array1::from_vec(self.inner.calibration.clone()).into_pyarray(py)
+    }
+
+    #[getter]
     fn select_counts<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<i64>> {
         let v: Vec<i64> = self.inner.select_counts.iter().map(|&c| c as i64).collect();
         Array1::from_vec(v).into_pyarray(py)
@@ -424,6 +487,26 @@ impl PyTraceModel {
     }
 
     #[getter]
+    fn round_train<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        Array1::from_vec(self.inner.round_train.clone()).into_pyarray(py)
+    }
+
+    #[getter]
+    fn round_val<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        Array1::from_vec(self.inner.round_val.clone()).into_pyarray(py)
+    }
+
+    #[getter]
+    fn round_step<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        Array1::from_vec(self.inner.round_step.clone()).into_pyarray(py)
+    }
+
+    #[getter]
+    fn round_center_kept<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        Array1::from_vec(self.inner.round_center_kept.clone()).into_pyarray(py)
+    }
+
+    #[getter]
     fn n_channels(&self) -> usize {
         self.inner.n_channels
     }
@@ -433,11 +516,18 @@ impl PyTraceModel {
         py: Python<'py>,
         x: PyReadonlyArray2<'_, f64>,
         project: bool,
+        calibrated: bool,
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
         let (n, _) = x.as_array().dim();
         let xs = slice2(&x)?;
         let q = py
-            .detach(|| self.inner.predict(xs, n, project))
+            .detach(|| {
+                if calibrated {
+                    self.inner.predict_calibrated(xs, n, project)
+                } else {
+                    self.inner.predict(xs, n, project)
+                }
+            })
             .map_err(err)?;
         Ok(flat_to_2d(py, q, n, self.inner.u.len()))
     }
@@ -477,6 +567,11 @@ fn trace_empirical_quantile<'py>(
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let q = trace::empirical_quantile(slice1(&y)?, slice1(&u)?).map_err(err)?;
     Ok(Array1::from_vec(q).into_pyarray(py))
+}
+
+#[pyfunction]
+fn trace_conformal_quantile(y: PyReadonlyArray1<'_, f64>, u: f64) -> PyResult<f64> {
+    trace::conformal_quantile(slice1(&y)?, u).map_err(err)
 }
 
 #[pyfunction]
@@ -642,6 +737,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(trace_basis, m)?)?;
     m.add_function(wrap_pyfunction!(trace_column_order, m)?)?;
     m.add_function(wrap_pyfunction!(trace_empirical_quantile, m)?)?;
+    m.add_function(wrap_pyfunction!(trace_conformal_quantile, m)?)?;
     m.add_function(wrap_pyfunction!(trace_pinball_grad, m)?)?;
     m.add_function(wrap_pyfunction!(target_proxy_screen, m)?)?;
     m.add_function(wrap_pyfunction!(duplicate_screen, m)?)?;

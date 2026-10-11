@@ -82,7 +82,7 @@ class TraceRegressor(EstimatorMixin):
         self,
         n_channels: int = 3,
         max_bins: int = 32,
-        learning_rate: float = 0.3,
+        learning_rate: float = 1.0,
         max_rounds: int = 40,
         patience: int = 8,
         tol: float = 0.0,
@@ -97,6 +97,7 @@ class TraceRegressor(EstimatorMixin):
         min_count: int = 1,
         u_levels: int = 19,
         seed: int = 0,
+        min_rounds: int = 20,
     ):
         self.n_channels = n_channels
         self.max_bins = max_bins
@@ -115,6 +116,7 @@ class TraceRegressor(EstimatorMixin):
         self.min_count = min_count
         self.u_levels = u_levels
         self.seed = seed
+        self.min_rounds = min_rounds
 
     def _check_fitted(self):
         if not hasattr(self, "model_"):
@@ -141,6 +143,7 @@ class TraceRegressor(EstimatorMixin):
             min_count=int(self.min_count),
             u_levels=int(self.u_levels),
             seed=int(self.seed),
+            min_rounds=int(self.min_rounds),
         )
 
     def _remember(self, p: int):
@@ -151,6 +154,7 @@ class TraceRegressor(EstimatorMixin):
         self.order_ = np.asarray(m.order)
         self.selected_ = np.asarray(m.selected)
         self.gains_ = np.asarray(m.gains)
+        self.shape_gains_ = np.asarray(m.shape_gains)
         self.train_loss_ = float(m.train_loss)
         self.val_loss_ = float(m.val_loss)
         return self
@@ -185,23 +189,48 @@ class TraceRegressor(EstimatorMixin):
             raise ValueError("codes must be uint8 or uint16")
         return self._remember(codes.shape[0])
 
-    def predict(self, X, project: bool = True) -> np.ndarray:
+    def predict(self, X, project: bool = True, calibrated: bool = False) -> np.ndarray:
         """Quantile functions of shape ``(n, u_levels)``.
 
         ``project=True`` applies isotonic regression in the quantile level.
+        ``calibrated=True`` adds split-conformal offsets from :meth:`calibrate`
+        before that projection.
         """
         self._check_fitted()
         X = _check_X(X, self.n_features_in_)
+        if calibrated:
+            return self.model_.predict_calibrated(X, project)
         if project:
             return self.model_.predict(X)
         return self.model_.predict_raw(X)
 
-    def score(self, X, y) -> dict:
-        """Pinball, CRPS approximation, coverage and squared errors on ``(X, y)``."""
+    def calibrate(self, X, y):
+        """Fit per-level split-conformal offsets on a held-out sample.
+
+        Residuals are ``y - Q(u|x)`` on the projected raw curve. The offset at
+        each level is the conformal order statistic ``ceil((n+1) u) - 1``.
+        """
         self._check_fitted()
         X = _check_X(X, self.n_features_in_)
         y = _check_y(y, X.shape[0])
-        return self.model_.score(X, y)
+        self.model_.calibrate(X, y)
+        return self
+
+    def score(self, X, y) -> dict:
+        """Pinball, CRPS approximation, coverage and squared errors on ``(X, y)``.
+
+        When :meth:`calibrate` has been called, calibrated coverage and pinball
+        are included under the ``_calibrated`` suffix.
+        """
+        self._check_fitted()
+        X = _check_X(X, self.n_features_in_)
+        y = _check_y(y, X.shape[0])
+        out = dict(self.model_.score(X, y))
+        if np.asarray(self.model_.calibration).size:
+            extra = dict(self.model_.score_calibrated(X, y))
+            for key, value in extra.items():
+                out[f"{key}_calibrated"] = value
+        return out
 
     def effect(self, j: int):
         """``(coef, std)`` for feature ``j``, each of shape ``(n_bins, n_channels)``.

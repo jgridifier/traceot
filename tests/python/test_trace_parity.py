@@ -5,6 +5,7 @@ import numpy as np
 from reference.trace import (
     column_order,
     conformal_pvalues,
+    conformal_quantile,
     duplicate_screen,
     empirical_quantile,
     feature_w2,
@@ -61,6 +62,13 @@ def test_basis_quantile_and_gradient_match():
     np.testing.assert_allclose(
         _core.trace_empirical_quantile(y, uq), empirical_quantile(y, uq), atol=ATOL, rtol=0
     )
+    for level in (0.1, 0.25, 0.5, 0.9):
+        np.testing.assert_allclose(
+            _core.trace_conformal_quantile(y, level),
+            conformal_quantile(y, level),
+            atol=ATOL,
+            rtol=0,
+        )
     theta = np.array([[0.1, -0.2, 0.0], [0.0, 0.3, -0.1], [0.4, 0.0, 0.2], [-0.2, 0.1, 0.05]])
     q0 = np.linspace(-1.0, 1.0, 11)
     g, loss = pinball_grad_channels(y[:4], theta, q0, basis, u)
@@ -77,6 +85,7 @@ def test_fit_and_predict_match():
     np.testing.assert_allclose(model.basis, ref["basis"], atol=ATOL, rtol=0)
     np.testing.assert_array_equal(np.asarray(model.order), np.asarray(ref["order"]))
     np.testing.assert_allclose(model.gains, ref["gains"], atol=ATOL, rtol=0)
+    np.testing.assert_allclose(model.shape_gains, ref["shape_gains"], atol=ATOL, rtol=0)
     np.testing.assert_array_equal(np.asarray(model.selected), np.asarray(ref["selected"]))
     np.testing.assert_array_equal(np.asarray(model.select_counts), np.asarray(ref["select_counts"]))
     np.testing.assert_allclose(model.train_loss, ref["train_loss"], atol=ATOL, rtol=0)

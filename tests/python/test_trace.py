@@ -157,3 +157,31 @@ def test_held_out_gain_keeps_the_signal():
     ).fit(x, y)
     assert bool(dropped.selected_[0])
     assert not bool(dropped.selected_[1])
+
+
+def test_split_conformal_reports_raw_and_calibrated_coverage():
+    rng = np.random.default_rng(3)
+    n = 800
+    x = rng.random((n, 2))
+    y = x[:, 0] + 0.08 * rng.normal(size=n)
+    model = TraceRegressor(
+        max_rounds=20,
+        patience=0,
+        val_frac=0.0,
+        min_rounds=0,
+        learning_rate=1.0,
+        max_bins=8,
+        u_levels=15,
+        seed=3,
+    ).fit(x[:500], y[:500])
+    raw = model.score(x[650:], y[650:])
+    model.calibrate(x[500:650], y[500:650])
+    both = model.score(x[650:], y[650:])
+    assert both["cover80"] == raw["cover80"]
+    assert "cover80_calibrated" in both
+    assert "cover90_calibrated" in both
+    assert 0.0 <= both["cover80_calibrated"] <= 1.0
+    q_raw = model.predict(x[650:])
+    q_cal = model.predict(x[650:], calibrated=True)
+    assert q_cal.shape == q_raw.shape
+    assert not np.allclose(q_raw, q_cal)

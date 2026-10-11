@@ -114,7 +114,33 @@ pub fn quantile_basis(n_levels: usize, n_channels: usize) -> Result<(Vec<f64>, V
     Ok((u, basis))
 }
 
-/// Order statistics of finite `y` on the probability grid `u`.
+/// Lower endpoint of the pinball minimiser on a finite sample.
+///
+/// For a level `u`, the check loss is minimised by every `q` in the closed interval
+/// between two order statistics when `u * n` is an integer, and by a single order
+/// statistic otherwise. The unique minimiser (non-integer case) is the order
+/// statistic `y_(ceil(u*n))` in 1-based ranking, which is `sorted[ceil(u*n) - 1]`.
+/// When `u * n` is an integer the minimisers are `[y_(u*n), y_(u*n+1)]` (1-based):
+/// the lower endpoint is `sorted[u*n - 1]` and the upper endpoint is `sorted[u*n]`
+/// (the same index `floor(u*n)` produces). TRACE uses the lower endpoint,
+/// `clamp(ceil(u*n) - 1, 0, n-1)`. The two conventions agree whenever `u*n` is not
+/// an integer.
+pub fn pinball_quantile_index(u: f64, n: usize) -> usize {
+    if n == 0 {
+        return 0;
+    }
+    if u <= 0.0 {
+        return 0;
+    }
+    if u >= 1.0 {
+        return n - 1;
+    }
+    let ceil_un = (u * n as f64).ceil();
+    let idx = (ceil_un - 1.0).max(0.0);
+    (idx as usize).min(n - 1)
+}
+
+/// Order statistics of finite `y` on the probability grid `u` (lower pinball convention).
 pub fn empirical_quantile(y: &[f64], u: &[f64]) -> Result<Vec<f64>> {
     if y.is_empty() || u.is_empty() {
         return Err(TraceError::InvalidArgument(
@@ -130,11 +156,32 @@ pub fn empirical_quantile(y: &[f64], u: &[f64]) -> Result<Vec<f64>> {
     ys.sort_by(f64::total_cmp);
     let n = ys.len();
     Ok(u.iter()
-        .map(|&ui| {
-            let r = (ui * n as f64).floor() as usize;
-            ys[r.min(n - 1)]
-        })
+        .map(|&ui| ys[pinball_quantile_index(ui, n)])
         .collect())
+}
+
+/// Split-conformal residual quantile. Index `ceil((n+1) * u) - 1`, clamped to the
+/// sample. This is the upper finite-sample rank used for one-sided coverage at
+/// level `u`, and it is not the same index as [`empirical_quantile`]: the `+1`
+/// in `n+1` is the conformal correction. When the rank would pass `n`, the largest
+/// residual is used.
+pub fn conformal_quantile(y: &[f64], u: f64) -> Result<f64> {
+    if y.is_empty() || !u.is_finite() {
+        return Err(TraceError::InvalidArgument(
+            "conformal_quantile needs residuals and a finite level".into(),
+        ));
+    }
+    if y.iter().any(|v| !v.is_finite()) {
+        return Err(TraceError::InvalidArgument(
+            "residuals must be finite".into(),
+        ));
+    }
+    let mut ys = y.to_vec();
+    ys.sort_by(f64::total_cmp);
+    let n = ys.len();
+    let rank = ((n as f64 + 1.0) * u).ceil();
+    let idx = (rank - 1.0).clamp(0.0, (n - 1) as f64) as usize;
+    Ok(ys[idx])
 }
 
 /// Lexicographic column order under `f64::total_cmp`. A permutation of the columns
@@ -177,5 +224,36 @@ mod tests {
         let loc0 = b[0];
         assert!((0..19).all(|k| (b[k * 3] - loc0).abs() < 1e-15));
         assert!(quantile_basis(19, 5).is_err());
+    }
+
+    #[test]
+    fn lower_pinball_endpoint_when_level_times_n_is_integral() {
+        let y = [1.0, 2.0, 3.0, 4.0];
+        // u*n = 2. Lower endpoint is y_(2) = 2. The upper endpoint would be y_(3) = 3.
+        let q = empirical_quantile(&y, &[0.5]).unwrap();
+        assert_eq!(q[0], 2.0);
+        let q = empirical_quantile(&y, &[0.25]).unwrap();
+        assert_eq!(q[0], 1.0);
+        // u*n = 1.6 is not integral, so lower and upper indices agree at 1 (value 2).
+        let q = empirical_quantile(&y, &[0.4]).unwrap();
+        assert_eq!(q[0], 2.0);
+        let upper = {
+            let n: f64 = 4.0;
+            let r = (0.5 * n).floor() as usize;
+            y[r.min(3)]
+        };
+        assert_eq!(upper, 3.0);
+    }
+
+    #[test]
+    fn conformal_rank_uses_n_plus_one() {
+        let y = [1.0, 2.0, 3.0];
+        // ceil((3+1)*0.5) - 1 = 1 → 2. The plain lower pinball index would be ceil(1.5)-1 = 1 as well.
+        assert_eq!(conformal_quantile(&y, 0.5).unwrap(), 2.0);
+        // ceil(4*0.9)-1 = 3, clamped to the last residual.
+        assert_eq!(conformal_quantile(&y, 0.9).unwrap(), 3.0);
+        // ceil(4*0.25)-1 = 0 → 1, while floor(0.25*3) = 0 as well. A split case:
+        // u = 2/4 = 0.5 already checked. u = 1/(n+1) = 0.25.
+        assert_eq!(conformal_quantile(&y, 0.2).unwrap(), 1.0);
     }
 }

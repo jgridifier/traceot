@@ -149,6 +149,9 @@ def _fmt(v, digits=3):
     if v is None:
         return "—"
     if isinstance(v, float):
+        # Three decimals hide a 0.01024 against a 0.01018.
+        if digits == 3 and abs(v) < 0.05:
+            return f"{v:.5f}"
         return f"{v:.{digits}f}"
     return str(v)
 
@@ -191,19 +194,56 @@ def _results_html():
                 )
                 continue
             conf = eb["conformal"]
+            cal = tr.get("calibrated") or {}
             erows.append(
-                f"<tr><td>{case['name']} TRACE</td><td>{_fmt(tr['crps'])}</td><td>{_fmt(tr['cover80'])}</td>"
-                f"<td>{_fmt(tr['mse_mean'])}</td><td>{_fmt(tr['fit_seconds'], 2)}</td></tr>"
+                f"<tr><td>{case['name']} TRACE raw</td><td>{_fmt(tr['crps'])}</td>"
+                f"<td>{_fmt(tr['cover80'])}</td><td>{_fmt(tr['mse_mean'])}</td>"
+                f"<td>{_fmt(tr['fit_seconds'], 2)}</td></tr>"
+            )
+            if cal:
+                erows.append(
+                    f"<tr><td>{case['name']} TRACE calibrated</td><td>{_fmt(cal['crps'])}</td>"
+                    f"<td>{_fmt(cal['cover80'])}</td><td>{_fmt(cal['mse_mean'])}</td><td>—</td></tr>"
+                )
+            erows.append(
                 f"<tr><td>{case['name']} EBM + conformal</td><td>{_fmt(conf['crps'])}</td>"
                 f"<td>{_fmt(conf['cover80'])}</td><td>{_fmt(conf['mse_mean'])}</td>"
                 f"<td>{_fmt(eb['fit_seconds'], 2)}</td></tr>"
             )
+        notes = []
+        for key, label in (
+            ("s1_period2", "S1 period 2"),
+            ("vendor_spend", "vendor spend"),
+            ("scale_small", "n = 2e4"),
+        ):
+            case = ebm.get(key)
+            if not case or not case["ebm"].get("available"):
+                continue
+            tr = case["trace"]
+            conf = case["ebm"]["conformal"]
+            cal = tr.get("calibrated") or {}
+            trace_crps = min(tr["crps"], cal.get("crps", tr["crps"]))
+            trace_mse = min(tr["mse_mean"], cal.get("mse_mean", tr["mse_mean"]))
+            bits = []
+            if conf["crps"] < trace_crps:
+                bits.append("CRPS")
+            if conf["mse_mean"] < trace_mse:
+                bits.append("MSE of the mean")
+            if bits:
+                notes.append(f"on {label}, {' and '.join(bits)}")
+        won = (
+            "EBM plus conformal residuals still wins " + "; ".join(notes) + "."
+            if notes
+            else "EBM plus conformal residuals does not win CRPS or mean squared error on these three cases."
+        )
         extra = (
             '<div class="scroll"><table><caption>TRACE and EBM plus residual quantiles</caption>'
             "<thead><tr><th></th><th>CRPS</th><th>80% cover</th><th>MSE of mean</th><th>Fit s</th></tr></thead><tbody>"
             + "".join(erows)
             + "</tbody></table></div>"
-            "<p>Full tables, including where a mean EBM wins, are in <code>docs/TRACE_SIMS.md</code>.</p>"
+            "<p>Raw TRACE coverage and calibrated TRACE coverage are different rows. "
+            f"{won} "
+            "Full tables, including the v0 numbers, are in <code>docs/TRACE_SIMS.md</code>.</p>"
         )
     return table + extra
 
@@ -308,7 +348,7 @@ def main():
 </tbody>
 </table></div>
 <p>The fair distributional baseline is not “EBM has no intervals”. Fit the EBM, take residuals on a calibration split, and add those residual quantiles to the prediction. The band then has a width, but the width does not depend on x, and it does not have a separate tail shape per feature. TRACE's scale channel is allowed to depend on x. Its shape channel is allowed to bend the tails.</p>
-<p>The residual-quantile baseline can still win on coverage, because split-conformal residuals are built to hit a coverage target when the residuals are exchangeable. TRACE's grid pinball loss does not promise 80% or 90% coverage. Both numbers are reported.</p>
+<p>TRACE's grid pinball loss does not promise 80% or 90% coverage, so the raw row can sit above those levels. The calibrated row is a split-conformal offset and is scored on its own. The residual-quantile EBM is built to hit a coverage target when the residuals are exchangeable. Both coverages are in the table.</p>
 {_results_html()}
 <p>There is no winner rule on the vendor-spend draw. It is a simulated table of units, price, deliveries, distance, quality and season, with a planted location, a planted scale and a small tail. The metrics sit next to S1–S4 in the simulation note.</p>
 </section>
@@ -317,7 +357,7 @@ def main():
 <h2>How TRACE fits</h2>
 <p>The model, written on the quantile function:</p>
 <p><code>Q(u | x) = Q0(u) + Σj fj(xj, u) + Σpairs fjk(xj, xk, u)</code></p>
-<p>then a monotone projection in <code>u</code>. <code>Q0</code> is the marginal quantile of the training outcomes. Each feature function uses a short basis in the level <code>u</code>.</p>
+<p>then a monotone projection in <code>u</code>. <code>Q0</code> starts as the lower pinball endpoint of the training outcomes (the order statistic at <code>ceil(u n) - 1</code>) and then absorbs the shared channel correction. Each feature function uses a short basis in the level <code>u</code>.</p>
 <figure>{fig_channels()}
 <figcaption>The three channels, drawn against the quantile level. Location is flat. Scale follows the normal quantile z(u). Shape follows z³ − 3z, which is small in the middle and large in the tails. Each column is rescaled to unit root-mean-square before fitting.</figcaption></figure>
 <ol>
@@ -325,10 +365,11 @@ def main():
 <li>Each round, compute the pinball subgradient of the current quantile fit once, on a fixed grid (19 levels by default). Average pinball on that grid is the training loss, and twice that average is the reported CRPS approximation.</li>
 <li>Update every feature from that same gradient. Do not refresh the gradient between features. Refreshing it would make the answer depend on which column was visited first, which is the failure TRACE is written to avoid.</li>
 <li>Add the updates in a canonical order of the raw columns, so a permutation of the columns is the same sum.</li>
-<li>Stop early when a held-out slice of the pinball loss stops improving. Drop a feature whose held-out gain stays below a threshold, and, with several bags, keep a feature only if it is selected in at least 70% of the bags.</li>
-<li>Screen pairs by a residual-gradient energy on a two-dimensional histogram, fit the selected pairs, then project each predicted curve so it increases in <code>u</code>.</li>
+<li>Center each feature update, then add the average of the removed channel means back once, into the shared quantile level. A common scale correction is kept. It is not added once per feature.</li>
+<li>Stop early on a held-out slice, but not before <code>min_rounds</code>. With more than one bag and a bag fraction below 1, that slice is the out-of-bag rows. Drop a feature only after those rounds, and keep it when either the full pinball gain or the shape channel's tail-weighted gain clears the threshold. Several bags keep a feature selected in at least 70% of them.</li>
+<li>Screen pairs by a residual-gradient energy on a two-dimensional histogram, fit them, then center each pair on both margins and move those margins into the main effects. Project each predicted curve so it increases in <code>u</code>. An optional calibration split adds a conformal offset at each level and projects again.</li>
 </ol>
-<p>The projection is what makes the delivered quantiles monotone. It is also what blurs a shape interaction: a bend that would have decreased in <code>u</code> gets flattened, and the pure interaction contrast shrinks. A pure location interaction, constant in <code>u</code>, is left alone. The measured ratios are in the simulation note. Pair tables in v0 are centered by their grand mean only, so a pair can still carry a main-effect margin. That is an open gap, not a hidden feature.</p>
+<p>The projection is what makes the delivered quantiles monotone. It is also what blurs a shape interaction: a bend that would have decreased in <code>u</code> gets flattened, and the pure interaction contrast shrinks. A pure location interaction, constant in <code>u</code>, is left alone. The measured ratios are in the simulation note.</p>
 <p>A round is one pass over the rows for the gradient and one pass per feature for the histogram. Nothing in that path builds an <code>n × n</code> matrix. The design note has the pseudocode and the complexity table: <a href="https://github.com/jgridifier/traceot/blob/main/docs/TRACE_DESIGN.md">TRACE_DESIGN.md</a>.</p>
 </section>
 
