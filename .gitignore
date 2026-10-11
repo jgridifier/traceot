@@ -1,0 +1,13 @@
+/target/
+**/target/
+__pycache__/
+*.pyc
+*.so
+*.pyd
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+benchmarks/results/raw/

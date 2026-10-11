@@ -1,0 +1,13 @@
+[package]
+name = "traceot-core"
+description = "Numerical core of traceot: 1-D optimal transport on quantile grids, local Frechet smoothers and ADOPT transport backfitting."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+name = "traceot_core"
+
+[dependencies]

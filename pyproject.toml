@@ -1,0 +1,47 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "traceot"
+description = "Glass-box optimal-transport regression: ADOPT reproduction (Song & Mueller, AISTATS 2026) on the way to TRACE. Research, unvalidated."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "jgridifier" }]
+dependencies = ["numpy>=1.24"]
+dynamic = ["version"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.optional-dependencies]
+sim = ["scipy>=1.10"]
+docs = ["scipy>=1.10", "matplotlib>=3.7"]
+dev = ["pytest>=7", "ruff>=0.5", "scipy>=1.10", "maturin>=1.7,<2"]
+
+[project.urls]
+Repository = "https://github.com/jgridifier/traceot"
+Documentation = "https://jgridifier.github.io/traceot/"
+
+[tool.maturin]
+manifest-path = "crates/py/Cargo.toml"
+python-source = "python"
+module-name = "traceot._core"
+features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY"]
+ignore = ["E741"]
