@@ -132,9 +132,7 @@ def main():
     quality = rng.uniform(0, 1, size=4000)
     season = rng.uniform(0, 1, size=4000)
     noise = rng.normal(size=(4000, 3))
-    xv = np.column_stack(
-        [log_units, unit_price, deliveries, distance, quality, season, noise]
-    )
+    xv = np.column_stack([log_units, unit_price, deliveries, distance, quality, season, noise])
     from statistics import NormalDist
 
     z = np.array([NormalDist().inv_cdf(float(v)) for v in rng.random(4000)])
@@ -204,9 +202,7 @@ def main():
         )
     )
     if OUT.exists() and os.environ.get("TRACE_DIAG_FORCE") != "1":
-        raise SystemExit(
-            f"{OUT} is the v0 diagnosis log. Set TRACE_DIAG_FORCE=1 to overwrite it."
-        )
+        raise SystemExit(f"{OUT} is the v0 diagnosis log. Set TRACE_DIAG_FORCE=1 to overwrite it.")
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(rows, indent=2))
     for row in rows:
