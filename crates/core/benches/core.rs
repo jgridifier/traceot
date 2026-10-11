@@ -1,0 +1,115 @@
+//! Criterion benchmarks for traceot-core.
+//!
+//! Two families, kept apart on purpose:
+//! * `adopt/*`  - faithful ADOPT reproduction path, O(n^2 p q) per backfitting cycle;
+//! * `scalable/*` - TRACE primitives (binning, histograms, pinball gradients), O(n) passes.
+//!
+//! Run: `cargo bench -p traceot-core` (results in target/criterion).
+
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use traceot_core::adopt::{adopt_w2_fit, BackfitConfig};
+use traceot_core::scalable::{binning, histogram, pinball, sketch::QuantileSketch};
+use traceot_core::w2::{pava, quantile_grid, transport_apply};
+use traceot_core::Mat;
+
+fn lcg(seed: &mut u64) -> f64 {
+    *seed = seed
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
+    ((*seed >> 11) as f64) / ((1u64 << 53) as f64)
+}
+
+fn normals(n: usize, seed: u64) -> Vec<f64> {
+    let mut s = seed;
+    (0..n)
+        .map(|_| {
+            let (a, b) = (lcg(&mut s).max(1e-300), lcg(&mut s));
+            (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos()
+        })
+        .collect()
+}
+
+fn bench_w2(c: &mut Criterion) {
+    let q = 100;
+    let y = normals(q, 1);
+    c.bench_function("w2/pava_q100", |b| {
+        b.iter(|| pava(black_box(&y), None, None))
+    });
+    let mut a = normals(q, 2);
+    a.sort_by(f64::total_cmp);
+    let mut t = normals(q, 3);
+    t.sort_by(f64::total_cmp);
+    c.bench_function("w2/transport_apply_q100", |b| {
+        b.iter(|| transport_apply(black_box(&a), black_box(&t), black_box(&a)))
+    });
+}
+
+fn bench_adopt(c: &mut Criterion) {
+    let mut g = c.benchmark_group("adopt");
+    g.sample_size(10);
+    let q = 100;
+    let u = quantile_grid(q);
+    for &n in &[100usize, 300, 1000] {
+        let mut s = 11u64;
+        let mut x = Mat::zeros(n, 3);
+        let mut y = Mat::zeros(n, q);
+        for i in 0..n {
+            let r = [lcg(&mut s), lcg(&mut s), lcg(&mut s)];
+            x.row_mut(i).copy_from_slice(&r);
+            for (k, v) in y.row_mut(i).iter_mut().enumerate() {
+                *v = (r[0] - 0.5) + (1.0 + r[1]) * (u[k] - 0.5) + 0.2 * r[2] * u[k] * u[k];
+            }
+        }
+        g.bench_with_input(BenchmarkId::new("fit_p3_q100", n), &n, |b, _| {
+            b.iter(|| adopt_w2_fit(&x, &y, &[0.1, 0.1, 0.1], &BackfitConfig::default()).unwrap())
+        });
+    }
+    g.finish();
+}
+
+fn bench_scalable(c: &mut Criterion) {
+    let mut g = c.benchmark_group("scalable");
+    g.sample_size(10);
+    for &n in &[100_000usize, 1_000_000] {
+        let x = normals(n, 5);
+        g.throughput(Throughput::Elements(n as u64));
+        g.bench_with_input(BenchmarkId::new("sketch_update_k2048", n), &n, |b, _| {
+            b.iter(|| {
+                let mut s = QuantileSketch::new(2048).unwrap();
+                s.update(black_box(&x));
+                s
+            })
+        });
+        let mut s = QuantileSketch::new(2048).unwrap();
+        s.update(&x);
+        let edges = s.bin_edges(255).unwrap();
+        g.bench_with_input(BenchmarkId::new("bin_column_u8", n), &n, |b, _| {
+            b.iter(|| binning::bin_column::<u8>(black_box(&x), &edges).unwrap())
+        });
+        let codes: Vec<u8> = binning::bin_column(&x, &edges).unwrap();
+        let g0 = normals(n, 6);
+        let g1 = normals(n, 7);
+        let cols: Vec<&[u8]> = (0..10).map(|_| &codes[..]).collect();
+        g.throughput(Throughput::Elements((n * 10) as u64));
+        g.bench_with_input(BenchmarkId::new("histograms_10feat_2ch", n), &n, |b, _| {
+            b.iter(|| histogram::histograms(black_box(&cols), &[&g0, &g1], 256).unwrap())
+        });
+        let k = 19;
+        let uu: Vec<f64> = (1..=k).map(|i| i as f64 / 20.0).collect();
+        let z = normals(k, 8);
+        let basis: Vec<f64> = z.iter().flat_map(|&zz| [1.0, zz]).collect();
+        let ones = vec![1.0; n];
+        let zeros = vec![0.0; n];
+        g.throughput(Throughput::Elements(n as u64));
+        g.bench_with_input(BenchmarkId::new("pinball_grad_k19_m2", n), &n, |b, _| {
+            b.iter(|| {
+                pinball::pinball_grad_location_scale(&x, &zeros, &ones, &z, &uu, &basis, 2).unwrap()
+            })
+        });
+    }
+    g.finish();
+}
+
+criterion_group!(benches, bench_w2, bench_adopt, bench_scalable);
+criterion_main!(benches);
