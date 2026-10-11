@@ -17,10 +17,12 @@ All numerics in a Rust core, thin scikit-learn-style Python API, test-only numpy
 | Part | What it is | State |
 |---|---|---|
 | **ADOPT** | Faithful re-implementation of *ADOPT: Additive Optimal Transport Regression* (Song & Müller, AISTATS 2026, [PMLR 300:1558–1566](https://proceedings.mlr.press/v300/song26c.html)), written from the paper alone (no public code). Wasserstein-2 and log-Cholesky (SPD) responses. | Milestone 1: done; simulation study reproduced, partly matching (see below) |
-| **TRACE** | *Transport-Residual Additive Change Explainer*, our own **unpublished** proposal: an EBM-style additive model of the conditional quantile function (the 1-D OT map), with shift decomposition, oddness scores and leakage/placebo checks. Scales to millions of rows. | Scalable primitives done (sketch, binning, histograms, pinball gradients); model not started |
+| **TRACE** | Our own **unpublished** method: a binned additive model of the conditional quantile function (location, scale and shape channels), with oddness scores and leakage/placebo checks. Scales to millions of rows. | v0 in `TraceRegressor`. Design: [docs/TRACE_DESIGN.md](docs/TRACE_DESIGN.md). Simulations: [docs/TRACE_SIMS.md](docs/TRACE_SIMS.md) |
 
-Learn the ideas: **[docs/learn/adopt.html](https://jgridifier.github.io/traceot/learn/adopt.html)**:
-OT regression, additive transport, ADOPT's components, our reproduction, and the path to TRACE.
+Learn the ideas:
+
+- **[docs/learn/adopt.html](https://jgridifier.github.io/traceot/learn/adopt.html)**: OT regression, additive transport, ADOPT's components, our reproduction.
+- **[docs/learn/trace.html](https://jgridifier.github.io/traceot/learn/trace.html)**: EBMs, TRACE versus a mean model, how the fit works, checks and oddness.
 
 ## Reproduction at a glance
 
@@ -60,19 +62,28 @@ Q_pred = model.predict(X_new)          # (m, q) predicted quantile functions
 model.component(j=0, x=grid)           # glass-box: effect of input 0 alone
 ```
 
-See [examples/adopt_quickstart.py](examples/adopt_quickstart.py) (neutral simulated data).
+See [examples/adopt_quickstart.py](examples/adopt_quickstart.py) and [examples/trace_quickstart.py](examples/trace_quickstart.py) (neutral simulated data).
+
+```python
+from traceot import TraceRegressor
+
+# y is a scalar outcome. predict() returns quantile functions, shape (n, u_levels).
+trace = TraceRegressor(max_rounds=40, seed=0).fit(X, y)
+Q = trace.predict(X_new)
+trace.effect(0)   # location, scale and shape steps for feature 0
+```
 
 ## Layout
 
 ```
 crates/core/            Rust core (traceot-core): ALL numerics. w2, smoother, adopt, additive,
-                        logchol, estimators (CV, scoring), scalable/ (TRACE primitives)
+                        logchol, estimators (CV, scoring), scalable/, trace/ (TRACE v0)
 crates/py/              PyO3 bindings -> traceot._core
 python/traceot/         thin Python layer: validation, numpy conversion, sklearn-style estimators
 tests/python/           pytest: reference properties, Rust/reference parity, estimators, architecture
 tests/python/reference/ pure-numpy reference (test-only, used to verify Rust)
-benchmarks/             ADOPT reproduction (driver + paper designs in adopt_paper/), scaling benchmark
-docs/               GitHub Pages: index.html, learn/adopt.html, reports
+benchmarks/             ADOPT reproduction, scaling benchmark, benchmarks/trace_sims/
+docs/               GitHub Pages: index.html, learn/adopt.html, learn/trace.html, reports
 examples/           runnable examples on simulated data
 ```
 
@@ -106,7 +117,10 @@ pytest                                    # Python tests (needs the built extens
 ruff check python tests benchmarks examples docs
 python benchmarks/adopt_paper/reproduce.py --reps 200   # paper simulations (~30 min on 7 cores)
 python benchmarks/scale_bench.py          # 1e4..1e7 rows x 10/100 features
+python benchmarks/trace_sims/run_sims.py  # TRACE S1-S4, criteria in docs/TRACE_SIMS.md
+python benchmarks/trace_sims/compare_ebm.py  # optional; needs the ebm extra
 python docs/build_docs.py                 # regenerate figures, tables and docs/learn/adopt.html
+python docs/build_trace_learn.py          # regenerate docs/learn/trace.html
 ```
 
 ## Citation

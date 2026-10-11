@@ -11,6 +11,7 @@ Status: research, unvalidated.
 ### Added
 - Optional ADOPT controls, paper behaviour by default: averaged-order and tangent-space composition, pushforward centering, damped backfitting with an in-sample descent certificate, isotonic projection of the composed prediction, equal-width binning, and endpoint reflection. Numpy references and parity tests cover each path.
 - Audit of leakage, noise, the MISE grid and seeds (`tests/python/test_audit.py`) and method-level experiments (`benchmarks/adopt_audit/`).
+- TRACE v0 (`TraceRegressor`): binned cyclic boosting of location, scale and shape channels of the conditional quantile function, with a final isotonic projection, bagging, a residual-gradient pair screen, held-out feature selection, leakage screens and conformal oddness scores. Numpy reference and parity tests. Design in `docs/TRACE_DESIGN.md`, simulations in `docs/TRACE_SIMS.md`, learning page `docs/learn/trace.html`. ADOPT is unchanged and remains a reproduction only.
 
 ## [0.1.0] - 2026-10-11
 

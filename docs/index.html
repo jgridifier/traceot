@@ -27,6 +27,7 @@
 <h2>Learn</h2>
 <ul>
 <li><a href="learn/adopt.html">ADOPT, explained</a>: what optimal-transport regression is, how additive transport works, and our reproduction of the ADOPT paper's simulations.</li>
+<li><a href="learn/trace.html">TRACE, beside explainable boosting</a>: what EBMs are, how TRACE models a whole conditional distribution, and the leakage and oddness checks.</li>
 </ul>
 
 <h2>Reports</h2>
@@ -34,12 +35,14 @@
 <li><a href="https://github.com/jgridifier/traceot/blob/main/docs/ADOPT_RESULTS.md">ADOPT reproduction table</a> (paper vs ours)</li>
 <li><a href="https://github.com/jgridifier/traceot/blob/main/docs/REPRODUCTION_NOTES.md">Reproduction notes</a>: every ambiguity and the choice we made</li>
 <li><a href="https://github.com/jgridifier/traceot/blob/main/docs/BENCHMARKS.md">Benchmarks</a>: wall time and peak memory</li>
+<li><a href="https://github.com/jgridifier/traceot/blob/main/docs/TRACE_DESIGN.md">TRACE design</a>: model, algorithm, order invariance, checks</li>
+<li><a href="https://github.com/jgridifier/traceot/blob/main/docs/TRACE_SIMS.md">TRACE simulations</a>: criteria, then results</li>
 </ul>
 
 <h2>Roadmap</h2>
 <ol>
 <li><strong>Milestone 1 (this release):</strong> faithful ADOPT (Song &amp; Müller, AISTATS 2026) with a numpy reference and a matching Rust core.</li>
-<li><strong>Next:</strong> TRACE, our own proposed method (unpublished): an EBM-style additive model of the conditional quantile function, i.e. of 1-D transport displacements, with shift decomposition, oddness scores and built-in leakage and placebo checks. It is designed for millions of rows.</li>
+<li><strong>TRACE v0 (unpublished):</strong> an EBM-style additive model of the conditional quantile function, with location, scale and shape channels, oddness scores, and leakage and placebo checks. ADOPT stays in the tree as a reproduction only. Designed for millions of rows. See the <a href="learn/trace.html">learning page</a>.</li>
 </ol>
 <p class="muted">Source: <a href="https://github.com/jgridifier/traceot">github.com/jgridifier/traceot</a> · MIT licence · personal research project · all examples use simulated data.</p>
 </main>

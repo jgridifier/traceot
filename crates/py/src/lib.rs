@@ -11,6 +11,8 @@ use numpy::{
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
+mod trace_api;
+
 use traceot_core::adopt::{BackfitConfig, BackfitResult};
 use traceot_core::scalable::{binning, histogram as hist, pinball, sketch};
 use traceot_core::{additive, adopt, estimators, logchol, smoother, w2, Kernel, Mat, TraceError};
@@ -1140,5 +1142,6 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(histograms_u8, m)?)?;
     m.add_function(wrap_pyfunction!(histograms_u16, m)?)?;
     m.add_function(wrap_pyfunction!(pinball_grad_location_scale, m)?)?;
+    trace_api::register(m)?;
     Ok(())
 }

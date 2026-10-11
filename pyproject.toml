@@ -23,6 +23,7 @@ classifiers = [
 [project.optional-dependencies]
 sim = ["scipy>=1.10"]  # benchmarks/adopt_paper (paper simulation designs)
 docs = ["scipy>=1.10", "matplotlib>=3.7"]
+ebm = ["interpret>=0.6"]  # benchmark only; never imported by the runtime package
 dev = ["pytest>=7", "ruff>=0.5", "scipy>=1.10", "maturin>=1.7,<2"]
 
 [project.urls]
@@ -48,3 +49,7 @@ ignore = ["E741"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["traceot", "conftest", "reference", "dgp"]
+
+[tool.ruff.lint.per-file-ignores]
+# The learning page is one HTML document assembled as Python strings.
+"docs/build_trace_learn.py" = ["E501"]
