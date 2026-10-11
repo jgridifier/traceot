@@ -130,9 +130,27 @@ Local linear cuts the edge error by about 30× and does not raise the interior e
 
 ### After (training-fold CV ranges)
 
-<!-- AFTER_TABLES -->
+Re-run: B = 200, q = 100, 10³ midpoint grid, Rust backend, 1367 s wall time on 4 workers. Minimum Chebyshev distance between a training point and the MISE grid was 2.01×10⁻⁴; the run aborts if that gap is zero. Canonical copy: `docs/ADOPT_RESULTS.md`.
 
-The gap with the paper is still open in the same two places: Table 1 Case II ADOPT, and Table 2 ADOPT and GF. See Section 2.
+| setting | paper ADOPT | ours ADOPT | paper GF | ours GF | paper FM | ours FM | ours L2-additive |
+|---|---|---|---|---|---|---|---|
+| I/100 | 0.317 (0.010) | 0.391 (0.014) | 0.591 (0.008) | 0.740 (0.011) | 11.019 (0.068) | 11.691 (0.010) | 0.636 (0.012) |
+| I/300 | 0.181 (0.004) | 0.179 (0.005) | 0.499 (0.003) | 0.576 (0.005) | 11.119 (0.040) | 11.602 (0.003) | 0.436 (0.006) |
+| II/100 | 1.685 (0.057) | 0.505 (0.010) | 6.636 (0.057) | 6.362 (0.022) | 207.205 (1.681) | 204.700 (0.219) | 0.579 (0.014) |
+| II/300 | 1.121 (0.041) | 0.178 (0.003) | 6.701 (0.037) | 5.975 (0.008) | 211.297 (1.080) | 203.277 (0.064) | 0.194 (0.004) |
+
+| setting | paper ADOPT | ours ADOPT | paper GF | ours GF | paper FM | ours FM |
+|---|---|---|---|---|---|---|
+| I/10/100 | 2.769 (0.025) | 0.060 (0.000) | 9.495 (0.060) | 0.950 (0.003) | 135.344 (0.647) | 134.279 (0.231) |
+| I/10/300 | 1.655 (0.012) | 0.021 (0.000) | 9.714 (0.037) | 0.895 (0.001) | 136.122 (0.366) | 132.593 (0.066) |
+| I/20/100 | 5.712 (0.070) | 0.220 (0.001) | 14.110 (0.102) | 1.943 (0.005) | 192.688 (0.92) | 272.178 (0.516) |
+| I/20/300 | 3.788 (0.048) | 0.079 (0.000) | 14.254 (0.063) | 1.806 (0.002) | 193.796 (0.521) | 268.959 (0.191) |
+| II/10/100 | 4.146 (0.088) | 0.086 (0.001) | 18.507 (0.090) | 4.675 (0.013) | 96.562 (0.490) | 206.037 (0.112) |
+| II/10/300 | 2.702 (0.036) | 0.031 (0.000) | 18.808 (0.052) | 4.481 (0.004) | 97.047 (0.303) | 205.286 (0.033) |
+| II/20/100 | 8.921 (0.167) | 0.343 (0.003) | 28.237 (0.14) | 10.124 (0.029) | 143.382 (0.706) | 434.257 (0.264) |
+| II/20/300 | 6.435 (0.100) | 0.115 (0.000) | 28.512 (0.078) | 9.723 (0.008) | 144.088 (0.437) | 432.502 (0.092) |
+
+Rounded to three decimals, four cells moved: Table 1 I/100 L2-additive 0.640 → 0.636, Table 1 II/100 ADOPT 0.503 → 0.505, Table 2 I/10/100 ADOPT 0.059 → 0.060, Table 2 II/20/100 ADOPT 0.340 (0.002) → 0.343 (0.003). GF and FM are identical in every cell. The gap with the paper is still open in the same two places: Table 1 Case II ADOPT (3–6× lower), and Table 2 ADOPT and GF (10–50× lower). See Section 2.
 
 ## 5. Still unresolved
 

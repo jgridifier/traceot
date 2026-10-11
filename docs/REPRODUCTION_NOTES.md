@@ -62,6 +62,7 @@ kept separate from the linear-time TRACE core (see `BENCHMARKS.md`).
 
 Run: B = 200 replicates per setting, fixed seeds, Rust backend, 845 s wall time on 7 worker processes.
 Paper values are copied verbatim from the PMLR PDF (Tables 1 and 2) and labelled "paper". Entries are mean (standard error).
+This section is the run from before the CV-range fix in `docs/ADOPT_AUDIT.md`. The re-run with training-fold ranges (1367 s, 4 workers) is the canonical table in `docs/ADOPT_RESULTS.md`. At three decimals only four cells moved (Table 1 I/100 L2-additive 0.640 → 0.636, Table 1 II/100 ADOPT 0.503 → 0.505, Table 2 I/10/100 ADOPT 0.059 → 0.060, Table 2 II/20/100 ADOPT 0.340 → 0.343); GF and FM did not change, and the comparisons below still hold.
 *L2-additive is our extra comparator (not in the paper). ADR was not run (A11).
 Full per-replicate data: `benchmarks/results/adopt_reproduction_reps.csv`. Generated copy: `docs/ADOPT_RESULTS.md`.
 
