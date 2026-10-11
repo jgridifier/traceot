@@ -11,6 +11,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use traceot_core::adopt::{BackfitConfig, BackfitResult};
+use traceot_core::scalable::{binning, histogram as hist, pinball, sketch};
 use traceot_core::{additive, adopt, logchol, smoother, w2, Kernel, Mat, TraceError};
 
 type ArrayPair<'py> = (Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>);
@@ -378,6 +379,207 @@ fn coords_to_spd<'py>(
     Ok(stack_to_py(py, out))
 }
 
+// ---------------------------------------------------------------------------
+// Scalable (TRACE) primitives: zero-copy inputs via contiguous slices, GIL released.
+// ---------------------------------------------------------------------------
+
+fn slice1<'a>(a: &'a PyReadonlyArray1<'_, f64>) -> PyResult<&'a [f64]> {
+    a.as_slice()
+        .map_err(|_| PyValueError::new_err("array must be C-contiguous"))
+}
+
+/// Deterministic mergeable streaming quantile sketch.
+#[pyclass(name = "QuantileSketch", module = "traceot._core")]
+struct PyQuantileSketch {
+    inner: sketch::QuantileSketch,
+}
+
+#[pymethods]
+impl PyQuantileSketch {
+    #[new]
+    #[pyo3(signature = (k=2048))]
+    fn new(k: usize) -> PyResult<Self> {
+        Ok(PyQuantileSketch {
+            inner: sketch::QuantileSketch::new(k).map_err(err)?,
+        })
+    }
+
+    /// Absorb a 1-D float64 array (NaN ignored). Zero-copy for contiguous input.
+    fn update(&mut self, py: Python<'_>, x: PyReadonlyArray1<'_, f64>) -> PyResult<()> {
+        let xs = slice1(&x)?;
+        let inner = &mut self.inner;
+        py.detach(|| inner.update(xs));
+        Ok(())
+    }
+
+    /// Chunk-parallel update: sketch `chunk`-sized blocks in parallel, merge in order.
+    #[pyo3(signature = (x, chunk=1_048_576))]
+    fn update_chunked(
+        &mut self,
+        py: Python<'_>,
+        x: PyReadonlyArray1<'_, f64>,
+        chunk: usize,
+    ) -> PyResult<()> {
+        let xs = slice1(&x)?;
+        let inner = &mut self.inner;
+        py.detach(|| inner.update_chunked(xs, chunk)).map_err(err)
+    }
+
+    fn merge(&mut self, other: &PyQuantileSketch) -> PyResult<()> {
+        self.inner.merge(&other.inner).map_err(err)
+    }
+
+    fn quantiles<'py>(
+        &self,
+        py: Python<'py>,
+        levels: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        Ok(self.inner.quantiles(slice1(&levels)?).into_pyarray(py))
+    }
+
+    fn bin_edges<'py>(
+        &self,
+        py: Python<'py>,
+        max_bins: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        Ok(self
+            .inner
+            .bin_edges(max_bins)
+            .map_err(err)?
+            .into_pyarray(py))
+    }
+
+    #[getter]
+    fn count(&self) -> u64 {
+        self.inner.count()
+    }
+
+    #[getter]
+    fn retained(&self) -> usize {
+        self.inner.retained()
+    }
+}
+
+/// Exact bin edges from sorted, NaN-free data.
+#[pyfunction]
+fn bin_edges_from_sorted<'py>(
+    py: Python<'py>,
+    x_sorted: PyReadonlyArray1<'py, f64>,
+    max_bins: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    Ok(binning::edges_from_sorted(slice1(&x_sorted)?, max_bins)
+        .map_err(err)?
+        .into_pyarray(py))
+}
+
+/// Bin a column: uint8 codes if `len(edges) + 2 <= 256`, else uint16.
+#[pyfunction]
+fn bin_column<'py>(
+    py: Python<'py>,
+    x: PyReadonlyArray1<'py, f64>,
+    edges: PyReadonlyArray1<'py, f64>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let xs = slice1(&x)?;
+    let es = slice1(&edges)?;
+    if es.len() + 2 <= 256 {
+        let out: Vec<u8> = py.detach(|| binning::bin_column(xs, es)).map_err(err)?;
+        Ok(out.into_pyarray(py).into_any())
+    } else {
+        let out: Vec<u16> = py.detach(|| binning::bin_column(xs, es)).map_err(err)?;
+        Ok(out.into_pyarray(py).into_any())
+    }
+}
+
+fn hist_to_py<'py>(
+    py: Python<'py>,
+    hs: Vec<hist::Histogram>,
+    n_bins: usize,
+    m_ch: usize,
+) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyArray2<u64>>)> {
+    let p = hs.len();
+    let mut sums = Vec::with_capacity(p * n_bins * m_ch);
+    let mut counts = Vec::with_capacity(p * n_bins);
+    for h in hs {
+        sums.extend(h.sums);
+        counts.extend(h.counts);
+    }
+    let s = Array3::from_shape_vec((p, n_bins, m_ch), sums)
+        .expect("shape")
+        .into_pyarray(py);
+    let c = Array2::from_shape_vec((p, n_bins), counts)
+        .expect("shape")
+        .into_pyarray(py);
+    Ok((s.into_any(), c))
+}
+
+fn grads_cols<'a>(g: &'a PyReadonlyArray2<'_, f64>) -> PyResult<(Vec<&'a [f64]>, usize)> {
+    let (m, n) = g.as_array().dim();
+    let all = g
+        .as_slice()
+        .map_err(|_| PyValueError::new_err("grads must be C-contiguous"))?;
+    Ok(((0..m).map(|i| &all[i * n..(i + 1) * n]).collect(), n))
+}
+
+macro_rules! histograms_impl {
+    ($name:ident, $t:ty) => {
+        /// Columnar histograms: `columns` (p, n) codes, `grads` (M, n). Zero-copy inputs.
+        #[pyfunction]
+        fn $name<'py>(
+            py: Python<'py>,
+            columns: numpy::PyReadonlyArray2<'py, $t>,
+            grads: PyReadonlyArray2<'py, f64>,
+            n_bins: usize,
+        ) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyArray2<u64>>)> {
+            let (p, n) = columns.as_array().dim();
+            let all = columns
+                .as_slice()
+                .map_err(|_| PyValueError::new_err("columns must be C-contiguous"))?;
+            let cols: Vec<&[$t]> = (0..p).map(|j| &all[j * n..(j + 1) * n]).collect();
+            let (g, gn) = grads_cols(&grads)?;
+            if gn != n {
+                return Err(PyValueError::new_err("grads and columns disagree on n"));
+            }
+            let m_ch = g.len();
+            let hs = py
+                .detach(|| hist::histograms(&cols, &g, n_bins))
+                .map_err(err)?;
+            hist_to_py(py, hs, n_bins, m_ch)
+        }
+    };
+}
+
+histograms_impl!(histograms_u8, u8);
+histograms_impl!(histograms_u16, u16);
+
+/// Pinball subgradient channels (M, n) and mean pinball loss for Q = loc + scale z.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn pinball_grad_location_scale<'py>(
+    py: Python<'py>,
+    y: PyReadonlyArray1<'py, f64>,
+    loc: PyReadonlyArray1<'py, f64>,
+    scale: PyReadonlyArray1<'py, f64>,
+    z: PyReadonlyArray1<'py, f64>,
+    u: PyReadonlyArray1<'py, f64>,
+    basis: PyReadonlyArray2<'py, f64>,
+) -> PyResult<(Bound<'py, PyArray2<f64>>, f64)> {
+    let m_ch = basis.as_array().dim().1;
+    let b = basis
+        .as_slice()
+        .map_err(|_| PyValueError::new_err("basis must be C-contiguous"))?;
+    let (ys, ls, ss, zs, us) = (
+        slice1(&y)?,
+        slice1(&loc)?,
+        slice1(&scale)?,
+        slice1(&z)?,
+        slice1(&u)?,
+    );
+    let (cols, loss) = py
+        .detach(|| pinball::pinball_grad_location_scale(ys, ls, ss, zs, us, b, m_ch))
+        .map_err(err)?;
+    Ok((rows_to_py(py, cols), loss))
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -396,5 +598,11 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(additive_euclid_predict, m)?)?;
     m.add_function(wrap_pyfunction!(spd_to_coords, m)?)?;
     m.add_function(wrap_pyfunction!(coords_to_spd, m)?)?;
+    m.add_class::<PyQuantileSketch>()?;
+    m.add_function(wrap_pyfunction!(bin_edges_from_sorted, m)?)?;
+    m.add_function(wrap_pyfunction!(bin_column, m)?)?;
+    m.add_function(wrap_pyfunction!(histograms_u8, m)?)?;
+    m.add_function(wrap_pyfunction!(histograms_u16, m)?)?;
+    m.add_function(wrap_pyfunction!(pinball_grad_location_scale, m)?)?;
     Ok(())
 }

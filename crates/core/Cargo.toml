@@ -10,4 +10,17 @@ authors.workspace = true
 [lib]
 name = "traceot_core"
 
+[features]
+default = ["parallel"]
+# Multi-threading via rayon for the scalable (TRACE) primitives. Disable for WASM.
+parallel = ["dep:rayon"]
+
 [dependencies]
+rayon = { version = "1.10", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.7", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "core"
+harness = false

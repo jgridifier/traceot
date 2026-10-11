@@ -18,6 +18,7 @@ pub mod adopt;
 pub mod error;
 pub mod linalg;
 pub mod logchol;
+pub mod scalable;
 pub mod smoother;
 pub mod w2;
 
