@@ -1,6 +1,6 @@
 //! Local linear (local Fréchet) and global Fréchet regression weights.
 //!
-//! Mirrors `python/traceot/reference/smoother.py`.
+//! Mirrors `tests/python/reference/smoother.py`.
 
 use crate::error::{Result, TraceError};
 use crate::linalg::{solve_spd, Mat};

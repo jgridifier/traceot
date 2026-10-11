@@ -1,7 +1,8 @@
 //! PyO3 bindings for `traceot-core`, exposed to Python as `traceot._core`.
 //!
-//! Function names and signatures follow `python/traceot/reference/` so that the two
-//! backends are interchangeable (see `python/traceot/_backend.py`).
+//! All numerical logic lives in `traceot-core`; this crate only converts arrays and
+//! releases the GIL. The numpy reference used to verify results lives in
+//! `tests/python/reference/` and mirrors the low-level function names below.
 
 use numpy::ndarray::{Array1, Array2, Array3, ArrayView2, ArrayView3};
 use numpy::{
@@ -12,7 +13,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use traceot_core::adopt::{BackfitConfig, BackfitResult};
 use traceot_core::scalable::{binning, histogram as hist, pinball, sketch};
-use traceot_core::{additive, adopt, logchol, smoother, w2, Kernel, Mat, TraceError};
+use traceot_core::{additive, adopt, estimators, logchol, smoother, w2, Kernel, Mat, TraceError};
 
 type ArrayPair<'py> = (Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>);
 
@@ -580,6 +581,245 @@ fn pinball_grad_location_scale<'py>(
     Ok((rows_to_py(py, cols), loss))
 }
 
+// ---------------------------------------------------------------------------
+// Estimator layer: everything the Python estimators need, so that Python holds no
+// numerical logic.
+// ---------------------------------------------------------------------------
+
+fn space_of(name: &str) -> PyResult<estimators::Space> {
+    estimators::Space::parse(name).map_err(err)
+}
+
+fn vec_of(a: PyReadonlyArray1<'_, f64>) -> Vec<f64> {
+    a.as_array().iter().copied().collect()
+}
+
+/// A fitted additive transport model (ADOPT or the L2-additive quantile model).
+#[pyclass(name = "AdditiveModel", module = "traceot._core")]
+struct PyAdditiveModel {
+    inner: estimators::AdditiveModel,
+}
+
+#[pymethods]
+impl PyAdditiveModel {
+    /// Fit with fixed bandwidths ``h`` (one per predictor).
+    #[staticmethod]
+    #[pyo3(signature = (method, space, x, z, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn fit(
+        py: Python<'_>,
+        method: &str,
+        space: &str,
+        x: PyReadonlyArray2<'_, f64>,
+        z: PyReadonlyArray2<'_, f64>,
+        h: PyReadonlyArray1<'_, f64>,
+        kernel: &str,
+        tol: f64,
+        max_iter: usize,
+        lower: Option<f64>,
+        upper: Option<f64>,
+    ) -> PyResult<Self> {
+        let method = estimators::Method::parse(method).map_err(err)?;
+        let space = space_of(space)?;
+        let cfg = config(kernel, tol, max_iter, lower, upper)?;
+        let (x, z, h) = (to_mat(x.as_array()), to_mat(z.as_array()), vec_of(h));
+        let inner = py
+            .detach(|| estimators::AdditiveModel::fit(method, space, &x, &z, &h, cfg))
+            .map_err(err)?;
+        Ok(PyAdditiveModel { inner })
+    }
+
+    /// Predictions in the encoded representation, shape (m, d).
+    fn predict<'py>(
+        &self,
+        py: Python<'py>,
+        x_new: PyReadonlyArray2<'py, f64>,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let x = to_mat(x_new.as_array());
+        let out = py.detach(|| self.inner.predict(&x)).map_err(err)?;
+        Ok(mat_to_py(py, out))
+    }
+
+    /// Component curve g_j(x), shape (len(x), d).
+    fn component<'py>(
+        &self,
+        py: Python<'py>,
+        j: usize,
+        x: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let x = vec_of(x);
+        Ok(mat_to_py(py, self.inner.component(j, &x).map_err(err)?))
+    }
+
+    /// Apply the j-th additive transport T_j(x0) to an encoded response v.
+    fn transport<'py>(
+        &self,
+        py: Python<'py>,
+        j: usize,
+        x0: f64,
+        v: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let v = vec_of(v);
+        Ok(self
+            .inner
+            .transport(j, x0, &v)
+            .map_err(err)?
+            .into_pyarray(py))
+    }
+
+    #[getter]
+    fn mu<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        self.inner.fit.mu.clone().into_pyarray(py)
+    }
+    #[getter]
+    fn centers<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray2<f64>> {
+        rows_to_py(py, self.inner.fit.m.clone())
+    }
+    #[getter]
+    fn bandwidths<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        self.inner.h.clone().into_pyarray(py)
+    }
+    #[getter]
+    fn fitted<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray2<f64>> {
+        mat_to_py(py, self.inner.fit.fitted.clone())
+    }
+    #[getter]
+    fn residuals<'py>(&self, py: Python<'py>) -> Bound<'py, PyAny> {
+        stack_to_py(py, self.inner.fit.resid.clone())
+    }
+    #[getter]
+    fn history<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        self.inner.fit.history.clone().into_pyarray(py)
+    }
+    #[getter]
+    fn n_iter(&self) -> usize {
+        self.inner.fit.n_iter
+    }
+    #[getter]
+    fn converged(&self) -> bool {
+        self.inner.fit.converged
+    }
+    #[getter]
+    fn n_features(&self) -> usize {
+        self.inner.x_train.cols
+    }
+}
+
+/// K-fold CV of a common bandwidth fraction; returns a dict with grid,
+/// mean_dist_sq and best_fraction.
+#[pyfunction]
+#[pyo3(signature = (method, space, x, z, grid, k, seed, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None))]
+#[allow(clippy::too_many_arguments)]
+fn select_bandwidth_cv<'py>(
+    py: Python<'py>,
+    method: &str,
+    space: &str,
+    x: PyReadonlyArray2<'py, f64>,
+    z: PyReadonlyArray2<'py, f64>,
+    grid: PyReadonlyArray1<'py, f64>,
+    k: usize,
+    seed: u64,
+    kernel: &str,
+    tol: f64,
+    max_iter: usize,
+    lower: Option<f64>,
+    upper: Option<f64>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let method = estimators::Method::parse(method).map_err(err)?;
+    let space = space_of(space)?;
+    let cfg = config(kernel, tol, max_iter, lower, upper)?;
+    let (x, z, grid) = (to_mat(x.as_array()), to_mat(z.as_array()), vec_of(grid));
+    let r = py
+        .detach(|| estimators::select_bandwidth_cv(method, space, &x, &z, &grid, k, seed, cfg))
+        .map_err(err)?;
+    let d = PyDict::new(py);
+    d.set_item("grid", r.grid.into_pyarray(py))?;
+    d.set_item("mean_dist_sq", r.mean_dist_sq.into_pyarray(py))?;
+    d.set_item("best_fraction", r.best_fraction)?;
+    Ok(d)
+}
+
+/// Shuffled K-fold split (SplitMix64 Fisher-Yates); list of sorted index arrays.
+#[pyfunction]
+fn kfold_indices<'py>(
+    py: Python<'py>,
+    n: usize,
+    k: usize,
+    seed: u64,
+) -> PyResult<Vec<Bound<'py, PyArray1<usize>>>> {
+    let folds = estimators::kfold_indices(n, k, seed).map_err(err)?;
+    Ok(folds.into_iter().map(|f| f.into_pyarray(py)).collect())
+}
+
+/// Observed range of each column (zero ranges replaced by one).
+#[pyfunction]
+fn column_ranges<'py>(py: Python<'py>, x: PyReadonlyArray2<'py, f64>) -> Bound<'py, PyArray1<f64>> {
+    estimators::column_ranges(&to_mat(x.as_array())).into_pyarray(py)
+}
+
+/// Global Fréchet regression predictions (encoded).
+#[pyfunction]
+#[pyo3(signature = (space, x_train, z_train, x_new, lower=None, upper=None))]
+fn global_frechet_predict<'py>(
+    py: Python<'py>,
+    space: &str,
+    x_train: PyReadonlyArray2<'py, f64>,
+    z_train: PyReadonlyArray2<'py, f64>,
+    x_new: PyReadonlyArray2<'py, f64>,
+    lower: Option<f64>,
+    upper: Option<f64>,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let space = space_of(space)?;
+    let cfg = config("gaussian", 0.0, 0, lower, upper)?;
+    let (xt, zt, xn) = (
+        to_mat(x_train.as_array()),
+        to_mat(z_train.as_array()),
+        to_mat(x_new.as_array()),
+    );
+    let out = py
+        .detach(|| estimators::global_frechet_predict(space, &xt, &zt, &xn, &cfg))
+        .map_err(err)?;
+    Ok(mat_to_py(py, out))
+}
+
+/// Column means of encoded responses (the Fréchet mean in both spaces).
+#[pyfunction]
+fn frechet_mean<'py>(py: Python<'py>, z: PyReadonlyArray2<'py, f64>) -> Bound<'py, PyArray1<f64>> {
+    to_mat(z.as_array()).col_means().into_pyarray(py)
+}
+
+/// Row-wise squared distances in the given space.
+#[pyfunction]
+fn dist_sq_rows<'py>(
+    py: Python<'py>,
+    space: &str,
+    a: PyReadonlyArray2<'py, f64>,
+    b: PyReadonlyArray2<'py, f64>,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let space = space_of(space)?;
+    let out = estimators::dist_sq_rows(space, &to_mat(a.as_array()), &to_mat(b.as_array()))
+        .map_err(err)?;
+    Ok(out.into_pyarray(py))
+}
+
+/// Fréchet R^2 = 1 - sum d^2(pred, z) / sum d^2(mean, z).
+#[pyfunction]
+fn frechet_r2(
+    space: &str,
+    pred: PyReadonlyArray2<'_, f64>,
+    z: PyReadonlyArray2<'_, f64>,
+    mean: PyReadonlyArray1<'_, f64>,
+) -> PyResult<f64> {
+    let space = space_of(space)?;
+    estimators::frechet_r2(
+        space,
+        &to_mat(pred.as_array()),
+        &to_mat(z.as_array()),
+        &vec_of(mean),
+    )
+    .map_err(err)
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -599,6 +839,14 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spd_to_coords, m)?)?;
     m.add_function(wrap_pyfunction!(coords_to_spd, m)?)?;
     m.add_class::<PyQuantileSketch>()?;
+    m.add_class::<PyAdditiveModel>()?;
+    m.add_function(wrap_pyfunction!(select_bandwidth_cv, m)?)?;
+    m.add_function(wrap_pyfunction!(kfold_indices, m)?)?;
+    m.add_function(wrap_pyfunction!(column_ranges, m)?)?;
+    m.add_function(wrap_pyfunction!(global_frechet_predict, m)?)?;
+    m.add_function(wrap_pyfunction!(frechet_mean, m)?)?;
+    m.add_function(wrap_pyfunction!(dist_sq_rows, m)?)?;
+    m.add_function(wrap_pyfunction!(frechet_r2, m)?)?;
     m.add_function(wrap_pyfunction!(bin_edges_from_sorted, m)?)?;
     m.add_function(wrap_pyfunction!(bin_column, m)?)?;
     m.add_function(wrap_pyfunction!(histograms_u8, m)?)?;

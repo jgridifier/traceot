@@ -4,9 +4,11 @@
 //! global Fréchet smoothers, and ADOPT transport backfitting (Song & Müller,
 //! AISTATS 2026, PMLR v300, <https://proceedings.mlr.press/v300/song26c.html>).
 //!
-//! Every routine has a pure-numpy reference in `python/traceot/reference/`; the
-//! Python test-suite checks that both agree to a tight tolerance. The crate has no
-//! dependencies and no I/O so that it can later be compiled to WASM.
+//! All numerical logic of traceot lives here; the Python package is a thin binding.
+//! Every routine has a pure-numpy reference in `tests/python/reference/`; the
+//! Python test-suite checks that both agree to a tight tolerance. The crate has no required
+//! dependencies (rayon is an optional default feature) and no I/O, so that it can
+//! later be compiled to WASM.
 //!
 //! Status: research, unvalidated.
 
@@ -16,6 +18,7 @@
 pub mod additive;
 pub mod adopt;
 pub mod error;
+pub mod estimators;
 pub mod linalg;
 pub mod logchol;
 pub mod scalable;

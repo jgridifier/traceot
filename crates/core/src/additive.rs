@@ -2,7 +2,7 @@
 //!
 //! Used for ADOPT under the log-Cholesky metric (where transports are translations
 //! of log-Cholesky coordinates) and for the extrinsic L2-additive baseline on
-//! quantile functions. Mirrors `python/traceot/reference/additive.py`.
+//! quantile functions. Mirrors `tests/python/reference/additive.py`.
 
 use crate::adopt::{BackfitConfig, BackfitResult, ABS_TOL_FLOOR};
 use crate::error::{Result, TraceError};

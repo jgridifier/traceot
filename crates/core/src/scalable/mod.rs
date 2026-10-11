@@ -11,7 +11,7 @@
 //! Parallelism (rayon) is behind the default `parallel` feature so that the crate
 //! can still be compiled single-threaded (e.g. for WASM).
 //!
-//! Reference implementations: `python/traceot/reference/scalable.py`.
+//! Reference implementations: `tests/python/reference/scalable.py`.
 
 pub mod binning;
 pub mod histogram;

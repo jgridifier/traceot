@@ -1,6 +1,6 @@
 //! 1-D Wasserstein-2 geometry on a common quantile grid.
 //!
-//! Mirrors `python/traceot/reference/w2.py`. A distribution is its quantile function
+//! Mirrors `tests/python/reference/w2.py`. A distribution is its quantile function
 //! on a fixed grid; W2 is the L2 distance between quantile functions, the Fréchet
 //! mean is the pointwise mean, and the optimal transport map `F2^{-1} o F1` is the
 //! monotone map sending `Q1(u_k)` to `Q2(u_k)`.

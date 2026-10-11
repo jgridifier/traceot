@@ -1,7 +1,7 @@
 //! ADOPT transport backfitting for distributional responses in W2.
 //!
 //! Algorithm 1 of Song & Müller, "ADOPT: Additive Optimal Transport Regression",
-//! AISTATS 2026 (PMLR v300). Mirrors `python/traceot/reference/adopt.py`; see that
+//! AISTATS 2026 (PMLR v300). Mirrors `tests/python/reference/adopt.py`; see that
 //! file and `docs/REPRODUCTION_NOTES.md` for the conventions:
 //!
 //! * `T_j(x) = T_{M_j, g_j(x)}` is the monotone map with knots `M_j -> g_j(x)`;

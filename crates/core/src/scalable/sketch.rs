@@ -1,6 +1,6 @@
 //! Deterministic mergeable compactor sketch for streaming quantiles.
 //!
-//! Mirrors `QuantileSketch` in `python/traceot/reference/scalable.py` exactly.
+//! Mirrors `QuantileSketch` in `tests/python/reference/scalable.py` exactly.
 
 use crate::error::{Result, TraceError};
 

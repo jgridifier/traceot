@@ -2,7 +2,7 @@
 //!
 //! Coordinates: strict lower part of the Cholesky factor in row-major order
 //! (`numpy.tril_indices(m, -1)`), then the log of its diagonal. Mirrors
-//! `python/traceot/reference/logchol.py`.
+//! `tests/python/reference/logchol.py`.
 
 use crate::error::{Result, TraceError};
 use crate::linalg::cholesky;
