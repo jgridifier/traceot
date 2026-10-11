@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import resource
 import subprocess
 import sys
@@ -376,8 +377,18 @@ def main():
         payload[key]["seconds"] = time.perf_counter() - t0
         print(key, "pass" if payload[key]["pass"] else "FAIL", f"{payload[key]['seconds']:.1f}s")
     payload["criteria"] = "docs/TRACE_SIMS.md"
-    OUT.write_text(json.dumps(payload, indent=2))
+    OUT.write_text(json.dumps(_finite(payload), indent=2, allow_nan=False))
     print(OUT)
+
+
+def _finite(obj):
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_finite(v) for v in obj]
+    return obj
 
 
 if __name__ == "__main__":

@@ -100,7 +100,9 @@ A TRACE round is one pinball gradient over the quantile grid (`O(n K M)`, indepe
 
 | Benchmark | Result |
 |---|---|
-| `trace/fit_n20k_p8_r3` | pending this run |
+| `trace/fit_n20k_p8_r3` | 13.1 ms median (12.5–13.4 ms), about 1.5 M rows/s for the whole 3-round fit. Criterion, 10 samples, release, 11 October 2026. |
+
+End-to-end TRACE fits (bin plus three rounds, columnar `uint8`, no `n × p` float matrix) are in `docs/TRACE_SIMS.md` (S4). At 1e7 × 100 the fit is 33 s and the peak RSS is 1.7 GB. Tenfold growth in rows costs about 7–12× wall time across the grid.
 
 ## Re-running
 

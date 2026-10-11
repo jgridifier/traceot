@@ -162,9 +162,11 @@ def _results_html():
         block = sims.get(key)
         if not block:
             continue
+        sec = block.get("seconds")
+        sec_txt = f"{sec:.2f}s" if isinstance(sec, float) else "—"
         rows.append(
             f"<tr><td>{key.upper()}</td><td>{'pass' if block.get('pass') else 'fail'}</td>"
-            f"<td>{_fmt(block.get('seconds'), 1)}s</td></tr>"
+            f"<td>{sec_txt}</td></tr>"
         )
     table = (
         '<div class="scroll"><table><caption>Suite checks</caption>'

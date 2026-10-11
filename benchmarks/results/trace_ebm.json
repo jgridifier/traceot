@@ -1,0 +1,133 @@
+{
+  "vendor_spend": {
+    "name": "vendor_spend",
+    "n_train": 2800,
+    "n_test": 1200,
+    "trace": {
+      "pinball": 0.5935019040032441,
+      "crps": 1.1870038080064882,
+      "cover80": 0.9958333333333333,
+      "cover90": 1.0,
+      "mse_median": 3.0213270839520474,
+      "mse_mean": 3.0217883234633454,
+      "fit_seconds": 0.048927470999842626,
+      "location_bin_correlation": 0.995970527371626
+    },
+    "ebm": {
+      "available": true,
+      "fit_seconds": 1.8418177539997487,
+      "point": {
+        "pinball": 0.5106305764322612,
+        "crps": 1.0212611528645223,
+        "cover80": 0.0,
+        "cover90": 0.0,
+        "mse_median": 1.798338971263452,
+        "mse_mean": 1.7983389712634517
+      },
+      "conformal": {
+        "pinball": 0.37129164991204,
+        "crps": 0.74258329982408,
+        "cover80": 0.8141666666666667,
+        "cover90": 0.9166666666666666,
+        "mse_median": 1.7992801210109681,
+        "mse_mean": 1.7993178349862269
+      },
+      "quantile_objective": {
+        "available": false,
+        "reason": "Exception: Unrecognized objective type"
+      },
+      "term0_range": 7.9080589084667
+    },
+    "features": [
+      "log_units",
+      "unit_price",
+      "deliveries",
+      "distance",
+      "quality",
+      "season",
+      "noise0",
+      "noise1",
+      "noise2"
+    ]
+  },
+  "s1_period2": {
+    "name": "s1_period2",
+    "n_train": 1400,
+    "n_test": 600,
+    "trace": {
+      "pinball": 0.2608529390759635,
+      "crps": 0.521705878151927,
+      "cover80": 0.8583333333333333,
+      "cover90": 0.93,
+      "mse_median": 0.9931960137578072,
+      "mse_mean": 0.993135296827969,
+      "fit_seconds": 0.005284870999730629,
+      "location_bin_correlation": 0.9528915436338976
+    },
+    "ebm": {
+      "available": true,
+      "fit_seconds": 0.7658381040000677,
+      "point": {
+        "pinball": 0.3458293287539194,
+        "crps": 0.6916586575078388,
+        "cover80": 0.0,
+        "cover90": 0.0,
+        "mse_median": 0.9711947509134142,
+        "mse_mean": 0.9711947509134142
+      },
+      "conformal": {
+        "pinball": 0.26107062138742926,
+        "crps": 0.5221412427748585,
+        "cover80": 0.8216666666666667,
+        "cover90": 0.9216666666666666,
+        "mse_median": 0.9714833966018184,
+        "mse_mean": 0.9715346700232055
+      },
+      "quantile_objective": {
+        "available": false,
+        "reason": "Exception: Unrecognized objective type"
+      },
+      "term0_range": 0.9486054643355748
+    }
+  },
+  "scale_small": {
+    "name": "s4_style_n2e4_p10",
+    "n_train": 14000,
+    "n_test": 6000,
+    "trace": {
+      "pinball": 0.051792026080259464,
+      "crps": 0.10358405216051893,
+      "cover80": 0.9976666666666667,
+      "cover90": 1.0,
+      "mse_median": 0.021300983535123462,
+      "mse_mean": 0.021295059380748882,
+      "fit_seconds": 0.013639817999774095,
+      "location_bin_correlation": 0.9960575408830038
+    },
+    "ebm": {
+      "available": true,
+      "fit_seconds": 1.8582863699998597,
+      "point": {
+        "pinball": 0.040340119474473156,
+        "crps": 0.08068023894894631,
+        "cover80": 0.0,
+        "cover90": 0.0,
+        "mse_median": 0.010180267139348232,
+        "mse_mean": 0.010180267139348224
+      },
+      "conformal": {
+        "pinball": 0.028545732934137518,
+        "crps": 0.057091465868275036,
+        "cover80": 0.7951666666666667,
+        "cover90": 0.904,
+        "mse_median": 0.010177950567663234,
+        "mse_mean": 0.010177450139726365
+      },
+      "quantile_objective": {
+        "available": false,
+        "reason": "Exception: Unrecognized objective type"
+      },
+      "term0_range": 1.0058336315645955
+    }
+  }
+}

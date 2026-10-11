@@ -1,0 +1,241 @@
+{
+  "s1": {
+    "energy": {
+      "x_loc": {
+        "location": 0.06970110573399402,
+        "scale": 0.0009561659143801469,
+        "shape": 0.000942680245804634
+      },
+      "x_scale": {
+        "location": 0.004126377780695377,
+        "scale": 0.01381232832788454,
+        "shape": 0.014062436377324607
+      },
+      "x_shape": {
+        "location": 0.0,
+        "scale": 0.0,
+        "shape": 0.0
+      },
+      "noise0": {
+        "location": 0.005027638886386034,
+        "scale": 0.00046592390558090706,
+        "shape": 0.0003484926437534148
+      },
+      "noise1": {
+        "location": 0.0,
+        "scale": 0.0,
+        "shape": 0.0
+      },
+      "noise2": {
+        "location": 0.0,
+        "scale": 0.0,
+        "shape": 0.0
+      },
+      "noise3": {
+        "location": 0.0,
+        "scale": 0.0,
+        "shape": 0.0
+      },
+      "noise4": {
+        "location": 0.0,
+        "scale": 0.0,
+        "shape": 0.0
+      }
+    },
+    "correlation": {
+      "x_loc_location": 0.9665874739352224,
+      "x_scale_scale": 0.9663849227795634,
+      "x_shape_shape": null
+    },
+    "checks": {
+      "location_dominates": true,
+      "scale_dominates": true,
+      "shape_dominates": false,
+      "location_correlation": true,
+      "scale_correlation": true,
+      "shape_correlation": false
+    },
+    "pass": false,
+    "seconds": 0.029617709999911312
+  },
+  "criteria": "docs/TRACE_SIMS.md",
+  "s2": {
+    "names": [
+      "x_signal",
+      "x_leak",
+      "x_proxy",
+      "x_future",
+      "x_dup",
+      "x_noise"
+    ],
+    "proxy_flags": [
+      [
+        2,
+        0,
+        0.9999546590848267
+      ],
+      [
+        3,
+        1,
+        1.0000000000000002
+      ]
+    ],
+    "duplicates": [
+      [
+        0,
+        4,
+        true,
+        1.0000000000000002
+      ]
+    ],
+    "real_abs_corr": [
+      0.7368903020010217,
+      0.6635146364990828,
+      0.9999546590848267,
+      0.45107200217022436,
+      0.7368903020010217,
+      0.008044780828688675
+    ],
+    "placebo_max": 0.08598616383077916,
+    "placebo_mean_max": 0.035456467741470814,
+    "w2_time": [
+      0.08833903694290196,
+      1.0671212709017497,
+      0.9519420531833741,
+      0.9493734778183054,
+      0.08833903694290196,
+      0.10777357086453318
+    ],
+    "w2_random": [
+      0.056974429135698716,
+      0.04198111559344629,
+      0.06972308989249018,
+      0.05510608913163251,
+      0.056974429135698716,
+      0.11272625649885475
+    ],
+    "w2_ratio": [
+      1.5505032394883793,
+      25.419078455083717,
+      13.653182247820991,
+      17.22810478440099,
+      1.5505032394883793,
+      0.9560644894264552
+    ],
+    "importance_leak_random": 0.0478163372455703,
+    "importance_leak_time": 0.007863432208316307,
+    "checks": {
+      "proxy_flagged": true,
+      "future_flagged": true,
+      "signal_leak_noise_quiet": true,
+      "duplicate_exact_only": true,
+      "placebo": true,
+      "leak_w2_ratio": true,
+      "signal_w2_ratio": true,
+      "leak_largest_w2_ratio": true,
+      "time_split_importance": true
+    },
+    "pass": true,
+    "seconds": 0.038166728999840416
+  },
+  "s3": {
+    "far": 0.07659574468085106,
+    "power": 1.0,
+    "segment": 1.0,
+    "checks": {
+      "far": true,
+      "power": true,
+      "segment": true
+    },
+    "pass": true,
+    "seconds": 0.012789814999905502
+  },
+  "s4": {
+    "cells": [
+      {
+        "rows": 10000,
+        "features": 10,
+        "bin_seconds": 0.0016414900005656818,
+        "fit_seconds": 0.01352636399997209,
+        "wall_seconds": 0.015167854000537773,
+        "peak_rss_mb": 38.61328125,
+        "pass_cell": true
+      },
+      {
+        "rows": 10000,
+        "features": 100,
+        "bin_seconds": 0.011359771001025365,
+        "fit_seconds": 0.0681096250000337,
+        "wall_seconds": 0.07946939600105907,
+        "peak_rss_mb": 39.52734375,
+        "pass_cell": true
+      },
+      {
+        "rows": 100000,
+        "features": 10,
+        "bin_seconds": 0.021265531999688392,
+        "fit_seconds": 0.08178357600036179,
+        "wall_seconds": 0.10304910800005018,
+        "peak_rss_mb": 46.796875,
+        "pass_cell": true
+      },
+      {
+        "rows": 100000,
+        "features": 100,
+        "bin_seconds": 0.17251104400065742,
+        "fit_seconds": 0.3257111990001249,
+        "wall_seconds": 0.4982222430007823,
+        "peak_rss_mb": 55.3046875,
+        "pass_cell": true
+      },
+      {
+        "rows": 1000000,
+        "features": 10,
+        "bin_seconds": 0.14539573000138262,
+        "fit_seconds": 0.5829799070002082,
+        "wall_seconds": 0.7283756370015908,
+        "peak_rss_mb": 124.96484375,
+        "pass_cell": true
+      },
+      {
+        "rows": 1000000,
+        "features": 100,
+        "bin_seconds": 1.1643967820000398,
+        "fit_seconds": 2.6668776999999864,
+        "wall_seconds": 3.831274482000026,
+        "peak_rss_mb": 210.890625,
+        "pass_cell": true
+      },
+      {
+        "rows": 10000000,
+        "features": 10,
+        "bin_seconds": 1.2628173470002366,
+        "fit_seconds": 5.427092823000294,
+        "wall_seconds": 6.68991017000053,
+        "peak_rss_mb": 837.921875,
+        "pass_cell": true
+      },
+      {
+        "rows": 10000000,
+        "features": 100,
+        "bin_seconds": 12.02110634499968,
+        "fit_seconds": 33.132036980000066,
+        "wall_seconds": 45.153143324999746,
+        "peak_rss_mb": 1696.00390625,
+        "pass_cell": true
+      }
+    ],
+    "ratios": {
+      "p10_1e6_over_1e5": 7.068238154970115,
+      "p100_1e6_over_1e5": 7.689890477238308,
+      "p10_1e5_over_1e4": 6.793914814607037,
+      "p100_1e5_over_1e4": 6.269359880300873
+    },
+    "checks": {
+      "all_finished": true,
+      "linear_growth": true
+    },
+    "pass": true,
+    "seconds": 62.285305853999944
+  }
+}
