@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: cargo test (parallel)
+        run: cargo test -p traceot-core
+      - name: cargo test (single-threaded, no rayon)
+        run: cargo test -p traceot-core --no-default-features
+      - name: benches compile
+        run: cargo bench -p traceot-core --no-run
+
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: maturin build
+        run: |
+          python -m pip install --upgrade pip maturin
+          maturin build --release -o dist
+      - name: install wheel and test deps
+        run: |
+          python -m pip install dist/*.whl
+          python -m pip install pytest scipy ruff
+      - name: ruff
+        run: |
+          ruff check python tests benchmarks examples docs
+          ruff format --check python tests benchmarks examples docs
+      - name: pytest
+        run: python -m pytest -q
