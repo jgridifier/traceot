@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn ADOPT: additive optimal transport regression · traceot</title>
+<meta name="description" content="A plain-language guide to optimal-transport regression, additive transport, the ADOPT method and our reproduction of its simulation study.">
+<style>
+  :root { color-scheme: light dark; --fg:#1d1d1f; --bg:#fdfdfc; --muted:#5b5b60; --rule:#ddd; --accent:#1b6ca8; --note:#f3f6fa; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e9e9ec; --bg:#141416; --muted:#a3a3aa; --rule:#333; --accent:#6fb3e6; --note:#1d2229; } svg { background:#fff; border-radius:6px; } }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+         font-size:1.0625rem; line-height:1.6; }
+  main { max-width:40rem; margin:0 auto; padding:1.25rem 1rem 4rem; }
+  h1 { font-size:1.7rem; line-height:1.2; margin:1.2rem 0 .4rem; }
+  h2 { font-size:1.3rem; margin:2.4rem 0 .6rem; padding-top:.6rem; border-top:1px solid var(--rule); }
+  h3 { font-size:1.05rem; margin:1.6rem 0 .4rem; }
+  p, li { max-width:40rem; }
+  a { color:var(--accent); }
+  .lede { color:var(--muted); font-size:1.05rem; }
+  .status { display:inline-block; font-size:.8rem; font-weight:600; padding:.15rem .5rem; border-radius:999px; background:#fff3cd; color:#664d03; }
+  .note { background:var(--note); border-left:4px solid var(--accent); padding:.6rem .9rem; border-radius:4px; margin:1rem 0; }
+  figure { margin:1.2rem 0; }
+  figure svg { width:100%; height:auto; display:block; }
+  figcaption { color:var(--muted); font-size:.9rem; margin-top:.35rem; }
+  .scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:1rem 0; }
+  table { border-collapse:collapse; font-size:.82rem; font-variant-numeric:tabular-nums; min-width:100%; }
+  caption { text-align:left; font-weight:600; padding:.3rem 0; }
+  th, td { border-bottom:1px solid var(--rule); padding:.3rem .45rem; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+  nav.toc ol { padding-left:1.2rem; }
+  footer { color:var(--muted); font-size:.85rem; margin-top:3rem; border-top:1px solid var(--rule); padding-top:1rem; }
+</style>
+</head>
+<body>
+<main>
+<p><a href="../index.html">traceot</a> · <span class="status">research, unvalidated</span></p>
+<h1>Learn ADOPT: regression when each answer is a whole distribution</h1>
+<p class="lede">A plain-language guide to optimal-transport regression, the additive transport idea behind ADOPT, and what happened when we re-implemented it from the paper.</p>
+
+<nav class="toc" aria-label="Contents"><ol>
+<li><a href="#ot">What optimal-transport regression is</a></li>
+<li><a href="#additive">How additive transport works</a></li>
+<li><a href="#components">ADOPT's components, one by one</a></li>
+<li><a href="#results">Our reproduction of the paper's simulations</a></li>
+<li><a href="#trace">From ADOPT to TRACE</a></li>
+<li><a href="#refs">Source and citation</a></li>
+</ol></nav>
+
+<h2 id="ot">1. What optimal-transport regression is</h2>
+<p>Ordinary regression predicts one number per row: an average. Sometimes the thing you care about is a whole <em>distribution</em>: how spread out values are, how heavy the right tail is, not just where the middle sits. Distributional regression predicts the whole shape.</p>
+<p>To compare and average distributions you need a distance between them. Optimal transport (OT) gives a natural one: the cheapest way to move the probability mass of one distribution so that it becomes the other. With squared-distance cost this is the <strong>Wasserstein-2 distance</strong>, written W2.</p>
+<p>On a single number line OT is especially simple. The cheapest plan moves the 10th percentile of the first distribution to the 10th percentile of the second, the median to the median, and so on. So the transport map is "percentile to same percentile", and it is always increasing.</p>
+<figure>{{FIG_OT}}<figcaption>Figure 1. Left: two distributions; arrows move each percentile of the blue one to the same percentile of the red one. Right: the resulting transport map. Simulated data.</figcaption></figure>
+<p>This gives a handy representation: describe each distribution by its <strong>quantile function</strong> (the value at each percentile). Then the W2 distance is just the ordinary distance between quantile functions, and the average distribution (the <em>Fréchet mean</em>) is the percentile-by-percentile average.</p>
+<p><strong>OT regression</strong> predicts, for each set of inputs <code>x</code>, a whole distribution, and judges errors with W2. Instead of "x raises the average by 2", the answer reads "x pushes the distribution along this transport map".</p>
+
+<h2 id="additive">2. How additive transport works</h2>
+<p>Additive models (like generalised additive models) are popular because each input gets its own curve you can plot. In ordinary regression the effects simply add: <code>prediction = average + effect of x1 + effect of x2 + …</code>.</p>
+<p>Distributions cannot be added. ADOPT's idea is to replace "add an effect" with "apply a transport". Each input <code>x_j</code> gets its own transport map <code>T_j(x_j)</code>. Start from the average distribution and apply the maps one after another:</p>
+<p class="note"><code>prediction(x) = T_p(x_p) ∘ … ∘ T_2(x_2) ∘ T_1(x_1) applied to the mean distribution</code></p>
+<p>In the paper this chaining is written with a "⊕" sign, which means "do this transport, then that one". In ordinary flat space, chaining shifts is the same as adding them, so ADOPT reduces to the usual additive model there.</p>
+<p>Each map is glass-box: you can show how one input value moves, widens or reshapes the outcome distribution while holding the others at their typical level.</p>
+<figure>{{FIG_COMP}}<figcaption>Figure 2. ADOPT fitted to simulated rows whose outcome distribution is shifted by x1, widened by x2 and given a heavier right tail by x3. Each panel shows one estimated transport applied to the mean distribution at three input values.</figcaption></figure>
+
+<h2 id="components">3. ADOPT's components, one by one</h2>
+<h3>Fréchet mean</h3>
+<p>The "average" distribution: the one with the smallest total squared W2 distance to all observed responses. For 1-D distributions it is the percentile-wise mean of the quantile functions.</p>
+<h3>Transport maps <code>T_j(x_j)</code></h3>
+<p>For each input there is a curve of distributions <code>g_j(x_j)</code>. The map <code>T_j(x_j)</code> is the OT map from the average of that curve to its value at <code>x_j</code>. This is the distribution version of "subtract the mean of each effect" that makes additive models identifiable.</p>
+<h3>Partial transport residuals</h3>
+<p>To estimate one map, undo all the others. For row <code>i</code>, take the map from the mean to the observed distribution, then apply the inverse maps of every other input. What remains is "the part of this row explained by input j, plus noise". This mirrors partial residuals in classic backfitting. Order matters because transports need not commute, and the paper fixes the order.</p>
+<h3>Local Fréchet regression (the smoother)</h3>
+<p>The residuals for input j are smoothed against <code>x_j</code> with kernel-weighted local linear regression, done in W2 geometry. For 1-D distributions this is a weighted average of quantile functions, followed by a step that makes the result increasing again (the weights can be negative).</p>
+<h3>Transport centring</h3>
+<p>After smoothing, each map is re-anchored at the Fréchet mean of its own curve, so that "typical" inputs mean "no change".</p>
+<h3>Transport backfitting loop</h3>
+<p>Cycle through the inputs, re-estimating each map with the others held fixed, until the fitted distributions stop changing. The bandwidth of the smoother is chosen by 5-fold cross-validation.</p>
+<h3>Cost</h3>
+<p>Each cycle smooths <code>n</code> residual distributions at <code>n</code> points for each of <code>p</code> inputs: about <code>n² · p · q</code> operations for <code>q</code> percentiles (the paper's Supplement C says the same). That is fine for hundreds or thousands of distributions, and too slow for millions of rows. See section 5.</p>
+
+<h2 id="results">4. Our reproduction of the paper's simulations</h2>
+<p>There is no public code, so we re-implemented ADOPT from the paper: once in plain numpy as a readable reference, and once in Rust for speed. Tests check that the two agree (to within 1e-9; in practice about 1e-14). We then re-ran the paper's two simulation designs with fixed seeds and B = {{REPS}} replicates per setting. Every guess we had to make is listed in <a href="https://github.com/jgridifier/traceot/blob/main/docs/REPRODUCTION_NOTES.md">REPRODUCTION_NOTES.md</a>.</p>
+<p>The metric is MISE: the squared W2 (or log-Cholesky) error of the predicted distribution, averaged over the unit cube of inputs and over replicates. Lower is better. "Paper" columns are copied verbatim from the published tables. "Ours" are our runs.</p>
+<div class="scroll">{{TABLE1}}</div>
+<div class="scroll">{{TABLE2}}</div>
+<p style="font-size:.85rem;color:var(--muted)">Mean (standard error). *L2-additive is an extra comparator of ours (additive model on quantile functions treated as vectors), not part of the paper. We did not re-implement the ADR method of Han et al. (2020), so its column is "not run".</p>
+<figure>{{FIG_REPRO}}<figcaption>Figure 3. Paper-reported (pale) versus our (solid) MISE, log scale.</figcaption></figure>
+<h3>What matched and what did not</h3>
+<ul>
+<li><strong>Distributional responses, Case I (Beta family):</strong> ADOPT, global Fréchet regression and the Fréchet mean all land close to the paper, and the ranking ADOPT &lt; GF &lt; FM is reproduced.</li>
+<li><strong>Case II (Normal family):</strong> GF and FM match the paper closely. Our ADOPT error is clearly <em>lower</em> than the paper's. The most likely cause is bandwidth selection (grid and CV details are not given in the paper). Here the true maps are pure shifts, which reward wide bandwidths.</li>
+<li><strong>SPD matrices (log-Cholesky):</strong> the ranking ADOPT &lt; GF &lt; FM is reproduced, but the levels are not. Only the FM value for Case I, m = 10 matches. Under our reading of the design, the FM error grows about in proportion to <code>m</code>, which the paper's FM column does not show. So we read at least part of the SPD design differently from the authors. Details and the population calculation are in the notes.</li>
+</ul>
+<p class="note">Bottom line: the method and its qualitative claims reproduce. The exact numbers in Table 1 reproduce for most cells, and Table 2 does not. We report this as is and did not tune anything towards the paper's values.</p>
+
+<h2 id="trace">5. From ADOPT to TRACE</h2>
+<p>ADOPT needs one whole distribution per row (for example, one per group or per period), and its smoother compares every row with every other row. TRACE is our own proposed method, <strong>not published and not validated</strong>. It keeps ADOPT's key idea and changes the setting:</p>
+<ul>
+<li><strong>Same idea, unit level.</strong> On a number line the quantile function <em>is</em> the OT map from a uniform variable. So an additive model of the conditional quantile function, <code>Q(u | x) = β₀(u) + Σ f_j(x_j, u)</code>, is an additive model of transport displacements. Each shape function says how <code>x_j</code> moves, widens or fattens the outcome distribution, read straight from individual rows rather than pre-aggregated distributions.</li>
+<li><strong>EBM-style fitting.</strong> Shape functions are lookup tables over histogram bins, learned by slow cyclic boosting on the pinball (quantile) loss: linear passes over the data, no row-by-row comparisons.</li>
+<li><strong>Built for large tables.</strong> The Rust core already has the scalable pieces: mergeable streaming quantile sketches, 8/16-bit histogram binning in columnar layout, multi-threaded gradient histograms, and pinball gradients that never store an <code>n × K</code> matrix.</li>
+<li><strong>Explanations of change and of oddness.</strong> Planned: splitting a shift between periods or groups into composition, structure and unexplained parts, transport-based oddness scores, and leakage and placebo checks that run inside the fitting loop.</li>
+</ul>
+<figure>{{FIG_SCALE}}<figcaption>Figure 4. Wall time against rows: an ADOPT fit (quadratic) versus one pass of the TRACE primitives (linear). Measured on a shared 8-core machine. See BENCHMARKS.md.</figcaption></figure>
+<p>ADOPT stays in the package as a faithful baseline for row-level distributional data, and as a segment-level comparator for TRACE.</p>
+
+<h2 id="refs">6. Source and citation</h2>
+<p>Song, W. and Müller, H.-G. (2026). "ADOPT: Additive Optimal Transport Regression." <em>Proceedings of the 29th International Conference on Artificial Intelligence and Statistics</em>, PMLR 300:1558–1566. <a href="https://proceedings.mlr.press/v300/song26c.html">proceedings.mlr.press/v300/song26c.html</a>. Also on arXiv (2512.08118).</p>
+<p>Other background: Petersen and Müller (2019), Fréchet regression; Lin (2019), log-Cholesky metric; McCann (1997), displacement interpolation.</p>
+<footer>traceot is a personal research project. Status: research, unvalidated. All data on this page are simulated. Generated by <code>docs/build_docs.py</code>. MIT licence.</footer>
+</main>
+</body>
+</html>
