@@ -72,6 +72,111 @@ pub fn pinball_grad_location_scale(
     Ok((cols, loss / denom))
 }
 
+/// Pinball subgradients for `Q(u) = q0(u) + sum_m theta_m basis_m(u)`.
+///
+/// `theta` and the returned gradient are interleaved `(n, M)`: index `i * M + m`.
+/// `basis` is row-major `(K, M)`. Also returns the per-row mean pinball loss.
+/// The `n x K` quantile matrix is never stored.
+pub fn pinball_grad_channels(
+    y: &[f64],
+    theta: &[f64],
+    q0: &[f64],
+    basis: &[f64],
+    u: &[f64],
+    n_channels: usize,
+) -> Result<(Vec<f64>, Vec<f64>)> {
+    let n = y.len();
+    let k = u.len();
+    let m_ch = n_channels;
+    if m_ch == 0 || q0.len() != k || basis.len() != k * m_ch || theta.len() != n * m_ch {
+        return Err(TraceError::Shape(
+            "pinball channel shapes are inconsistent".into(),
+        ));
+    }
+    let mut grad = vec![0.0; n * m_ch];
+    let mut row_loss = vec![0.0; n];
+    pinball_grad_into(y, theta, q0, basis, u, m_ch, &mut grad, &mut row_loss);
+    Ok((grad, row_loss))
+}
+
+/// Fill `grad` `(n, M)` interleaved and `row_loss` `(n,)`. Buffers are overwritten.
+#[allow(clippy::too_many_arguments)]
+pub fn pinball_grad_into(
+    y: &[f64],
+    theta: &[f64],
+    q0: &[f64],
+    basis: &[f64],
+    u: &[f64],
+    m_ch: usize,
+    grad: &mut [f64],
+    row_loss: &mut [f64],
+) {
+    let n = y.len();
+    let k = u.len();
+    let one = |s: usize, g: &mut [f64], loss: &mut [f64]| {
+        for r in 0..loss.len() {
+            let i = s + r;
+            let th = &theta[i * m_ch..(i + 1) * m_ch];
+            let grow = &mut g[r * m_ch..(r + 1) * m_ch];
+            grow.fill(0.0);
+            let mut acc = 0.0;
+            for kk in 0..k {
+                let b = &basis[kk * m_ch..(kk + 1) * m_ch];
+                let mut q = q0[kk];
+                for m in 0..m_ch {
+                    q += th[m] * b[m];
+                }
+                let res = y[i] - q;
+                let rr = if res < 0.0 { u[kk] - 1.0 } else { u[kk] };
+                acc += res * rr;
+                for m in 0..m_ch {
+                    grow[m] += rr * b[m];
+                }
+            }
+            loss[r] = acc / k as f64;
+        }
+    };
+    #[cfg(feature = "parallel")]
+    {
+        let threads = rayon::current_num_threads().max(1).min(n.max(1));
+        let parts = disjoint_rows(grad, row_loss, m_ch, threads);
+        parts
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(t, (g, loss))| {
+                let s = t * n / threads;
+                one(s, g, loss);
+            });
+    }
+    #[cfg(not(feature = "parallel"))]
+    one(0, grad, row_loss);
+}
+
+/// Split gradient and row-loss buffers into `threads` disjoint row ranges.
+#[cfg(feature = "parallel")]
+fn disjoint_rows<'a>(
+    grad: &'a mut [f64],
+    row_loss: &'a mut [f64],
+    m_ch: usize,
+    threads: usize,
+) -> Vec<(&'a mut [f64], &'a mut [f64])> {
+    let n = row_loss.len();
+    let mut g = grad;
+    let mut loss = row_loss;
+    let mut out = Vec::with_capacity(threads);
+    for t in 0..threads {
+        let begin = t * n / threads;
+        let end = (t + 1) * n / threads;
+        let rows = end - begin;
+        let (gl, gr) = g.split_at_mut(rows * m_ch);
+        let (ll, lr) = loss.split_at_mut(rows);
+        out.push((gl, ll));
+        g = gr;
+        loss = lr;
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,5 +199,26 @@ mod tests {
         assert!(
             pinball_grad_location_scale(&[1.0], &[], &[1.0], &[0.0], &[0.5], &[1.0], 1).is_err()
         );
+    }
+
+    #[test]
+    fn channel_gradient_matches_location_scale() {
+        // Q = theta0 * 1 + theta1 * z, basis = [[1, 0], [1, 1]], two rows.
+        let (g, loss) = pinball_grad_channels(
+            &[1.0, -1.0],
+            &[0.0, 0.0, 0.0, 0.0],
+            &[0.0, 0.0],
+            &[1.0, 0.0, 1.0, 1.0],
+            &[0.25, 0.75],
+            2,
+        )
+        .unwrap();
+        // y=1 > 0: r = u. y=-1 < 0: r = u-1.
+        // G[0,0] = 0.25*1 + 0.75*1 = 1; G[0,1] = 0.25*0 + 0.75*1 = 0.75
+        assert!((g[0] - 1.0).abs() < 1e-15);
+        assert!((g[1] - 0.75).abs() < 1e-15);
+        assert!((g[2] - ((0.25 - 1.0) + (0.75 - 1.0))).abs() < 1e-15);
+        assert!((loss[0] - 0.5).abs() < 1e-15, "{loss:?}");
+        assert!(pinball_grad_channels(&[1.0], &[], &[0.0], &[1.0], &[0.5], 1).is_err());
     }
 }

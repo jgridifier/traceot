@@ -10,6 +10,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Through
 use std::hint::black_box;
 use traceot_core::adopt::{adopt_w2_fit, BackfitConfig};
 use traceot_core::scalable::{binning, histogram, pinball, sketch::QuantileSketch};
+use traceot_core::trace::{fit_trace, TraceConfig};
 use traceot_core::w2::{pava, quantile_grid, transport_apply};
 use traceot_core::Mat;
 
@@ -111,5 +112,42 @@ fn bench_scalable(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, bench_w2, bench_adopt, bench_scalable);
+fn bench_trace(c: &mut Criterion) {
+    let mut g = c.benchmark_group("trace");
+    g.sample_size(10);
+    let n = 20_000usize;
+    let p = 8usize;
+    let mut s = 19u64;
+    let mut x = vec![0.0; n * p];
+    let mut y = vec![0.0; n];
+    for i in 0..n {
+        let mut row = [0.0; 8];
+        for v in &mut row {
+            *v = lcg(&mut s);
+        }
+        x[i * p..(i + 1) * p].copy_from_slice(&row);
+        let z = {
+            let (a, b) = (lcg(&mut s).max(1e-300), lcg(&mut s));
+            (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos()
+        };
+        y[i] = 1.2 * row[0] + (0.4 + row[1]) * z;
+    }
+    let cfg = TraceConfig {
+        max_rounds: 3,
+        patience: 0,
+        val_frac: 0.0,
+        max_interactions: 0,
+        max_bins: 32,
+        u_levels: 19,
+        n_channels: 3,
+        ..TraceConfig::default()
+    };
+    g.throughput(Throughput::Elements(n as u64));
+    g.bench_function("fit_n20k_p8_r3", |b| {
+        b.iter(|| fit_trace(black_box(&x), n, p, black_box(&y), &cfg).unwrap())
+    });
+    g.finish();
+}
+
+criterion_group!(benches, bench_w2, bench_adopt, bench_scalable, bench_trace);
 criterion_main!(benches);

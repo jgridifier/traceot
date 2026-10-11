@@ -23,6 +23,7 @@ pub mod linalg;
 pub mod logchol;
 pub mod scalable;
 pub mod smoother;
+pub mod trace;
 pub mod w2;
 
 pub use error::{Result, TraceError};

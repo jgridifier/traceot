@@ -7,14 +7,15 @@ thin binding layer (input validation, numpy conversion, scikit-learn-style API).
 
 Milestone 1 implements ADOPT (Song & Müller, "ADOPT: Additive Optimal Transport
 Regression", AISTATS 2026, PMLR v300, https://proceedings.mlr.press/v300/song26c.html).
-TRACE, our own proposed (unpublished) method, is the long-term goal; its scalable
-primitives are in :mod:`traceot.primitives`.
+TRACE v0, our own unpublished method, is a binned additive model of the conditional
+quantile function (:class:`traceot.TraceRegressor`). ADOPT remains a reproduction only.
 """
 
-from . import primitives
+from . import checks, primitives
 from .adopt import ADOPTRegressor
 from .baselines import FrechetMeanRegressor, GlobalFrechetRegressor, L2AdditiveQuantileRegressor
 from .primitives import quantile_grid
+from .trace import TraceRegressor
 
 __version__ = "0.1.0"
 
@@ -23,6 +24,8 @@ __all__ = [
     "FrechetMeanRegressor",
     "GlobalFrechetRegressor",
     "L2AdditiveQuantileRegressor",
+    "TraceRegressor",
+    "checks",
     "primitives",
     "quantile_grid",
 ]

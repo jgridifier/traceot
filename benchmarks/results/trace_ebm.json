@@ -1,0 +1,166 @@
+{
+  "vendor_spend": {
+    "name": "vendor_spend",
+    "n_train": 2800,
+    "n_test": 1200,
+    "trace": {
+      "pinball": 0.38520814981188384,
+      "crps": 0.7704162996237677,
+      "cover80": 0.9191666666666667,
+      "cover90": 0.995,
+      "mse_median": 1.8414880495755945,
+      "mse_mean": 1.8419309891598679,
+      "fit_seconds": 0.03922216400042089,
+      "rounds": [
+        40
+      ],
+      "calibrated": {
+        "pinball": 0.3865674186860605,
+        "crps": 0.773134837372121,
+        "cover80": 0.8083333333333333,
+        "cover90": 0.9075,
+        "mse_median": 1.9577975308334017,
+        "mse_mean": 1.95765567711827
+      },
+      "location_bin_correlation": 0.998898972339163
+    },
+    "ebm": {
+      "available": true,
+      "fit_seconds": 1.668095514000015,
+      "point": {
+        "pinball": 0.5106305764322612,
+        "crps": 1.0212611528645223,
+        "cover80": 0.0,
+        "cover90": 0.0,
+        "mse_median": 1.798338971263452,
+        "mse_mean": 1.7983389712634517
+      },
+      "conformal": {
+        "pinball": 0.37129164991204,
+        "crps": 0.74258329982408,
+        "cover80": 0.8141666666666667,
+        "cover90": 0.9166666666666666,
+        "mse_median": 1.7992801210109681,
+        "mse_mean": 1.7993178349862269
+      },
+      "quantile_objective": {
+        "available": false,
+        "reason": "Exception: Unrecognized objective type"
+      },
+      "term0_range": 7.9080589084667
+    },
+    "features": [
+      "log_units",
+      "unit_price",
+      "deliveries",
+      "distance",
+      "quality",
+      "season",
+      "noise0",
+      "noise1",
+      "noise2"
+    ]
+  },
+  "s1_period2": {
+    "name": "s1_period2",
+    "n_train": 1400,
+    "n_test": 600,
+    "trace": {
+      "pinball": 0.25886150459424184,
+      "crps": 0.5177230091884837,
+      "cover80": 0.8216666666666667,
+      "cover90": 0.9116666666666666,
+      "mse_median": 0.9829882840182974,
+      "mse_mean": 0.9829443778740073,
+      "fit_seconds": 0.00922824600002059,
+      "rounds": [
+        29
+      ],
+      "calibrated": {
+        "pinball": 0.2618701401479683,
+        "crps": 0.5237402802959366,
+        "cover80": 0.8266666666666667,
+        "cover90": 0.94,
+        "mse_median": 0.9976968185880993,
+        "mse_mean": 0.9975666803637826
+      },
+      "location_bin_correlation": 0.9576811838795282
+    },
+    "ebm": {
+      "available": true,
+      "fit_seconds": 0.7007686120005019,
+      "point": {
+        "pinball": 0.3458293287539194,
+        "crps": 0.6916586575078388,
+        "cover80": 0.0,
+        "cover90": 0.0,
+        "mse_median": 0.9711947509134142,
+        "mse_mean": 0.9711947509134142
+      },
+      "conformal": {
+        "pinball": 0.26107062138742926,
+        "crps": 0.5221412427748585,
+        "cover80": 0.8216666666666667,
+        "cover90": 0.9216666666666666,
+        "mse_median": 0.9714833966018184,
+        "mse_mean": 0.9715346700232055
+      },
+      "quantile_objective": {
+        "available": false,
+        "reason": "Exception: Unrecognized objective type"
+      },
+      "term0_range": 0.9486054643355748
+    }
+  },
+  "scale_small": {
+    "name": "s4_style_n2e4_p10",
+    "n_train": 14000,
+    "n_test": 6000,
+    "trace": {
+      "pinball": 0.03025066784017546,
+      "crps": 0.06050133568035092,
+      "cover80": 0.9523333333333334,
+      "cover90": 0.9986666666666667,
+      "mse_median": 0.010243526213888854,
+      "mse_mean": 0.010238879332795414,
+      "fit_seconds": 0.06723941699965508,
+      "rounds": [
+        40
+      ],
+      "calibrated": {
+        "pinball": 0.029379339435339415,
+        "crps": 0.05875867887067883,
+        "cover80": 0.7898333333333334,
+        "cover90": 0.905,
+        "mse_median": 0.010501652412638575,
+        "mse_mean": 0.010501936540303645
+      },
+      "location_bin_correlation": 0.9992226189976174
+    },
+    "ebm": {
+      "available": true,
+      "fit_seconds": 1.5742911190000086,
+      "point": {
+        "pinball": 0.040340119474473156,
+        "crps": 0.08068023894894631,
+        "cover80": 0.0,
+        "cover90": 0.0,
+        "mse_median": 0.010180267139348232,
+        "mse_mean": 0.010180267139348224
+      },
+      "conformal": {
+        "pinball": 0.028545732934137518,
+        "crps": 0.057091465868275036,
+        "cover80": 0.7951666666666667,
+        "cover90": 0.904,
+        "mse_median": 0.010177950567663234,
+        "mse_mean": 0.010177450139726365
+      },
+      "quantile_objective": {
+        "available": false,
+        "reason": "Exception: Unrecognized objective type"
+      },
+      "term0_range": 1.0058336315645955
+    }
+  }
+}

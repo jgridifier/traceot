@@ -1,0 +1,496 @@
+{
+  "dgp": "seed 101, n=4000, p=5, y=3*(x0-0.5)+1.2*(x1-0.5)+0.25*N(0,1), holdout last 30%",
+  "bayes_mse": 0.0625,
+  "rows": [
+    {
+      "lr": 1.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 33,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 33,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 33,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 33,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 33,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 33,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 40,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 40,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 40,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 45,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 45,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 45,
+      "mse": 0.06610011443447458
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 13,
+      "mse": 0.06730660098173981
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 13,
+      "mse": 0.06730660098173981
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 25,
+      "mse": 0.06730660098173981
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 25,
+      "mse": 0.06730660098173981
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 33,
+      "mse": 0.07115777927461309
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 33,
+      "mse": 0.07115777927461309
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 40,
+      "mse": 0.07115777927461309
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 45,
+      "mse": 0.07115777927461309
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 19,
+      "mse": 0.07263087398615137
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 19,
+      "mse": 0.07263087398615137
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 31,
+      "mse": 0.07263087398615137
+    },
+    {
+      "lr": 1.5,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 31,
+      "mse": 0.07263087398615137
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 11,
+      "mse": 0.07427781486592934
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 11,
+      "mse": 0.07427781486592934
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 23,
+      "mse": 0.07427781486592934
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 23,
+      "mse": 0.07427781486592934
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 40,
+      "mse": 0.07491389560227582
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 52,
+      "mse": 0.07491389560227582
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 26,
+      "mse": 0.07533263297783861
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 26,
+      "mse": 0.07533263297783861
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 38,
+      "mse": 0.07533263297783861
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 38,
+      "mse": 0.07533263297783861
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 70,
+      "mse": 0.08001102171664132
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 31,
+      "mse": 0.08160070579669586
+    },
+    {
+      "lr": 2.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 31,
+      "mse": 0.08160070579669586
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 18,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 18,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 18,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 18,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 30,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 30,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 30,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 30,
+      "mse": 0.08255923009948495
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 40,
+      "mse": 0.08600403005935625
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 40,
+      "mse": 0.08600403005935625
+    },
+    {
+      "lr": 3.0,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 46,
+      "mse": 0.08600403005935625
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 10,
+      "mse": 0.08812159118135106
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 0,
+      "ran": 10,
+      "mse": 0.08812159118135106
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 22,
+      "mse": 0.08812159118135106
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 0,
+      "ran": 22,
+      "mse": 0.08812159118135106
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 33,
+      "mse": 0.0899012226920116
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 20,
+      "ran": 33,
+      "mse": 0.0899012226920116
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 40,
+      "mse": 0.0899012226920116
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 40,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 40,
+      "mse": 0.0899012226920116
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 10,
+      "ran": 45,
+      "mse": 0.0899012226920116
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 80,
+      "patience": 20,
+      "min_rounds": 20,
+      "ran": 45,
+      "mse": 0.0899012226920116
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 40,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 19,
+      "mse": 0.09997579611495407
+    },
+    {
+      "lr": 2.5,
+      "max_rounds": 80,
+      "patience": 8,
+      "min_rounds": 10,
+      "ran": 19,
+      "mse": 0.09997579611495407
+    }
+  ],
+  "chosen": {
+    "lr": 1.0,
+    "max_rounds": 40,
+    "patience": 8,
+    "min_rounds": 20,
+    "mse": 0.06610011443447458,
+    "ran": 33,
+    "rule": "lowest held-out median MSE; ties keep the smaller max_rounds. min_rounds=20 matches that MSE at lr=1 and is the screen floor.",
+    "note": "This grid is the fitter that adds the shared channel step once. On this surface lr=2.5 is worse (median MSE about 0.088 to 0.100)."
+  }
+}

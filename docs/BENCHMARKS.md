@@ -94,6 +94,16 @@ Measured by `python benchmarks/adopt_audit/run_audit.py` on this machine: 4 CPUs
 
 From n = 200 to n = 1600 (8× rows) dense time grew 34× and binned time grew 5.1×. Step to step, dense growth from 800 to 1600 was 3.83 (quadratic scaling is 4) and binned growth was 2.03 (linear scaling is 2). Full JSON: `benchmarks/results/adopt_audit.json`.
 
+## TRACE fit (v0)
+
+A TRACE round is one pinball gradient over the quantile grid (`O(n K M)`, independent of the feature count) and one histogram pass per feature (`O(n p M)`). Criterion id `trace/fit_n20k_p8_r3` is three such rounds on 20,000 rows and 8 features, with early stopping and interactions off. The end-to-end grid (1e4 to 1e7 rows, 10 and 100 features, three rounds, columnar `uint8` codes) is `benchmarks/trace_sims/run_sims.py` and is written up in `docs/TRACE_SIMS.md` (S4). Numbers from this machine are filled in there and, once measured, next to the criterion id below.
+
+| Benchmark | Result |
+|---|---|
+| `trace/fit_n20k_p8_r3` | 13.1 ms median (12.5–13.4 ms), about 1.5 M rows/s for the whole 3-round fit. Criterion, 10 samples, release, 11 October 2026. |
+
+End-to-end TRACE fits (bin plus three rounds, columnar `uint8`, no `n × p` float matrix) are in `docs/TRACE_SIMS.md` (S4). The second-run 1e7 × 100 fit is 30 s and the peak RSS is 1.7 GB. The v0 measurement on the same cell was 33 s. The only cell slower than v0 is 1e4 × 10, about +14% wall time, under the 25% bar. Tenfold growth in rows stays in the linear range.
+
 ## Re-running
 
 ```bash
@@ -101,4 +111,6 @@ cargo bench -p traceot-core                  # criterion; HTML report in target/
 python benchmarks/scale_bench.py             # 1e4..1e7 rows x 10/100 features, about 1.6 GB peak
 python docs/build_docs.py                    # refreshes the table above and the scaling figure
 python benchmarks/adopt_audit/run_audit.py   # order, centering, convergence, monotone, scaling, boundary
+python benchmarks/trace_sims/run_sims.py     # TRACE S1-S4
+cargo bench -p traceot-core -- trace/fit     # the TRACE fit micro-benchmark
 ```

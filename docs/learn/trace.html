@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn TRACE · traceot</title>
+<meta name="description" content="What explainable boosting machines are, how TRACE models a whole conditional distribution, and the checks around it.">
+<style>
+  :root { color-scheme: light dark; --fg:#1d1d1f; --bg:#fdfdfc; --muted:#5b5b60; --rule:#ddd; --accent:#1b6ca8; --note:#f3f6fa; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg:#e9e9ec; --bg:#141416; --muted:#a3a3aa; --rule:#333; --accent:#6fb3e6; --note:#1d2229; }
+    svg { background:#fff; border-radius:6px; }
+  }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+         font-size:1.0625rem; line-height:1.6; }
+  main { max-width:40rem; margin:0 auto; padding:1.25rem 1rem 4rem; }
+  h1 { font-size:1.7rem; line-height:1.2; margin:1.2rem 0 .4rem; }
+  h2 { font-size:1.25rem; margin:1.6rem 0 .5rem; }
+  h3 { font-size:1.05rem; margin:1.3rem 0 .3rem; }
+  a { color:var(--accent); }
+  .lede { color:var(--muted); }
+  .status { display:inline-block; font-size:.8rem; font-weight:600; padding:.15rem .5rem; border-radius:999px; background:#fff3cd; color:#664d03; }
+  .note { background:var(--note); border-left:4px solid var(--accent); padding:.6rem .9rem; border-radius:4px; margin:1rem 0; }
+  figure { margin:1rem 0; }
+  figure svg { width:100%; height:auto; display:block; }
+  figcaption { color:var(--muted); font-size:.9rem; margin-top:.35rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+  .scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:1rem 0; }
+  table { border-collapse:collapse; font-size:.85rem; font-variant-numeric:tabular-nums; min-width:100%; }
+  caption { text-align:left; font-weight:600; padding:.3rem 0; }
+  th, td { border-bottom:1px solid var(--rule); padding:.3rem .45rem; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  .tabs { display:flex; flex-wrap:wrap; gap:.4rem; margin:1rem 0 .2rem; }
+  .tabs label {
+    border:1px solid var(--rule); border-radius:999px; padding:.25rem .7rem; cursor:pointer; font-size:.92rem;
+  }
+  .panel { display:none; }
+  input.tab { position:absolute; opacity:0; pointer-events:none; }
+  #t1:checked ~ .tabs label[for="t1"],
+  #t2:checked ~ .tabs label[for="t2"],
+  #t3:checked ~ .tabs label[for="t3"],
+  #t4:checked ~ .tabs label[for="t4"] { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #t1:checked ~ .p1, #t2:checked ~ .p2, #t3:checked ~ .p3, #t4:checked ~ .p4 { display:block; }
+  footer { color:var(--muted); font-size:.85rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; }
+</style>
+</head>
+<body>
+<main>
+<p><a href="../index.html">traceot</a> · <span class="status">research, unvalidated</span></p>
+<h1>TRACE, beside explainable boosting</h1>
+<p class="lede">A glass-box model of a whole conditional distribution, and the checks that sit next to it. TRACE is our own unpublished method. The boosting ideas it borrows are older, and they are cited below.</p>
+
+<input class="tab" type="radio" name="tab" id="t1" checked>
+<input class="tab" type="radio" name="tab" id="t2">
+<input class="tab" type="radio" name="tab" id="t3">
+<input class="tab" type="radio" name="tab" id="t4">
+<div class="tabs" role="tablist">
+  <label for="t1">EBM refresher</label>
+  <label for="t2">TRACE vs EBM</label>
+  <label for="t3">How TRACE works</label>
+  <label for="t4">Checks and oddness</label>
+</div>
+
+<section class="panel p1">
+<h2>What an explainable boosting machine is</h2>
+<p>An explainable boosting machine (EBM) predicts a single number, usually a mean, as a sum of small functions of one feature at a time:</p>
+<p><code>g(x) = g0 + f1(x1) + f2(x2) + … + a few pairwise terms.</code></p>
+<p>Each <code>fj</code> is a shape function. In the usual implementation the feature is cut into bins, and the fit cycles through the features: hold the rest of the sum fixed, update this feature's bins from the residual gradient, then move on. Many rounds, a small learning rate. Because the pieces are added, you can plot each <code>fj</code> on its own and read off what that feature does. That is the glass box.</p>
+<figure><svg role="img" aria-label="Four panels: three feature shape functions and their sum" viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg"><rect width="640" height="180" fill="#f7f5f2"/><text x="24" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">f1(x1)</text><line x1="24" y1="100" x2="144" y2="100" stroke="#ccc"/><polyline fill="none" stroke="#1b6ca8" stroke-width="2" points="24.0,100.0 27.1,95.5 30.2,91.1 33.2,87.0 36.3,83.2 39.4,79.8 42.5,77.0 45.5,74.7 48.6,73.1 51.7,72.2 54.8,72.0 57.8,72.6 60.9,73.8 64.0,75.8 67.1,78.3 70.2,81.4 73.2,85.0 76.3,89.0 79.4,93.3 82.5,97.7 85.5,102.3 88.6,106.7 91.7,111.0 94.8,115.0 97.8,118.6 100.9,121.7 104.0,124.2 107.1,126.2 110.2,127.4 113.2,128.0 116.3,127.8 119.4,126.9 122.5,125.3 125.5,123.0 128.6,120.2 131.7,116.8 134.8,113.0 137.8,108.9 140.9,104.5 144.0,100.0"/><text x="180" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">f2(x2)</text><line x1="180" y1="100" x2="300" y2="100" stroke="#ccc"/><polyline fill="none" stroke="#b85c38" stroke-width="2" points="180.0,81.8 183.1,82.8 186.2,83.7 189.2,84.6 192.3,85.4 195.4,86.2 198.5,86.9 201.5,87.6 204.6,88.2 207.7,88.8 210.8,89.3 213.8,89.7 216.9,90.2 220.0,90.5 223.1,90.8 226.2,91.1 229.2,91.3 232.3,91.4 235.4,91.5 238.5,91.6 241.5,91.6 244.6,91.5 247.7,91.4 250.8,91.3 253.8,91.1 256.9,90.8 260.0,90.5 263.1,90.2 266.2,89.7 269.2,89.3 272.3,88.8 275.4,88.2 278.5,87.6 281.5,86.9 284.6,86.2 287.7,85.4 290.8,84.6 293.8,83.7 296.9,82.8 300.0,81.8"/><text x="336" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">f3(x3)</text><line x1="336" y1="100" x2="456" y2="100" stroke="#ccc"/><polyline fill="none" stroke="#2f7d4a" stroke-width="2" points="336.0,120.6 339.1,120.3 342.2,119.8 345.2,119.3 348.3,118.6 351.4,117.8 354.5,116.9 357.5,115.8 360.6,114.6 363.7,113.2 366.8,111.6 369.8,109.8 372.9,107.9 376.0,105.8 379.1,103.6 382.2,101.4 385.2,99.1 388.3,96.8 391.4,94.6 394.5,92.5 397.5,90.5 400.6,88.7 403.7,87.1 406.8,85.7 409.8,84.4 412.9,83.3 416.0,82.3 419.1,81.5 422.2,80.9 425.2,80.3 428.3,79.8 431.4,79.4 434.5,79.1 437.5,78.8 440.6,78.6 443.7,78.4 446.8,78.3 449.8,78.1 452.9,78.0 456.0,78.0"/><text x="492" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">sum</text><line x1="492" y1="100" x2="612" y2="100" stroke="#ccc"/><polyline fill="none" stroke="#1d1d1f" stroke-width="2" points="492.0,100.8 495.1,99.5 498.2,98.2 501.2,96.9 504.3,95.7 507.4,94.6 510.5,93.6 513.5,92.7 516.6,92.0 519.7,91.4 522.8,91.0 525.8,90.7 528.9,90.6 532.0,90.7 535.1,90.9 538.2,91.3 541.2,91.8 544.3,92.4 547.4,93.1 550.5,93.9 553.5,94.8 556.6,95.7 559.7,96.5 562.8,97.3 565.8,98.0 568.9,98.6 572.0,99.0 575.1,99.3 578.2,99.3 581.2,99.2 584.3,98.8 587.4,98.2 590.5,97.3 593.5,96.3 596.6,95.0 599.7,93.6 602.8,92.0 605.8,90.2 608.9,88.4 612.0,86.6"/></svg>
+<figcaption>Cyclic boosting learns one shape per feature. The prediction is their sum. The picture is a sketch, not a fitted model.</figcaption></figure>
+<p>Binning is what makes this cheap. A column becomes a bin code, and the update is a histogram of gradients. The cost of a round grows with the number of rows, not with the square of the number of rows.</p>
+<p>Pairs are optional. Looking at every pair in full is expensive, so GA2M / FAST first screens candidate pairs from the residuals and only then fits the ones that look useful (Lou, Caruana, Gehrke and Hooker, <em>Accurate Intelligible Models with Pairwise Interactions</em>, KDD 2013). InterpretML packages this whole pattern: cyclic boosting, binning, the FAST-style interaction pass, and the plots (Nori, Jenkins, Koch and Caruana, <em>InterpretML: A Unified Framework for Machine Learning Interpretability</em>, arXiv:1909.09223, 2019).</p>
+<h3>Where EBMs are strong</h3>
+<ul>
+<li>They are built for the thing most regression losses ask for: a conditional mean (or a similar one-number summary). On mean squared error they are often the right baseline, and they can beat a distributional model that spends its capacity on scale and tails.</li>
+<li>The shape plots are the explanation. There is no second model that “explains” the first.</li>
+<li>The public implementation in InterpretML is careful, fast, and widely exercised. TRACE is a research prototype. When the comparison below says EBM wins, that is the result.</li>
+</ul>
+<p>What a mean model does not show is a change in width or in the tail when the centre stays put. That is the gap TRACE is aimed at.</p>
+</section>
+
+<section class="panel p2">
+<h2>Mean versus the whole distribution</h2>
+<figure><svg role="img" aria-label="A single mean curve beside a fan of conditional quantiles" viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg"><rect width="640" height="200" fill="#f7f5f2"/><text x="20" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">EBM: one mean</text><text x="340" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">TRACE: a quantile fan</text><polyline fill="none" stroke="#1d1d1f" stroke-width="2.4" points="24.0,110.0 29.1,107.4 34.2,104.9 39.3,102.4 44.4,99.9 49.5,97.4 54.6,95.0 59.7,92.6 64.8,90.4 69.9,88.2 75.0,86.1 80.1,84.1 85.2,82.2 90.3,80.4 95.4,78.7 100.5,77.2 105.6,75.8 110.7,74.5 115.8,73.4 120.9,72.5 126.0,71.7 131.1,71.0 136.2,70.5 141.3,70.2 146.4,70.0 151.6,70.0 156.7,70.2 161.8,70.5 166.9,71.0 172.0,71.7 177.1,72.5 182.2,73.4 187.3,74.5 192.4,75.8 197.5,77.2 202.6,78.7 207.7,80.4 212.8,82.2 217.9,84.1 223.0,86.1 228.1,88.2 233.2,90.4 238.3,92.6 243.4,95.0 248.5,97.4 253.6,99.9 258.7,102.4 263.8,104.9 268.9,107.4 274.0,110.0"/><polyline fill="none" stroke="#9bb8d3" stroke-width="1.6" points="340.0,125.4 345.5,123.5 351.0,121.5 356.5,119.6 362.0,117.7 367.6,115.9 373.1,114.1 378.6,112.4 384.1,110.8 389.6,109.2 395.1,107.7 400.6,106.3 406.1,105.1 411.6,103.9 417.1,102.9 422.7,102.0 428.2,101.2 433.7,100.5 439.2,100.1 444.7,99.7 450.2,99.5 455.7,99.5 461.2,99.6 466.7,99.9 472.2,100.4 477.8,101.0 483.3,101.8 488.8,102.8 494.3,103.9 499.8,105.1 505.3,106.6 510.8,108.2 516.3,109.9 521.8,111.8 527.3,113.8 532.9,116.0 538.4,118.3 543.9,120.7 549.4,123.2 554.9,125.8 560.4,128.5 565.9,131.4 571.4,134.3 576.9,137.2 582.4,140.3 588.0,143.3 593.5,146.5 599.0,149.6 604.5,152.8 610.0,156.0"/><polyline fill="none" stroke="#5d8eb8" stroke-width="1.6" points="340.0,117.7 345.5,115.4 351.0,113.1 356.5,110.9 362.0,108.6 367.6,106.4 373.1,104.3 378.6,102.2 384.1,100.2 389.6,98.3 395.1,96.5 400.6,94.8 406.1,93.1 411.6,91.6 417.1,90.2 422.7,89.0 428.2,87.8 433.7,86.8 439.2,86.0 444.7,85.3 450.2,84.8 455.7,84.4 461.2,84.2 466.7,84.1 472.2,84.2 477.8,84.5 483.3,84.9 488.8,85.5 494.3,86.3 499.8,87.2 505.3,88.3 510.8,89.5 516.3,90.9 521.8,92.4 527.3,94.1 532.9,95.9 538.4,97.8 543.9,99.9 549.4,102.1 554.9,104.3 560.4,106.7 565.9,109.2 571.4,111.7 576.9,114.3 582.4,117.0 588.0,119.7 593.5,122.5 599.0,125.3 604.5,128.1 610.0,131.0"/><polyline fill="none" stroke="#1b6ca8" stroke-width="2.4" points="340.0,110.0 345.5,107.4 351.0,104.9 356.5,102.4 362.0,99.9 367.6,97.4 373.1,95.0 378.6,92.6 384.1,90.4 389.6,88.2 395.1,86.1 400.6,84.1 406.1,82.2 411.6,80.4 417.1,78.7 422.7,77.2 428.2,75.8 433.7,74.5 439.2,73.4 444.7,72.5 450.2,71.7 455.7,71.0 461.2,70.5 466.7,70.2 472.2,70.0 477.8,70.0 483.3,70.2 488.8,70.5 494.3,71.0 499.8,71.7 505.3,72.5 510.8,73.4 516.3,74.5 521.8,75.8 527.3,77.2 532.9,78.7 538.4,80.4 543.9,82.2 549.4,84.1 554.9,86.1 560.4,88.2 565.9,90.4 571.4,92.6 576.9,95.0 582.4,97.4 588.0,99.9 593.5,102.4 599.0,104.9 604.5,107.4 610.0,110.0"/><polyline fill="none" stroke="#5d8eb8" stroke-width="1.6" points="340.0,102.3 345.5,99.5 351.0,96.6 356.5,93.8 362.0,91.1 367.6,88.3 373.1,85.7 378.6,83.0 384.1,80.5 389.6,78.0 395.1,75.7 400.6,73.4 406.1,71.2 411.6,69.2 417.1,67.2 422.7,65.4 428.2,63.8 433.7,62.2 439.2,60.8 444.7,59.6 450.2,58.5 455.7,57.6 461.2,56.9 466.7,56.3 472.2,55.8 477.8,55.5 483.3,55.4 488.8,55.5 494.3,55.7 499.8,56.1 505.3,56.6 510.8,57.3 516.3,58.2 521.8,59.2 527.3,60.3 532.9,61.5 538.4,62.9 543.9,64.5 549.4,66.1 554.9,67.8 560.4,69.6 565.9,71.6 571.4,73.6 576.9,75.6 582.4,77.8 588.0,80.0 593.5,82.2 599.0,84.5 604.5,86.7 610.0,89.0"/><polyline fill="none" stroke="#9bb8d3" stroke-width="1.6" points="340.0,94.6 345.5,91.4 351.0,88.2 356.5,85.1 362.0,82.0 367.6,78.9 373.1,75.8 378.6,72.9 384.1,70.0 389.6,67.2 395.1,64.4 400.6,61.8 406.1,59.3 411.6,56.9 417.1,54.6 422.7,52.4 428.2,50.4 433.7,48.5 439.2,46.8 444.7,45.2 450.2,43.8 455.7,42.5 461.2,41.4 466.7,40.4 472.2,39.6 477.8,39.0 483.3,38.6 488.8,38.3 494.3,38.1 499.8,38.2 505.3,38.3 510.8,38.7 516.3,39.2 521.8,39.8 527.3,40.6 532.9,41.5 538.4,42.5 543.9,43.7 549.4,45.0 554.9,46.3 560.4,47.8 565.9,49.4 571.4,51.0 576.9,52.8 582.4,54.5 588.0,56.4 593.5,58.2 599.0,60.2 604.5,62.1 610.0,64.0"/></svg>
+<figcaption>Left: one curve, the sort of summary an EBM regression returns. Right: several quantile levels of one conditional distribution. A feature can move the middle, the width, or the tails.</figcaption></figure>
+<div class="scroll"><table>
+<caption>What each model is willing to explain</caption>
+<thead><tr><th></th><th>EBM regression</th><th>EBM + residual quantiles</th><th>TRACE</th></tr></thead>
+<tbody>
+<tr><td>Target</td><td>a mean</td><td>a mean, plus a residual band</td><td>Q(u | x) on a grid of u</td></tr>
+<tr><td>Form</td><td>sum of shape functions</td><td>that sum, shifted by calibration residuals</td><td>Q0(u) + sum of location, scale and shape channels</td></tr>
+<tr><td>Plot</td><td>fj(xj)</td><td>the same fj, and one global band</td><td>per feature: a step in location, in scale, and in the tail</td></tr>
+<tr><td>Interactions</td><td>FAST screen, then a pair table</td><td>the same</td><td>a residual-gradient screen, then a pair table per channel</td></tr>
+<tr><td>Order of columns</td><td>the cycle order is part of the path</td><td>same</td><td>the sum is order-invariant by construction</td></tr>
+</tbody>
+</table></div>
+<p>The fair distributional baseline is not “EBM has no intervals”. Fit the EBM, take residuals on a calibration split, and add those residual quantiles to the prediction. The band then has a width, but the width does not depend on x, and it does not have a separate tail shape per feature. TRACE's scale channel is allowed to depend on x. Its shape channel is allowed to bend the tails.</p>
+<p>TRACE's grid pinball loss does not promise 80% or 90% coverage, so the raw row can sit above those levels. The calibrated row is a split-conformal offset and is scored on its own. The residual-quantile EBM is built to hit a coverage target when the residuals are exchangeable. Both coverages are in the table.</p>
+<div class="scroll"><table><caption>Suite checks</caption><thead><tr><th>Design</th><th>Result</th><th>Wall</th></tr></thead><tbody><tr><td>S1</td><td>fail</td><td>0.05s</td></tr><tr><td>S2</td><td>pass</td><td>0.06s</td></tr><tr><td>S3</td><td>pass</td><td>0.04s</td></tr><tr><td>S4</td><td>pass</td><td>51.27s</td></tr></tbody></table></div><div class="scroll"><table><caption>TRACE and EBM plus residual quantiles</caption><thead><tr><th></th><th>CRPS</th><th>80% cover</th><th>MSE of mean</th><th>Fit s</th></tr></thead><tbody><tr><td>s1_period2 TRACE raw</td><td>0.518</td><td>0.822</td><td>0.983</td><td>0.01</td></tr><tr><td>s1_period2 TRACE calibrated</td><td>0.524</td><td>0.827</td><td>0.998</td><td>—</td></tr><tr><td>s1_period2 EBM + conformal</td><td>0.522</td><td>0.822</td><td>0.972</td><td>0.70</td></tr><tr><td>vendor_spend TRACE raw</td><td>0.770</td><td>0.919</td><td>1.842</td><td>0.04</td></tr><tr><td>vendor_spend TRACE calibrated</td><td>0.773</td><td>0.808</td><td>1.958</td><td>—</td></tr><tr><td>vendor_spend EBM + conformal</td><td>0.743</td><td>0.814</td><td>1.799</td><td>1.67</td></tr><tr><td>s4_style_n2e4_p10 TRACE raw</td><td>0.061</td><td>0.952</td><td>0.01024</td><td>0.07</td></tr><tr><td>s4_style_n2e4_p10 TRACE calibrated</td><td>0.059</td><td>0.790</td><td>0.01050</td><td>—</td></tr><tr><td>s4_style_n2e4_p10 EBM + conformal</td><td>0.057</td><td>0.795</td><td>0.01018</td><td>1.57</td></tr></tbody></table></div><p>Raw TRACE coverage and calibrated TRACE coverage are different rows. EBM plus conformal residuals still wins on S1 period 2, MSE of the mean; on vendor spend, CRPS and MSE of the mean; on n = 2e4, CRPS and MSE of the mean. Full tables, including the v0 numbers, are in <code>docs/TRACE_SIMS.md</code>.</p>
+<p>There is no winner rule on the vendor-spend draw. It is a simulated table of units, price, deliveries, distance, quality and season, with a planted location, a planted scale and a small tail. The metrics sit next to S1–S4 in the simulation note.</p>
+</section>
+
+<section class="panel p3">
+<h2>How TRACE fits</h2>
+<p>The model, written on the quantile function:</p>
+<p><code>Q(u | x) = Q0(u) + Σj fj(xj, u) + Σpairs fjk(xj, xk, u)</code></p>
+<p>then a monotone projection in <code>u</code>. <code>Q0</code> starts as the lower pinball endpoint of the training outcomes (the order statistic at <code>ceil(u n) - 1</code>) and then absorbs the shared channel correction. Each feature function uses a short basis in the level <code>u</code>.</p>
+<figure><svg role="img" aria-label="Location, scale and shape basis functions of the quantile level" viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg"><rect width="640" height="200" fill="#f7f5f2"/><line x1="40" y1="110" x2="600" y2="110" stroke="#ccc"/><polyline fill="none" stroke="#1b6ca8" stroke-width="2" points="44.7,110.0 54.0,110.0 63.3,110.0 72.7,110.0 82.0,110.0 91.3,110.0 100.7,110.0 110.0,110.0 119.3,110.0 128.7,110.0 138.0,110.0 147.3,110.0 156.7,110.0 166.0,110.0 175.3,110.0 184.7,110.0 194.0,110.0 203.3,110.0 212.7,110.0 222.0,110.0 231.3,110.0 240.7,110.0 250.0,110.0 259.3,110.0 268.7,110.0 278.0,110.0 287.3,110.0 296.7,110.0 306.0,110.0 315.3,110.0 324.7,110.0 334.0,110.0 343.3,110.0 352.7,110.0 362.0,110.0 371.3,110.0 380.7,110.0 390.0,110.0 399.3,110.0 408.7,110.0 418.0,110.0 427.3,110.0 436.7,110.0 446.0,110.0 455.3,110.0 464.7,110.0 474.0,110.0 483.3,110.0 492.7,110.0 502.0,110.0 511.3,110.0 520.7,110.0 530.0,110.0 539.3,110.0 548.7,110.0 558.0,110.0 567.3,110.0 576.7,110.0 586.0,110.0 595.3,110.0"/><text x="40" y="28" font-size="13" font-family="system-ui,sans-serif" fill="#1b6ca8">location: 1</text><polyline fill="none" stroke="#b85c38" stroke-width="2" points="44.7,145.0 54.0,138.7 63.3,135.3 72.7,132.9 82.0,131.0 91.3,129.5 100.7,128.1 110.0,126.8 119.3,125.7 128.7,124.6 138.0,123.7 147.3,122.7 156.7,121.9 166.0,121.0 175.3,120.2 184.7,119.5 194.0,118.7 203.3,118.0 212.7,117.3 222.0,116.6 231.3,116.0 240.7,115.3 250.0,114.7 259.3,114.0 268.7,113.4 278.0,112.8 287.3,112.1 296.7,111.5 306.0,110.9 315.3,110.3 324.7,109.7 334.0,109.1 343.3,108.5 352.7,107.9 362.0,107.2 371.3,106.6 380.7,106.0 390.0,105.3 399.3,104.7 408.7,104.0 418.0,103.4 427.3,102.7 436.7,102.0 446.0,101.3 455.3,100.5 464.7,99.8 474.0,99.0 483.3,98.1 492.7,97.3 502.0,96.3 511.3,95.4 520.7,94.3 530.0,93.2 539.3,91.9 548.7,90.5 558.0,89.0 567.3,87.1 576.7,84.7 586.0,81.3 595.3,75.0"/><text x="230" y="28" font-size="13" font-family="system-ui,sans-serif" fill="#b85c38">scale: z(u)</text><polyline fill="none" stroke="#2f7d4a" stroke-width="2" points="44.7,145.0 54.0,118.8 63.3,110.0 72.7,105.5 82.0,102.9 91.3,101.2 100.7,100.3 110.0,99.7 119.3,99.4 128.7,99.3 138.0,99.4 147.3,99.5 156.7,99.8 166.0,100.2 175.3,100.6 184.7,101.0 194.0,101.5 203.3,102.1 212.7,102.6 222.0,103.2 231.3,103.8 240.7,104.4 250.0,105.1 259.3,105.7 268.7,106.3 278.0,107.0 287.3,107.7 296.7,108.3 306.0,109.0 315.3,109.7 324.7,110.3 334.0,111.0 343.3,111.7 352.7,112.3 362.0,113.0 371.3,113.7 380.7,114.3 390.0,114.9 399.3,115.6 408.7,116.2 418.0,116.8 427.3,117.4 436.7,117.9 446.0,118.5 455.3,119.0 464.7,119.4 474.0,119.8 483.3,120.2 492.7,120.5 502.0,120.6 511.3,120.7 520.7,120.6 530.0,120.3 539.3,119.7 548.7,118.8 558.0,117.1 567.3,114.5 576.7,110.0 586.0,101.2 595.3,75.0"/><text x="420" y="28" font-size="13" font-family="system-ui,sans-serif" fill="#2f7d4a">shape: z³ − 3z</text><text x="40" y="188" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">quantile level u, from 0 to 1</text></svg>
+<figcaption>The three channels, drawn against the quantile level. Location is flat. Scale follows the normal quantile z(u). Shape follows z³ − 3z, which is small in the middle and large in the tails. Each column is rescaled to unit root-mean-square before fitting.</figcaption></figure>
+<ol>
+<li>Cut every feature into histogram bins. A missing value gets its own bin. Codes are one byte when there are at most 255 bins.</li>
+<li>Each round, compute the pinball subgradient of the current quantile fit once, on a fixed grid (19 levels by default). Average pinball on that grid is the training loss, and twice that average is the reported CRPS approximation.</li>
+<li>Update every feature from that same gradient. Do not refresh the gradient between features. Refreshing it would make the answer depend on which column was visited first, which is the failure TRACE is written to avoid.</li>
+<li>Add the updates in a canonical order of the raw columns, so a permutation of the columns is the same sum.</li>
+<li>Center each feature update, then add the average of the removed channel means back once, into the shared quantile level. A common scale correction is kept. It is not added once per feature.</li>
+<li>Stop early on a held-out slice, but not before <code>min_rounds</code>. With more than one bag and a bag fraction below 1, that slice is the out-of-bag rows. Drop a feature only after those rounds, and keep it when either the full pinball gain or the shape channel's tail-weighted gain clears the threshold. Several bags keep a feature selected in at least 70% of them.</li>
+<li>Screen pairs by a residual-gradient energy on a two-dimensional histogram, fit them, then center each pair on both margins and move those margins into the main effects. Project each predicted curve so it increases in <code>u</code>. An optional calibration split adds a conformal offset at each level and projects again.</li>
+</ol>
+<p>The projection is what makes the delivered quantiles monotone. It is also what blurs a shape interaction: a bend that would have decreased in <code>u</code> gets flattened, and the pure interaction contrast shrinks. A pure location interaction, constant in <code>u</code>, is left alone. The measured ratios are in the simulation note.</p>
+<p>A round is one pass over the rows for the gradient and one pass per feature for the histogram. Nothing in that path builds an <code>n × n</code> matrix. The design note has the pseudocode and the complexity table: <a href="https://github.com/jgridifier/traceot/blob/main/docs/TRACE_DESIGN.md">TRACE_DESIGN.md</a>.</p>
+</section>
+
+<section class="panel p4">
+<h2>Checks and oddness</h2>
+<p>The booster will happily use a column that is a copy of the outcome, a copy of another column, or a column that only lines up with the outcome inside a random split. The checks are part of the method, and they are ordinary statistics with fixed seeds, not a second model.</p>
+<ul>
+<li><strong>Target proxy.</strong> Correlation of each column with <code>y</code>, and with <code>y</code> shifted by a row. A column that leads <code>y</code> (today's feature is tomorrow's outcome) shows up at a positive shift.</li>
+<li><strong>Duplicate.</strong> Bit-identical columns, and pairs that are almost collinear.</li>
+<li><strong>Placebo target.</strong> Shuffle <code>y</code> and look at the largest correlation any feature manages. A real proxy sits far above that maximum.</li>
+<li><strong>Adversarial validation.</strong> Wasserstein distance, per feature, between the training window and the test window. A time-only column moves a lot under a time split and little under a random split.</li>
+<li><strong>Time-respecting importance.</strong> Fit on the past, shuffle a column on the future, and see whether the pinball loss actually gets worse. A random split can still reward a column that will not travel forward.</li>
+</ul>
+<h3>Oddness</h3>
+<p>Hold out a calibration set. Score every row by its mean pinball loss under the fitted quantiles. The conformal p-value of a new score <code>s</code> is <code>(1 + number of calibration scores ≥ s) / (n_cal + 1)</code>. Under exchangeability, those p-values stay above <code>α</code> except for about a fraction <code>α</code> of ordinary rows. A planted spike in <code>y</code> should land in the tail.</p>
+<figure><svg role="img" aria-label="Histogram of conformal p-values with extra mass near zero" viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg"><rect width="640" height="180" fill="#f7f5f2"/><text x="20" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">conformal p-values on the test rows</text><rect x="30" y="42" width="56" height="108" fill="#b85c38"/><rect x="92" y="126" width="56" height="24" fill="#1b6ca8"/><rect x="154" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="216" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="278" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="340" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="402" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="464" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="526" y="132" width="56" height="18" fill="#1b6ca8"/><rect x="588" y="126" width="56" height="24" fill="#1b6ca8"/><text x="30" y="170" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">0</text><text x="560" y="170" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">1</text></svg>
+<figcaption>Sketch of the intended picture: ordinary rows spread across the p-value range, anomalous rows pile up near zero. The real false-alarm rate and power are measured in S3, not in this drawing.</figcaption></figure>
+<p>The planted designs, the thresholds that were written down first, and the numbers that came back are in <a href="https://github.com/jgridifier/traceot/blob/main/docs/TRACE_SIMS.md">TRACE_SIMS.md</a>.</p>
+</section>
+
+<footer>
+<p>Personal research project. Simulated examples only. TRACE is unpublished and unvalidated.</p>
+<p>Background: Nori, Jenkins, Koch, Caruana, arXiv:1909.09223 (2019). Lou, Caruana, Gehrke, Hooker, KDD (2013). No page numbers are stated here beyond what those records themselves print in the design note.</p>
+</footer>
+</main>
+</body>
+</html>
