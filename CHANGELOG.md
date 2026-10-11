@@ -5,6 +5,13 @@ Status: research, unvalidated.
 
 ## [Unreleased]
 
+### Fixed
+- Bandwidth cross-validation now scales `h_j` by the range of the training rows of each fold. The previous version included the held-out fold's covariates in that range. Held-out responses were never used in the fit. See `docs/ADOPT_AUDIT.md`.
+
+### Added
+- Optional ADOPT controls, paper behaviour by default: averaged-order and tangent-space composition, pushforward centering, damped backfitting with an in-sample descent certificate, isotonic projection of the composed prediction, equal-width binning, and endpoint reflection. Numpy references and parity tests cover each path.
+- Audit of leakage, noise, the MISE grid and seeds (`tests/python/test_audit.py`) and method-level experiments (`benchmarks/adopt_audit/`).
+
 ## [0.1.0] - 2026-10-11
 
 ### Architecture

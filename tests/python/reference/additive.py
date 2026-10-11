@@ -19,7 +19,47 @@ from __future__ import annotations
 
 import numpy as np
 
-from .smoother import ABS_TOL_FLOOR, check_bandwidths, local_linear_weights
+from .smoother import (
+    ABS_TOL_FLOOR,
+    binned_smooth,
+    check_bandwidths,
+    local_linear_weights,
+    reflected_local_linear_weights,
+)
+
+
+def _mean_sq_rows(a, b) -> float:
+    return float(np.mean(np.mean((a - b) ** 2, axis=1)))
+
+
+def _smooth_one(x, resid, h, kernel, bins, boundary, prepared):
+    if prepared is not None:
+        return prepared @ resid
+    if bins is not None:
+        return binned_smooth(x, resid, h, x, bins, kernel)
+    if boundary == "reflect":
+        return reflected_local_linear_weights(x, x, h, kernel) @ resid
+    return local_linear_weights(x, x, h, kernel) @ resid
+
+
+def _partial_euclid(Z, G, M, j):
+    pj = Z.copy()
+    p = G.shape[0]
+    for k in range(p):
+        if k != j:
+            pj -= G[k] - M[k]
+    return pj
+
+
+def _compose_euclid(mu, G, M):
+    fitted = np.tile(mu, (G.shape[1], 1))
+    for k in range(G.shape[0]):
+        fitted += G[k] - M[k]
+    return fitted
+
+
+def _paper_flat(damping, certificate, bins, boundary) -> bool:
+    return damping == 1.0 and not certificate and bins is None and boundary == "none"
 
 
 def additive_euclid_fit(
@@ -29,6 +69,10 @@ def additive_euclid_fit(
     kernel: str = "gaussian",
     tol: float = 1e-10,
     max_iter: int = 200,
+    damping: float = 1.0,
+    certificate: bool = False,
+    bins: int | None = None,
+    boundary: str = "none",
 ) -> dict:
     """Backfit ``Z_i ≈ mu + sum_j (g_j(X_ij) - M_j)`` (see module docstring)."""
     X = np.atleast_2d(np.asarray(X, dtype=float))
@@ -38,8 +82,84 @@ def additive_euclid_fit(
     h = check_bandwidths(h, p)
     if Z.shape[0] != n:
         raise ValueError("X and Z must have the same number of rows")
+    if not (damping > 0.0 and damping <= 1.0):
+        raise ValueError("damping must lie in (0, 1]")
     mu = Z.mean(axis=0)
     V = float(np.mean(np.mean((Z - mu) ** 2, axis=1)))
+    if _paper_flat(damping, certificate, bins, boundary):
+        return _additive_euclid_fit_paper(X, Z, h, kernel, tol, max_iter, mu, V)
+    dense = bins is None and boundary == "none"
+    prepared = [
+        local_linear_weights(X[:, j], X[:, j], h[j], kernel) if dense else None for j in range(p)
+    ]
+    G = np.zeros((p, n, d))
+    M = np.zeros((p, d))
+    P = np.zeros((p, n, d))
+    prev = np.tile(mu, (n, 1))
+    loss_prev = _mean_sq_rows(Z, prev)
+    history: list[float] = []
+    converged = False
+    it = 0
+    n_rejected = 0
+    thresh = max(tol * V, ABS_TOL_FLOOR)
+    for t in range(1, max_iter + 1):
+        it = t
+        snap_G, snap_M, snap_P = G.copy(), M.copy(), P.copy()
+        lam = float(damping)
+        accepted = False
+        fitted = prev
+        while True:
+            G, M, P = snap_G.copy(), snap_M.copy(), snap_P.copy()
+            for j in range(p):
+                pj = _partial_euclid(Z, G, M, j)
+                raw = _smooth_one(X[:, j], pj, h[j], kernel, bins, boundary, prepared[j])
+                g_new = raw if lam == 1.0 else (1.0 - lam) * G[j] + lam * raw
+                P[j] = pj
+                G[j] = g_new
+                M[j] = G[j].mean(axis=0)
+            fitted = _compose_euclid(mu, G, M)
+            if not certificate:
+                prev = fitted
+                accepted = True
+                break
+            loss = _mean_sq_rows(Z, fitted)
+            if loss <= loss_prev + 1e-12:
+                loss_prev = loss
+                prev = fitted
+                accepted = True
+                break
+            n_rejected += 1
+            lam *= 0.5
+            if lam < 1e-8:
+                G, M, P = snap_G, snap_M, snap_P
+                converged = True
+                it = t - 1
+                break
+        if not accepted:
+            break
+        crit = _mean_sq_rows(prev, _compose_euclid(mu, snap_G, snap_M))
+        history.append(crit)
+        if crit <= thresh:
+            converged = True
+            break
+    return {
+        "mu": mu,
+        "G": G,
+        "M": M,
+        "P": P,
+        "fitted": prev,
+        "n_iter": it,
+        "converged": converged,
+        "history": np.asarray(history, dtype=float),
+        "n_rejected": n_rejected,
+        "orders": [],
+    }
+
+
+def _additive_euclid_fit_paper(X, Z, h, kernel, tol, max_iter, mu, V):
+    """Original accumulation order. Do not rewrite: parity depends on it."""
+    n, p = X.shape
+    d = Z.shape[1]
     S = [local_linear_weights(X[:, j], X[:, j], h[j], kernel) for j in range(p)]
     G = np.zeros((p, n, d))
     M = np.zeros((p, d))
@@ -74,6 +194,8 @@ def additive_euclid_fit(
         "n_iter": it,
         "converged": converged,
         "history": np.asarray(history),
+        "n_rejected": 0,
+        "orders": [],
     }
 
 
@@ -85,14 +207,21 @@ def additive_euclid_predict(
     h: np.ndarray,
     X_new: np.ndarray,
     kernel: str = "gaussian",
+    bins: int | None = None,
+    boundary: str = "none",
 ) -> np.ndarray:
     """``mu + sum_j (g_j(x_j) - M_j)`` with ``g_j`` re-smoothed from the stored residuals."""
     X_train = np.atleast_2d(np.asarray(X_train, dtype=float))
     X_new = np.atleast_2d(np.asarray(X_new, dtype=float))
     p = X_train.shape[1]
     h = check_bandwidths(h, p)
-    out = np.tile(mu, (X_new.shape[0], 1))
+    out = np.tile(np.asarray(mu, dtype=float), (X_new.shape[0], 1))
     for j in range(p):
-        W = local_linear_weights(X_train[:, j], X_new[:, j], h[j], kernel)
-        out += W @ P[j] - M[j]
+        if bins is not None:
+            gj = binned_smooth(X_train[:, j], P[j], h[j], X_new[:, j], bins, kernel)
+        elif boundary == "reflect":
+            gj = reflected_local_linear_weights(X_train[:, j], X_new[:, j], h[j], kernel) @ P[j]
+        else:
+            gj = local_linear_weights(X_train[:, j], X_new[:, j], h[j], kernel) @ P[j]
+        out += gj - M[j]
     return out

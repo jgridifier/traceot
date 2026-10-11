@@ -10,7 +10,7 @@ use numpy::{
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList};
 use traceot_core::adopt::{BackfitConfig, BackfitResult};
 use traceot_core::scalable::{binning, histogram as hist, pinball, sketch};
 use traceot_core::{additive, adopt, estimators, logchol, smoother, w2, Kernel, Mat, TraceError};
@@ -66,12 +66,20 @@ fn rows_to_py<'py>(py: Python<'py>, rows: Vec<Vec<f64>>) -> Bound<'py, PyArray2<
         .into_pyarray(py)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn config(
     kernel: &str,
     tol: f64,
     max_iter: usize,
     lower: Option<f64>,
     upper: Option<f64>,
+    damping: f64,
+    certificate: bool,
+    composition: &str,
+    centering: &str,
+    project_prediction: bool,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<BackfitConfig> {
     Ok(BackfitConfig {
         kernel: Kernel::parse(kernel).map_err(err)?,
@@ -79,10 +87,44 @@ fn config(
         max_iter,
         lower,
         upper,
+        damping,
+        certificate,
+        composition: traceot_core::adopt::Composition::parse(composition).map_err(err)?,
+        centering: traceot_core::adopt::Centering::parse(centering).map_err(err)?,
+        project_prediction,
+        bins,
+        boundary: traceot_core::smoother::Boundary::parse(boundary).map_err(err)?,
     })
 }
 
+fn config_basic(
+    kernel: &str,
+    tol: f64,
+    max_iter: usize,
+    lower: Option<f64>,
+    upper: Option<f64>,
+) -> PyResult<BackfitConfig> {
+    config(
+        kernel, tol, max_iter, lower, upper, 1.0, false, "given", "frechet", false, None, "none",
+    )
+}
+
+fn orders_to_py<'py>(py: Python<'py>, orders: &[adopt::OrderFit]) -> PyResult<Bound<'py, PyList>> {
+    let out = PyList::empty(py);
+    for o in orders {
+        let d = PyDict::new(py);
+        let perm: Vec<i64> = o.perm.iter().map(|&i| i as i64).collect();
+        d.set_item("perm", perm.into_pyarray(py))?;
+        d.set_item("G", stack_to_py(py, o.g.clone()))?;
+        d.set_item("M", rows_to_py(py, o.m.clone()))?;
+        d.set_item("P", stack_to_py(py, o.resid.clone()))?;
+        out.append(d)?;
+    }
+    Ok(out)
+}
+
 fn result_to_dict<'py>(py: Python<'py>, r: BackfitResult) -> PyResult<Bound<'py, PyDict>> {
+    let orders = orders_to_py(py, &r.orders)?;
     let d = PyDict::new(py);
     d.set_item("mu", Array1::from_vec(r.mu).into_pyarray(py))?;
     d.set_item("G", stack_to_py(py, r.g))?;
@@ -92,7 +134,37 @@ fn result_to_dict<'py>(py: Python<'py>, r: BackfitResult) -> PyResult<Bound<'py,
     d.set_item("n_iter", r.n_iter)?;
     d.set_item("converged", r.converged)?;
     d.set_item("history", Array1::from_vec(r.history).into_pyarray(py))?;
+    d.set_item("n_rejected", r.n_rejected)?;
+    d.set_item("orders", orders)?;
     Ok(d)
+}
+
+fn require_item<'py>(d: &Bound<'py, PyDict>, key: &str) -> PyResult<Bound<'py, PyAny>> {
+    d.get_item(key)?
+        .ok_or_else(|| PyValueError::new_err(format!("order missing {key}")))
+}
+
+fn order_from_dict(d: &Bound<'_, PyDict>) -> PyResult<adopt::OrderFit> {
+    let perm_obj = require_item(d, "perm")?;
+    let perm: Vec<usize> = if let Ok(arr) = perm_obj.extract::<PyReadonlyArray1<i64>>() {
+        arr.as_array().iter().map(|&v| v as usize).collect()
+    } else {
+        perm_obj
+            .extract::<Vec<i64>>()?
+            .into_iter()
+            .map(|v| v as usize)
+            .collect()
+    };
+    let g = require_item(d, "G")?.extract::<PyReadonlyArray3<f64>>()?;
+    let m = require_item(d, "M")?.extract::<PyReadonlyArray2<f64>>()?;
+    let p = require_item(d, "P")?.extract::<PyReadonlyArray3<f64>>()?;
+    let mm = to_mat(m.as_array());
+    Ok(adopt::OrderFit {
+        perm,
+        g: to_mats(g.as_array()),
+        m: (0..mm.rows).map(|i| mm.row(i).to_vec()).collect(),
+        resid: to_mats(p.as_array()),
+    })
 }
 
 /// Midpoint quantile grid of size q.
@@ -202,6 +274,64 @@ fn local_linear_weights<'py>(
     Ok(mat_to_py(py, w))
 }
 
+/// Local linear weights with reflections through both ends of the sample.
+#[pyfunction]
+#[pyo3(signature = (x_train, x_eval, h, kernel="gaussian"))]
+fn reflected_local_linear_weights<'py>(
+    py: Python<'py>,
+    x_train: PyReadonlyArray1<'py, f64>,
+    x_eval: PyReadonlyArray1<'py, f64>,
+    h: f64,
+    kernel: &str,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let k = Kernel::parse(kernel).map_err(err)?;
+    let xt: Vec<f64> = x_train.as_array().iter().copied().collect();
+    let xe: Vec<f64> = x_eval.as_array().iter().copied().collect();
+    let w = smoother::reflected_local_linear_weights(&xt, &xe, h, k).map_err(err)?;
+    Ok(mat_to_py(py, w))
+}
+
+/// Multiplicity-weighted local linear weights. Unit weights match the unweighted call.
+#[pyfunction]
+#[pyo3(signature = (x_train, multiplicity, x_eval, h, kernel="gaussian"))]
+fn local_linear_weights_weighted<'py>(
+    py: Python<'py>,
+    x_train: PyReadonlyArray1<'py, f64>,
+    multiplicity: PyReadonlyArray1<'py, f64>,
+    x_eval: PyReadonlyArray1<'py, f64>,
+    h: f64,
+    kernel: &str,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let k = Kernel::parse(kernel).map_err(err)?;
+    let xt: Vec<f64> = x_train.as_array().iter().copied().collect();
+    let mult: Vec<f64> = multiplicity.as_array().iter().copied().collect();
+    let xe: Vec<f64> = x_eval.as_array().iter().copied().collect();
+    let w = smoother::local_linear_weights_weighted(&xt, &mult, &xe, h, k).map_err(err)?;
+    Ok(mat_to_py(py, w))
+}
+
+/// Equal-width histogram smoother: bin means, then local-linear on the bin centres.
+#[pyfunction]
+#[pyo3(signature = (x_train, y, h, x_eval, n_bins, kernel="gaussian"))]
+fn binned_smooth<'py>(
+    py: Python<'py>,
+    x_train: PyReadonlyArray1<'py, f64>,
+    y: PyReadonlyArray2<'py, f64>,
+    h: f64,
+    x_eval: PyReadonlyArray1<'py, f64>,
+    n_bins: usize,
+    kernel: &str,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let k = Kernel::parse(kernel).map_err(err)?;
+    let xt: Vec<f64> = x_train.as_array().iter().copied().collect();
+    let xe: Vec<f64> = x_eval.as_array().iter().copied().collect();
+    let y = to_mat(y.as_array());
+    let out = py
+        .detach(|| smoother::binned_smooth(&xt, &y, h, &xe, n_bins, k))
+        .map_err(err)?;
+    Ok(mat_to_py(py, out))
+}
+
 /// Global Fréchet regression weights (rows sum to one).
 #[pyfunction]
 fn global_frechet_weights<'py>(
@@ -217,7 +347,7 @@ fn global_frechet_weights<'py>(
 
 /// ADOPT transport backfitting in W2 (Algorithm 1).
 #[pyfunction]
-#[pyo3(signature = (x, y, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None))]
+#[pyo3(signature = (x, y, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None, damping=1.0, certificate=false, composition="given", centering="frechet", project_prediction=false, bins=None, boundary="none"))]
 #[allow(clippy::too_many_arguments)]
 fn adopt_w2_fit<'py>(
     py: Python<'py>,
@@ -229,8 +359,28 @@ fn adopt_w2_fit<'py>(
     max_iter: usize,
     lower: Option<f64>,
     upper: Option<f64>,
+    damping: f64,
+    certificate: bool,
+    composition: &str,
+    centering: &str,
+    project_prediction: bool,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let cfg = config(kernel, tol, max_iter, lower, upper)?;
+    let cfg = config(
+        kernel,
+        tol,
+        max_iter,
+        lower,
+        upper,
+        damping,
+        certificate,
+        composition,
+        centering,
+        project_prediction,
+        bins,
+        boundary,
+    )?;
     let (x, y) = (to_mat(x.as_array()), to_mat(y.as_array()));
     let h: Vec<f64> = h.as_array().iter().copied().collect();
     let r = py
@@ -241,7 +391,7 @@ fn adopt_w2_fit<'py>(
 
 /// ADOPT prediction at new predictor values.
 #[pyfunction]
-#[pyo3(signature = (x_train, p, m, mu, h, x_new, kernel="gaussian", lower=None, upper=None))]
+#[pyo3(signature = (x_train, p, m, mu, h, x_new, kernel="gaussian", lower=None, upper=None, project_prediction=false, bins=None, boundary="none"))]
 #[allow(clippy::too_many_arguments)]
 fn adopt_w2_predict<'py>(
     py: Python<'py>,
@@ -254,8 +404,24 @@ fn adopt_w2_predict<'py>(
     kernel: &str,
     lower: Option<f64>,
     upper: Option<f64>,
+    project_prediction: bool,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<Bound<'py, PyArray2<f64>>> {
-    let cfg = config(kernel, 0.0, 0, lower, upper)?;
+    let cfg = config(
+        kernel,
+        0.0,
+        1,
+        lower,
+        upper,
+        1.0,
+        false,
+        "given",
+        "frechet",
+        project_prediction,
+        bins,
+        boundary,
+    )?;
     let xt = to_mat(x_train.as_array());
     let resid = to_mats(p.as_array());
     let mm = to_mat(m.as_array());
@@ -269,9 +435,57 @@ fn adopt_w2_predict<'py>(
     Ok(mat_to_py(py, out))
 }
 
+/// Average the composed map over every stored feature order.
+#[pyfunction]
+#[pyo3(signature = (x_train, orders, mu, h, x_new, kernel="gaussian", lower=None, upper=None, project_prediction=false, bins=None, boundary="none"))]
+#[allow(clippy::too_many_arguments)]
+fn adopt_w2_predict_averaged<'py>(
+    py: Python<'py>,
+    x_train: PyReadonlyArray2<'py, f64>,
+    orders: &Bound<'py, PyAny>,
+    mu: PyReadonlyArray1<'py, f64>,
+    h: PyReadonlyArray1<'py, f64>,
+    x_new: PyReadonlyArray2<'py, f64>,
+    kernel: &str,
+    lower: Option<f64>,
+    upper: Option<f64>,
+    project_prediction: bool,
+    bins: Option<usize>,
+    boundary: &str,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let cfg = config(
+        kernel,
+        0.0,
+        1,
+        lower,
+        upper,
+        1.0,
+        false,
+        "given",
+        "frechet",
+        project_prediction,
+        bins,
+        boundary,
+    )?;
+    let mut rust_orders = Vec::new();
+    for item in orders.try_iter()? {
+        let item = item?;
+        let d = item.cast::<PyDict>()?;
+        rust_orders.push(order_from_dict(d)?);
+    }
+    let xt = to_mat(x_train.as_array());
+    let mu: Vec<f64> = mu.as_array().iter().copied().collect();
+    let h: Vec<f64> = h.as_array().iter().copied().collect();
+    let xn = to_mat(x_new.as_array());
+    let out = py
+        .detach(|| adopt::adopt_w2_predict_averaged(&xt, &rust_orders, &mu, &h, &xn, &cfg))
+        .map_err(err)?;
+    Ok(mat_to_py(py, out))
+}
+
 /// `g_j(x)` at new points from stored residuals.
 #[pyfunction]
-#[pyo3(signature = (x_train_j, p_j, h_j, x_eval, kernel="gaussian", lower=None, upper=None))]
+#[pyo3(signature = (x_train_j, p_j, h_j, x_eval, kernel="gaussian", lower=None, upper=None, bins=None, boundary="none"))]
 #[allow(clippy::too_many_arguments)]
 fn adopt_w2_component<'py>(
     py: Python<'py>,
@@ -282,8 +496,12 @@ fn adopt_w2_component<'py>(
     kernel: &str,
     lower: Option<f64>,
     upper: Option<f64>,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<Bound<'py, PyArray2<f64>>> {
-    let cfg = config(kernel, 0.0, 0, lower, upper)?;
+    let cfg = config(
+        kernel, 0.0, 1, lower, upper, 1.0, false, "given", "frechet", false, bins, boundary,
+    )?;
     let xt: Vec<f64> = x_train_j.as_array().iter().copied().collect();
     let xe: Vec<f64> = x_eval.as_array().iter().copied().collect();
     let pj = to_mat(p_j.as_array());
@@ -293,7 +511,8 @@ fn adopt_w2_component<'py>(
 
 /// Additive backfitting in flat coordinates.
 #[pyfunction]
-#[pyo3(signature = (x, z, h, kernel="gaussian", tol=1e-10, max_iter=200))]
+#[pyo3(signature = (x, z, h, kernel="gaussian", tol=1e-10, max_iter=200, damping=1.0, certificate=false, bins=None, boundary="none"))]
+#[allow(clippy::too_many_arguments)]
 fn additive_euclid_fit<'py>(
     py: Python<'py>,
     x: PyReadonlyArray2<'py, f64>,
@@ -302,8 +521,25 @@ fn additive_euclid_fit<'py>(
     kernel: &str,
     tol: f64,
     max_iter: usize,
+    damping: f64,
+    certificate: bool,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let cfg = config(kernel, tol, max_iter, None, None)?;
+    let cfg = config(
+        kernel,
+        tol,
+        max_iter,
+        None,
+        None,
+        damping,
+        certificate,
+        "given",
+        "frechet",
+        false,
+        bins,
+        boundary,
+    )?;
     let (x, z) = (to_mat(x.as_array()), to_mat(z.as_array()));
     let h: Vec<f64> = h.as_array().iter().copied().collect();
     let r = py
@@ -314,7 +550,7 @@ fn additive_euclid_fit<'py>(
 
 /// Additive prediction in flat coordinates.
 #[pyfunction]
-#[pyo3(signature = (x_train, p, m, mu, h, x_new, kernel="gaussian"))]
+#[pyo3(signature = (x_train, p, m, mu, h, x_new, kernel="gaussian", bins=None, boundary="none"))]
 #[allow(clippy::too_many_arguments)]
 fn additive_euclid_predict<'py>(
     py: Python<'py>,
@@ -325,8 +561,12 @@ fn additive_euclid_predict<'py>(
     h: PyReadonlyArray1<'py, f64>,
     x_new: PyReadonlyArray2<'py, f64>,
     kernel: &str,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<Bound<'py, PyArray2<f64>>> {
-    let cfg = config(kernel, 0.0, 0, None, None)?;
+    let cfg = config(
+        kernel, 0.0, 1, None, None, 1.0, false, "given", "frechet", false, bins, boundary,
+    )?;
     let xt = to_mat(x_train.as_array());
     let resid = to_mats(p.as_array());
     let mm = to_mat(m.as_array());
@@ -604,7 +844,7 @@ struct PyAdditiveModel {
 impl PyAdditiveModel {
     /// Fit with fixed bandwidths ``h`` (one per predictor).
     #[staticmethod]
-    #[pyo3(signature = (method, space, x, z, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None))]
+    #[pyo3(signature = (method, space, x, z, h, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None, damping=1.0, certificate=false, composition="given", centering="frechet", project_prediction=false, bins=None, boundary="none"))]
     #[allow(clippy::too_many_arguments)]
     fn fit(
         py: Python<'_>,
@@ -618,10 +858,30 @@ impl PyAdditiveModel {
         max_iter: usize,
         lower: Option<f64>,
         upper: Option<f64>,
+        damping: f64,
+        certificate: bool,
+        composition: &str,
+        centering: &str,
+        project_prediction: bool,
+        bins: Option<usize>,
+        boundary: &str,
     ) -> PyResult<Self> {
         let method = estimators::Method::parse(method).map_err(err)?;
         let space = space_of(space)?;
-        let cfg = config(kernel, tol, max_iter, lower, upper)?;
+        let cfg = config(
+            kernel,
+            tol,
+            max_iter,
+            lower,
+            upper,
+            damping,
+            certificate,
+            composition,
+            centering,
+            project_prediction,
+            bins,
+            boundary,
+        )?;
         let (x, z, h) = (to_mat(x.as_array()), to_mat(z.as_array()), vec_of(h));
         let inner = py
             .detach(|| estimators::AdditiveModel::fit(method, space, &x, &z, &h, cfg))
@@ -696,6 +956,10 @@ impl PyAdditiveModel {
         self.inner.fit.n_iter
     }
     #[getter]
+    fn n_rejected(&self) -> usize {
+        self.inner.fit.n_rejected
+    }
+    #[getter]
     fn converged(&self) -> bool {
         self.inner.fit.converged
     }
@@ -708,7 +972,7 @@ impl PyAdditiveModel {
 /// K-fold CV of a common bandwidth fraction; returns a dict with grid,
 /// mean_dist_sq and best_fraction.
 #[pyfunction]
-#[pyo3(signature = (method, space, x, z, grid, k, seed, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None))]
+#[pyo3(signature = (method, space, x, z, grid, k, seed, kernel="gaussian", tol=1e-10, max_iter=200, lower=None, upper=None, damping=1.0, certificate=false, composition="given", centering="frechet", project_prediction=false, bins=None, boundary="none"))]
 #[allow(clippy::too_many_arguments)]
 fn select_bandwidth_cv<'py>(
     py: Python<'py>,
@@ -724,10 +988,30 @@ fn select_bandwidth_cv<'py>(
     max_iter: usize,
     lower: Option<f64>,
     upper: Option<f64>,
+    damping: f64,
+    certificate: bool,
+    composition: &str,
+    centering: &str,
+    project_prediction: bool,
+    bins: Option<usize>,
+    boundary: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
     let method = estimators::Method::parse(method).map_err(err)?;
     let space = space_of(space)?;
-    let cfg = config(kernel, tol, max_iter, lower, upper)?;
+    let cfg = config(
+        kernel,
+        tol,
+        max_iter,
+        lower,
+        upper,
+        damping,
+        certificate,
+        composition,
+        centering,
+        project_prediction,
+        bins,
+        boundary,
+    )?;
     let (x, z, grid) = (to_mat(x.as_array()), to_mat(z.as_array()), vec_of(grid));
     let r = py
         .detach(|| estimators::select_bandwidth_cv(method, space, &x, &z, &grid, k, seed, cfg))
@@ -770,7 +1054,7 @@ fn global_frechet_predict<'py>(
     upper: Option<f64>,
 ) -> PyResult<Bound<'py, PyArray2<f64>>> {
     let space = space_of(space)?;
-    let cfg = config("gaussian", 0.0, 0, lower, upper)?;
+    let cfg = config_basic("gaussian", 0.0, 1, lower, upper)?;
     let (xt, zt, xn) = (
         to_mat(x_train.as_array()),
         to_mat(z_train.as_array()),
@@ -830,9 +1114,13 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(collapse_knots, m)?)?;
     m.add_function(wrap_pyfunction!(transport_apply, m)?)?;
     m.add_function(wrap_pyfunction!(local_linear_weights, m)?)?;
+    m.add_function(wrap_pyfunction!(reflected_local_linear_weights, m)?)?;
+    m.add_function(wrap_pyfunction!(local_linear_weights_weighted, m)?)?;
+    m.add_function(wrap_pyfunction!(binned_smooth, m)?)?;
     m.add_function(wrap_pyfunction!(global_frechet_weights, m)?)?;
     m.add_function(wrap_pyfunction!(adopt_w2_fit, m)?)?;
     m.add_function(wrap_pyfunction!(adopt_w2_predict, m)?)?;
+    m.add_function(wrap_pyfunction!(adopt_w2_predict_averaged, m)?)?;
     m.add_function(wrap_pyfunction!(adopt_w2_component, m)?)?;
     m.add_function(wrap_pyfunction!(additive_euclid_fit, m)?)?;
     m.add_function(wrap_pyfunction!(additive_euclid_predict, m)?)?;

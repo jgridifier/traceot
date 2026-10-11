@@ -8,7 +8,7 @@ Function names and signatures match ``traceot.primitives``.
 """
 
 from .additive import additive_euclid_fit, additive_euclid_predict
-from .adopt import adopt_w2_component, adopt_w2_fit, adopt_w2_predict
+from .adopt import adopt_w2_component, adopt_w2_fit, adopt_w2_predict, adopt_w2_predict_averaged
 from .logchol import coords_to_spd, spd_to_coords
 from .scalable import (
     QuantileSketch,
@@ -18,7 +18,14 @@ from .scalable import (
     histograms,
     pinball_grad_location_scale,
 )
-from .smoother import global_frechet_weights, kernel_values, local_linear_weights
+from .smoother import (
+    binned_smooth,
+    global_frechet_weights,
+    kernel_values,
+    local_linear_weights,
+    local_linear_weights_weighted,
+    reflected_local_linear_weights,
+)
 from .w2 import (
     collapse_knots,
     pava,
@@ -40,11 +47,15 @@ __all__ = [
     "adopt_w2_component",
     "adopt_w2_fit",
     "adopt_w2_predict",
+    "adopt_w2_predict_averaged",
+    "binned_smooth",
     "collapse_knots",
     "coords_to_spd",
     "global_frechet_weights",
     "kernel_values",
     "local_linear_weights",
+    "local_linear_weights_weighted",
+    "reflected_local_linear_weights",
     "pava",
     "pava_rows",
     "quantile_grid",

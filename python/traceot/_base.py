@@ -145,8 +145,20 @@ class AdditiveFitMixin(EstimatorMixin):
         n, p = X.shape
         lo, hi = check_bounds(self.bounds, self._space.name)
         mode, val = check_bandwidth_arg(self.bandwidth, self.bandwidth_grid, p)
+        bins = getattr(self, "bins", None)
         opts = dict(
-            kernel=self.kernel, tol=float(self.tol), max_iter=int(self.max_iter), lower=lo, upper=hi
+            kernel=self.kernel,
+            tol=float(self.tol),
+            max_iter=int(self.max_iter),
+            lower=lo,
+            upper=hi,
+            damping=float(getattr(self, "damping", 1.0)),
+            certificate=bool(getattr(self, "certificate", False)),
+            composition=str(getattr(self, "composition", "given")),
+            centering=str(getattr(self, "centering", "frechet")),
+            project_prediction=bool(getattr(self, "project_prediction", False)),
+            bins=None if bins is None else int(bins),
+            boundary=str(getattr(self, "boundary", "none")),
         )
         if mode == "cv":
             if not 2 <= int(self.cv) <= n:

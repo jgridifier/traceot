@@ -45,6 +45,7 @@
 <li><a href="#additive">How additive transport works</a></li>
 <li><a href="#components">ADOPT's components, one by one</a></li>
 <li><a href="#results">Our reproduction of the paper's simulations</a></li>
+<li><a href="#found">What we found</a></li>
 <li><a href="#trace">From ADOPT to TRACE</a></li>
 <li><a href="#refs">Source and citation</a></li>
 </ol></nav>
@@ -4420,8 +4421,8 @@ z
 <h2 id="results">4. Our reproduction of the paper's simulations</h2>
 <p>There is no public code, so we re-implemented ADOPT from the paper: All computation runs in a Rust core. A separate plain-numpy version, used only by the tests, checks every Rust result (agreement within 1e-9, in practice about 1e-14). We then re-ran the paper's two simulation designs with fixed seeds and B = 200 replicates per setting. Every guess we had to make is listed in <a href="https://github.com/jgridifier/traceot/blob/main/docs/REPRODUCTION_NOTES.md">REPRODUCTION_NOTES.md</a>.</p>
 <p>The metric is MISE: the squared W2 (or log-Cholesky) error of the predicted distribution, averaged over the unit cube of inputs and over replicates. Lower is better. "Paper" columns are copied verbatim from the published tables. "Ours" are our runs.</p>
-<div class="scroll"><table><caption>Table 1: distributional responses, MISE ×10⁻³</caption><thead><tr><th scope='col'>setting</th><th scope='col'>paper ADOPT</th><th scope='col'>ours ADOPT</th><th scope='col'>paper GF</th><th scope='col'>ours GF</th><th scope='col'>paper ADR</th><th scope='col'>ours ADR</th><th scope='col'>paper FM</th><th scope='col'>ours FM</th><th scope='col'>ours L2-additive*</th></tr></thead><tbody><tr><td>I/100</td><td>0.317 (0.010)</td><td>0.391 (0.014)</td><td>0.591 (0.008)</td><td>0.740 (0.011)</td><td>0.761 (0.008)</td><td>not run</td><td>11.019 (0.068)</td><td>11.691 (0.010)</td><td>0.640 (0.012)</td></tr><tr><td>I/300</td><td>0.181 (0.004)</td><td>0.179 (0.005)</td><td>0.499 (0.003)</td><td>0.576 (0.005)</td><td>0.586 (0.004)</td><td>not run</td><td>11.119 (0.040)</td><td>11.602 (0.003)</td><td>0.436 (0.006)</td></tr><tr><td>II/100</td><td>1.685 (0.057)</td><td>0.503 (0.010)</td><td>6.636 (0.057)</td><td>6.362 (0.022)</td><td>80.411 (0.702)</td><td>not run</td><td>207.205 (1.681)</td><td>204.700 (0.219)</td><td>0.579 (0.014)</td></tr><tr><td>II/300</td><td>1.121 (0.041)</td><td>0.178 (0.003)</td><td>6.701 (0.037)</td><td>5.975 (0.008)</td><td>81.951 (0.455)</td><td>not run</td><td>211.297 (1.080)</td><td>203.277 (0.064)</td><td>0.194 (0.004)</td></tr></tbody></table></div>
-<div class="scroll"><table><caption>Table 2: SPD responses, MISE ×10⁻²</caption><thead><tr><th scope='col'>setting</th><th scope='col'>paper ADOPT</th><th scope='col'>ours ADOPT</th><th scope='col'>paper GF</th><th scope='col'>ours GF</th><th scope='col'>paper FM</th><th scope='col'>ours FM</th></tr></thead><tbody><tr><td>I/10/100</td><td>2.769 (0.025)</td><td>0.059 (0.000)</td><td>9.495 (0.060)</td><td>0.950 (0.003)</td><td>135.344 (0.647)</td><td>134.279 (0.231)</td></tr><tr><td>I/10/300</td><td>1.655 (0.012)</td><td>0.021 (0.000)</td><td>9.714 (0.037)</td><td>0.895 (0.001)</td><td>136.122 (0.366)</td><td>132.593 (0.066)</td></tr><tr><td>I/20/100</td><td>5.712 (0.070)</td><td>0.220 (0.001)</td><td>14.110 (0.102)</td><td>1.943 (0.005)</td><td>192.688 (0.92)</td><td>272.178 (0.516)</td></tr><tr><td>I/20/300</td><td>3.788 (0.048)</td><td>0.079 (0.000)</td><td>14.254 (0.063)</td><td>1.806 (0.002)</td><td>193.796 (0.521)</td><td>268.959 (0.191)</td></tr><tr><td>II/10/100</td><td>4.146 (0.088)</td><td>0.086 (0.001)</td><td>18.507 (0.090)</td><td>4.675 (0.013)</td><td>96.562 (0.490)</td><td>206.037 (0.112)</td></tr><tr><td>II/10/300</td><td>2.702 (0.036)</td><td>0.031 (0.000)</td><td>18.808 (0.052)</td><td>4.481 (0.004)</td><td>97.047 (0.303)</td><td>205.286 (0.033)</td></tr><tr><td>II/20/100</td><td>8.921 (0.167)</td><td>0.340 (0.002)</td><td>28.237 (0.14)</td><td>10.124 (0.029)</td><td>143.382 (0.706)</td><td>434.257 (0.264)</td></tr><tr><td>II/20/300</td><td>6.435 (0.100)</td><td>0.115 (0.000)</td><td>28.512 (0.078)</td><td>9.723 (0.008)</td><td>144.088 (0.437)</td><td>432.502 (0.092)</td></tr></tbody></table></div>
+<div class="scroll"><table><caption>Table 1: distributional responses, MISE ×10⁻³</caption><thead><tr><th scope='col'>setting</th><th scope='col'>paper ADOPT</th><th scope='col'>ours ADOPT</th><th scope='col'>paper GF</th><th scope='col'>ours GF</th><th scope='col'>paper ADR</th><th scope='col'>ours ADR</th><th scope='col'>paper FM</th><th scope='col'>ours FM</th><th scope='col'>ours L2-additive*</th></tr></thead><tbody><tr><td>I/100</td><td>0.317 (0.010)</td><td>0.391 (0.014)</td><td>0.591 (0.008)</td><td>0.740 (0.011)</td><td>0.761 (0.008)</td><td>not run</td><td>11.019 (0.068)</td><td>11.691 (0.010)</td><td>0.636 (0.012)</td></tr><tr><td>I/300</td><td>0.181 (0.004)</td><td>0.179 (0.005)</td><td>0.499 (0.003)</td><td>0.576 (0.005)</td><td>0.586 (0.004)</td><td>not run</td><td>11.119 (0.040)</td><td>11.602 (0.003)</td><td>0.436 (0.006)</td></tr><tr><td>II/100</td><td>1.685 (0.057)</td><td>0.505 (0.010)</td><td>6.636 (0.057)</td><td>6.362 (0.022)</td><td>80.411 (0.702)</td><td>not run</td><td>207.205 (1.681)</td><td>204.700 (0.219)</td><td>0.579 (0.014)</td></tr><tr><td>II/300</td><td>1.121 (0.041)</td><td>0.178 (0.003)</td><td>6.701 (0.037)</td><td>5.975 (0.008)</td><td>81.951 (0.455)</td><td>not run</td><td>211.297 (1.080)</td><td>203.277 (0.064)</td><td>0.194 (0.004)</td></tr></tbody></table></div>
+<div class="scroll"><table><caption>Table 2: SPD responses, MISE ×10⁻²</caption><thead><tr><th scope='col'>setting</th><th scope='col'>paper ADOPT</th><th scope='col'>ours ADOPT</th><th scope='col'>paper GF</th><th scope='col'>ours GF</th><th scope='col'>paper FM</th><th scope='col'>ours FM</th></tr></thead><tbody><tr><td>I/10/100</td><td>2.769 (0.025)</td><td>0.060 (0.000)</td><td>9.495 (0.060)</td><td>0.950 (0.003)</td><td>135.344 (0.647)</td><td>134.279 (0.231)</td></tr><tr><td>I/10/300</td><td>1.655 (0.012)</td><td>0.021 (0.000)</td><td>9.714 (0.037)</td><td>0.895 (0.001)</td><td>136.122 (0.366)</td><td>132.593 (0.066)</td></tr><tr><td>I/20/100</td><td>5.712 (0.070)</td><td>0.220 (0.001)</td><td>14.110 (0.102)</td><td>1.943 (0.005)</td><td>192.688 (0.92)</td><td>272.178 (0.516)</td></tr><tr><td>I/20/300</td><td>3.788 (0.048)</td><td>0.079 (0.000)</td><td>14.254 (0.063)</td><td>1.806 (0.002)</td><td>193.796 (0.521)</td><td>268.959 (0.191)</td></tr><tr><td>II/10/100</td><td>4.146 (0.088)</td><td>0.086 (0.001)</td><td>18.507 (0.090)</td><td>4.675 (0.013)</td><td>96.562 (0.490)</td><td>206.037 (0.112)</td></tr><tr><td>II/10/300</td><td>2.702 (0.036)</td><td>0.031 (0.000)</td><td>18.808 (0.052)</td><td>4.481 (0.004)</td><td>97.047 (0.303)</td><td>205.286 (0.033)</td></tr><tr><td>II/20/100</td><td>8.921 (0.167)</td><td>0.343 (0.003)</td><td>28.237 (0.14)</td><td>10.124 (0.029)</td><td>143.382 (0.706)</td><td>434.257 (0.264)</td></tr><tr><td>II/20/300</td><td>6.435 (0.100)</td><td>0.115 (0.000)</td><td>28.512 (0.078)</td><td>9.723 (0.008)</td><td>144.088 (0.437)</td><td>432.502 (0.092)</td></tr></tbody></table></div>
 <p style="font-size:.85rem;color:var(--muted)">Mean (standard error). *L2-additive is an extra comparator of ours (additive model on quantile functions treated as vectors), not part of the paper. We did not re-implement the ADR method of Han et al. (2020), so its column is "not run".</p>
 <figure><svg role="img" aria-label="Paper-reported versus reproduced MISE for each simulation setting" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="auto" viewBox="0 0 525.34 366.556875" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
@@ -4493,24 +4494,24 @@ z
    <g id="patch_7">
     <path d="M 74.559153 40015.011833 
 L 89.580125 40015.011833 
-L 89.580125 135.967125 
-L 74.559153 135.967125 
+L 89.580125 135.933462 
+L 74.559153 135.933462 
 z
 " clip-path="url(#p0ac364ece7)" style="fill: #1b6ca8"/>
    </g>
    <g id="patch_8">
     <path d="M 190.105089 40015.011833 
 L 205.126061 40015.011833 
-L 205.126061 149.476033 
-L 190.105089 149.476033 
+L 205.126061 149.460078 
+L 190.105089 149.460078 
 z
 " clip-path="url(#p0ac364ece7)" style="fill: #1b6ca8"/>
    </g>
    <g id="patch_9">
     <path d="M 305.651025 40015.011833 
 L 320.671996 40015.011833 
-L 320.671996 131.586556 
-L 305.651025 131.586556 
+L 320.671996 131.528029 
+L 305.651025 131.528029 
 z
 " clip-path="url(#p0ac364ece7)" style="fill: #1b6ca8"/>
    </g>
@@ -5998,8 +5999,8 @@ z
    <g id="patch_44">
     <path d="M 66.836289 28676.409494 
 L 74.134396 28676.409494 
-L 74.134396 311.29686 
-L 66.836289 311.29686 
+L 74.134396 311.277309 
+L 66.836289 311.277309 
 z
 " clip-path="url(#paa2fd723a7)" style="fill: #1b6ca8"/>
    </g>
@@ -6038,16 +6039,16 @@ z
    <g id="patch_49">
     <path d="M 347.532713 28676.409494 
 L 354.83082 28676.409494 
-L 354.83082 319.339438 
-L 347.532713 319.339438 
+L 354.83082 319.278354 
+L 347.532713 319.278354 
 z
 " clip-path="url(#paa2fd723a7)" style="fill: #1b6ca8"/>
    </g>
    <g id="patch_50">
     <path d="M 403.671998 28676.409494 
 L 410.970105 28676.409494 
-L 410.970105 289.782664 
-L 403.671998 289.782664 
+L 410.970105 289.691719 
+L 403.671998 289.691719 
 z
 " clip-path="url(#paa2fd723a7)" style="fill: #1b6ca8"/>
    </g>
@@ -7074,6 +7075,19 @@ z
 <li><strong>SPD matrices (log-Cholesky):</strong> the ranking ADOPT &lt; GF &lt; FM is reproduced, but the levels are not. Only FM for Case I, m = 10 matches. Our ADOPT and GF errors are 10–50 times smaller than the paper's. A diagnostic run (not used in the table) shows that noise about ten times larger than the stated σ = 0.01 brings ADOPT into the paper's range for m = 10. It does not fix GF or FM, though. Under our reading of the design, FM grows in proportion to m, which the paper's FM column does not show. So at least part of the SPD design must differ from how we read it.</li>
 </ul>
 <p class="note">Bottom line: the method and its qualitative claims reproduce (ADOPT is best everywhere, and its error falls as n grows). The exact numbers in Table 1 are close for Case I and for the baselines. Our ADOPT in Case II and all of Table 2 do not match. We report this as is and did not tune anything towards the paper's values.</p>
+
+<h2 id="found">What we found</h2>
+<p>An earlier arXiv copy (2512.08118) was withdrawn on 15 December 2025. The notice says: "Not all co-authors had agreed in advance to the public release." That is a consent issue, not a stated technical correction. The paper appears in AISTATS 2026.</p>
+<p>We checked our code for leaked test points, a wrong noise formula, a wrong error integral, and mixed-up seeds. The evaluation grid does not contain training rows. Responses are noisy in the way the paper writes, and the score compares predictions with the noise-free truth. One bug was real: while choosing the bandwidth, the range of each input was computed on the whole sample, including the fold held out of that check. The fit never saw the held-out responses. The tables above are after that fix. The gap with the paper is still there, so the bug was not the cause.</p>
+<p>The method itself has limits the paper's algorithm does not remove. Details and numbers are in <a href="../ADOPT_AUDIT.md">ADOPT_AUDIT.md</a>.</p>
+<ul>
+<li><strong>Order.</strong> Transport maps do not commute, so the order of the inputs changes the fit. Averaging every order removes that. On problems where the maps do commute, the average matches the original fit.</li>
+<li><strong>Shared inputs.</strong> Two identical inputs make the algorithm put the whole effect on whichever one it visits first. Averaging the orders splits the effect evenly, and the prediction stays the same.</li>
+<li><strong>The loop can walk uphill.</strong> On a stiff example the in-sample error rose at every cycle. A check that rejects an uphill step stops at the best cycle so far.</li>
+<li><strong>Crossed quantiles.</strong> Adding curves in the tangent space can decrease a quantile function. Projecting back onto increasing functions removes the crossings. Composing the paper's increasing maps does not cross.</li>
+<li><strong>Cost.</strong> Each cycle compares every row with every other row. Binning the inputs keeps the error on a smooth additive problem and grows much more slowly.</li>
+<li><strong>Edges.</strong> Local-linear smoothing already handles the edge of the sample far better than a plain kernel average. Reflecting points through the endpoints is optional and, on a curved target, made the edge worse. It stays off.</li>
+</ul>
 
 <h2 id="trace">5. From ADOPT to TRACE</h2>
 <p>ADOPT needs one whole distribution per row (for example, one per group or per period), and its smoother compares every row with every other row. TRACE is our own proposed method, <strong>not published and not validated</strong>. It keeps ADOPT's key idea and changes the setting:</p>
@@ -8897,7 +8911,7 @@ L 150.672031 55.278437
 <p>ADOPT stays in the package as a faithful baseline for row-level distributional data, and as a segment-level comparator for TRACE.</p>
 
 <h2 id="refs">6. Source and citation</h2>
-<p>Song, W. and Müller, H.-G. (2026). "ADOPT: Additive Optimal Transport Regression." <em>Proceedings of the 29th International Conference on Artificial Intelligence and Statistics</em>, PMLR 300:1558–1566. <a href="https://proceedings.mlr.press/v300/song26c.html">proceedings.mlr.press/v300/song26c.html</a>. Also on arXiv (2512.08118).</p>
+<p>Song, W. and Müller, H.-G. (2026). "ADOPT: Additive Optimal Transport Regression." <em>Proceedings of the 29th International Conference on Artificial Intelligence and Statistics</em>, PMLR 300:1558–1566. <a href="https://proceedings.mlr.press/v300/song26c.html">proceedings.mlr.press/v300/song26c.html</a>. An arXiv preprint (2512.08118) was withdrawn on 15 December 2025 with the comment "Not all co-authors had agreed in advance to the public release". The conference paper is the version we reproduced.</p>
 <p>Other background: Petersen and Müller (2019), Fréchet regression; Lin (2019), log-Cholesky metric; McCann (1997), displacement interpolation.</p>
 <footer>traceot is a personal research project. Status: research, unvalidated. All data on this page are simulated. Generated by <code>docs/build_docs.py</code>. MIT licence.</footer>
 </main>

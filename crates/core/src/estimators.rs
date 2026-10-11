@@ -7,12 +7,15 @@
 
 use crate::additive::{additive_euclid_fit, additive_euclid_predict};
 use crate::adopt::{
-    adopt_w2_component, adopt_w2_fit, adopt_w2_predict, BackfitConfig, BackfitResult,
+    adopt_w2_component, adopt_w2_fit, adopt_w2_predict, adopt_w2_predict_averaged, BackfitConfig,
+    BackfitResult, Composition,
 };
 use crate::error::{Result, TraceError};
 use crate::linalg::Mat;
 use crate::logchol;
-use crate::smoother::{global_frechet_weights, local_linear_weights};
+use crate::smoother::{
+    binned_smooth, global_frechet_weights, local_linear_weights, local_linear_weights_boundary,
+};
 use crate::w2::{pava, TransportMap};
 
 /// Response space. Responses are stored in a flat encoding: quantile functions on the
@@ -162,6 +165,30 @@ impl AdditiveModel {
     pub fn predict(&self, x_new: &Mat) -> Result<Mat> {
         let f = &self.fit;
         match (self.method, self.space) {
+            (Method::Adopt, Space::Wasserstein)
+                if self.cfg.composition == Composition::Average && !f.orders.is_empty() =>
+            {
+                adopt_w2_predict_averaged(
+                    &self.x_train,
+                    &f.orders,
+                    &f.mu,
+                    &self.h,
+                    x_new,
+                    &self.cfg,
+                )
+            }
+            (Method::Adopt, Space::Wasserstein) if self.cfg.composition == Composition::Tangent => {
+                let raw = additive_euclid_predict(
+                    &self.x_train,
+                    &f.resid,
+                    &f.m,
+                    &f.mu,
+                    &self.h,
+                    x_new,
+                    &self.cfg,
+                )?;
+                Ok(pava_rows(raw, &self.cfg))
+            }
             (Method::Adopt, Space::Wasserstein) => adopt_w2_predict(
                 &self.x_train,
                 &f.resid,
@@ -204,11 +231,25 @@ impl AdditiveModel {
         }
         let xj = self.x_train.col(j);
         match (self.method, self.space) {
-            (Method::Adopt, Space::Wasserstein) => {
+            (Method::Adopt, Space::Wasserstein) if self.cfg.composition != Composition::Tangent => {
                 adopt_w2_component(&xj, &self.fit.resid[j], self.h[j], x, &self.cfg)
             }
             _ => {
-                local_linear_weights(&xj, x, self.h[j], self.cfg.kernel)?.matmul(&self.fit.resid[j])
+                if let Some(bins) = self.cfg.bins {
+                    binned_smooth(&xj, &self.fit.resid[j], self.h[j], x, bins, self.cfg.kernel)
+                } else if self.cfg.dense_smoother() {
+                    Ok(local_linear_weights(&xj, x, self.h[j], self.cfg.kernel)?
+                        .matmul(&self.fit.resid[j])?)
+                } else {
+                    Ok(local_linear_weights_boundary(
+                        &xj,
+                        x,
+                        self.h[j],
+                        self.cfg.kernel,
+                        self.cfg.boundary,
+                    )?
+                    .matmul(&self.fit.resid[j])?)
+                }
             }
         }
     }
@@ -218,7 +259,9 @@ impl AdditiveModel {
         let g = self.component(j, &[x0])?;
         let center = &self.fit.m[j];
         match self.space {
-            Space::Wasserstein if self.method == Method::Adopt => {
+            Space::Wasserstein
+                if self.method == Method::Adopt && self.cfg.composition != Composition::Tangent =>
+            {
                 let mut out = v.to_vec();
                 TransportMap::new(center, g.row(0)).apply_inplace(&mut out);
                 Ok(out)
@@ -311,7 +354,7 @@ pub struct CvResult {
 }
 
 /// K-fold CV over a common bandwidth fraction `c` (predictor j uses
-/// `h_j = c * range(X_j)`, ranges of the full sample). Ties go to the first minimum.
+/// `h_j = c * range(X_j)` on the training rows of that fold only). Ties go to the first minimum.
 /// The (candidate, fold) fits are independent and run in parallel with rayon.
 #[allow(clippy::too_many_arguments)]
 pub fn select_bandwidth_cv(
@@ -336,7 +379,6 @@ pub fn select_bandwidth_cv(
     }
     let n = x.rows;
     let folds = kfold_indices(n, k, seed)?;
-    let ranges = column_ranges(x);
     let jobs: Vec<(usize, usize)> = (0..grid.len())
         .flat_map(|g| (0..k).map(move |f| (g, f)))
         .collect();
@@ -345,15 +387,12 @@ pub fn select_bandwidth_cv(
         let mut is_test = vec![false; n];
         test.iter().for_each(|&i| is_test[i] = true);
         let train: Vec<usize> = (0..n).filter(|&i| !is_test[i]).collect();
+        let x_train = take_rows(x, &train);
+        // Bandwidths use the training fold only. The held-out fold's covariate
+        // range must not enter h.
+        let ranges = column_ranges(&x_train);
         let h: Vec<f64> = ranges.iter().map(|r| grid[g] * r).collect();
-        let model = AdditiveModel::fit(
-            method,
-            space,
-            &take_rows(x, &train),
-            &take_rows(z, &train),
-            &h,
-            cfg,
-        )?;
+        let model = AdditiveModel::fit(method, space, &x_train, &take_rows(z, &train), &h, cfg)?;
         let pred = model.predict(&take_rows(x, test))?;
         let zt = take_rows(z, test);
         Ok(dist_sq_rows(space, &pred, &zt)?.iter().sum())

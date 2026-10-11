@@ -43,6 +43,34 @@ GRID_PER_AXIS = 10  # MISE integration grid on [0,1]^3 (CHOICE)
 CASE_ID = {"I": 1, "II": 2}
 
 
+def data_seed(table, case, n, m, rep):
+    """Entropy of the data generator. Distinct from the CV fold seed."""
+    return np.random.SeedSequence([1 if table == "table1" else 2, CASE_ID[case], n, m, rep])
+
+
+def cv_seed(rep):
+    """Bandwidth-CV fold seed: the replicate index only (ambiguity A5)."""
+    return int(rep)
+
+
+def chebyshev_gap(X, grid):
+    """Smallest Chebyshev distance between training rows and evaluation rows."""
+    X = np.atleast_2d(np.asarray(X, float))
+    grid = np.atleast_2d(np.asarray(grid, float))
+    gap = np.max(np.abs(X[:, None, :] - grid[None, :, :]), axis=-1)
+    return float(gap.min())
+
+
+def mise_w2(pred, truth):
+    """Mean over the cube of the mean squared quantile error (Riemann form of W2²)."""
+    return float(np.mean(np.mean((pred - truth) ** 2, axis=1)))
+
+
+def mise_spd(pred, truth):
+    """Mean over the cube of the summed squared log-Cholesky coordinates."""
+    return float(np.mean(np.sum((pred - truth) ** 2, axis=1)))
+
+
 def settings():
     for case in ("I", "II"):
         for n in (100, 300):
@@ -71,31 +99,36 @@ def _truth(table, case, m):
 
 def run_one(task):
     table, case, n, m, rep = task
-    ss = np.random.SeedSequence([1 if table == "table1" else 2, CASE_ID[case], n, m, rep])
-    rng = np.random.default_rng(ss)
+    rng = np.random.default_rng(data_seed(table, case, n, m, rep))
     obj, xg, truth = _truth(table, case, m)
     out = []
     if table == "table1":
         X, Y = dgp.simulate_w2(case, n, rng, q=Q, truth=obj)
+        gap = chebyshev_gap(X, xg)
+        if not gap > 0.0:
+            raise RuntimeError("MISE grid overlaps a training row")
         models = {
-            "ADOPT": ADOPTRegressor(random_state=rep),
+            "ADOPT": ADOPTRegressor(random_state=cv_seed(rep)),
             "GF": GlobalFrechetRegressor(),
             "FM": FrechetMeanRegressor(),
-            "L2ADD": L2AdditiveQuantileRegressor(random_state=rep),
+            "L2ADD": L2AdditiveQuantileRegressor(random_state=cv_seed(rep)),
         }
         for name, est in models.items():
             t0 = time.perf_counter()
             est.fit(X, Y)
             pred = est.predict(xg)
             dt = time.perf_counter() - t0
-            mise = float(np.mean(np.mean((pred - truth) ** 2, axis=1)))
+            mise = mise_w2(pred, truth)
             bw = getattr(est, "cv_results_", None)
             out.append((name, mise, dt, None if not bw else float(bw["best_fraction"])))
     else:
         X, Z = dgp.simulate_spd(case, n, m, rng, means=obj)
+        gap = chebyshev_gap(X, xg)
+        if not gap > 0.0:
+            raise RuntimeError("MISE grid overlaps a training row")
         S = dgp_spd_matrices(Z, m)
         models = {
-            "ADOPT": ADOPTRegressor(space="logcholesky", random_state=rep),
+            "ADOPT": ADOPTRegressor(space="logcholesky", random_state=cv_seed(rep)),
             "GF": GlobalFrechetRegressor(space="logcholesky"),
             "FM": FrechetMeanRegressor(space="logcholesky"),
         }
@@ -104,10 +137,10 @@ def run_one(task):
             est.fit(X, S)
             pred = est.predict_encoded(xg)
             dt = time.perf_counter() - t0
-            mise = float(np.mean(np.sum((pred - truth) ** 2, axis=1)))
+            mise = mise_spd(pred, truth)
             bw = getattr(est, "cv_results_", None)
             out.append((name, mise, dt, None if not bw else float(bw["best_fraction"])))
-    return task, out
+    return task, out, gap
 
 
 def dgp_spd_matrices(Z, m):
@@ -133,7 +166,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     rows = []
     agg: dict = {}
-    for (t, c, n, m, r), out in results:
+    min_gap = min(gap for _task, _out, gap in results)
+    for (t, c, n, m, r), out, _gap in results:
         key = f"{c}/{n}" if t == "table1" else f"{c}/{m}/{n}"
         for name, mise, dt, bw in out:
             rows.append([t, c, n, m, r, name, mise, dt, bw])
@@ -152,6 +186,8 @@ def main():
             "python": platform.python_version(),
             "wall_seconds": wall,
             "workers": args.workers,
+            "min_train_grid_chebyshev": min_gap,
+            "cv_ranges": "training-fold",
         },
         "results": {},
     }
