@@ -1,0 +1,8 @@
+{
+  "source": "cargo bench -p traceot-core -- adopt/fit_p3_q100 (criterion 0.7, median of estimates, single thread)",
+  "machine": "shared cloud VM, 8 vCPU",
+  "p": 3,
+  "q": 100,
+  "n": [100, 300, 1000],
+  "seconds": [0.01213, 0.04539, 0.29895]
+}
