@@ -42,6 +42,8 @@ testpaths = ["tests/python"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Pre-written numerical checks. Style rules are not applied to them.
+extend-exclude = ["docs/theory/verify"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "NPY"]
