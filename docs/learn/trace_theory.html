@@ -59,7 +59,7 @@ window.MathJax = {
 </head>
 <body>
 <main>
-<p><a href="../index.html">traceot</a> · <a href="trace.html">TRACE</a> · <span class="status">research, unvalidated</span></p>
+<p><a href="../index.html">traceot</a> · <a href="trace.html">TRACE</a> · <a href="explaining_shifts.html">Explaining a shift</a> · <span class="status">research, unvalidated</span></p>
 <h1>The theory behind TRACE</h1>
 <p class="lede">Seven results, each with the plain idea, the statement, a sketch of the proof, the numerical check, and where it stops being true. The proofs live in <a href="https://github.com/jgridifier/traceot/blob/main/docs/theory/THEORY.md">THEORY.md</a>. The checks are <code>docs/theory/verify/</code>, archived in <code>RESULTS.txt</code> (46 pass, 0 fail, 11 October 2026). Figures on this page were recomputed by <code>docs/build_trace_theory.py</code>.</p>
 <p>A citation marked <span class="unv">UNVERIFIED</span> is a detail the notes could not confirm against a primary source. Those flags stay visible on purpose.</p>
@@ -160,7 +160,7 @@ window.MathJax = {
 
 <section class="panel p5">
 <h2>Explaining a shift between two periods</h2>
-<p>For a fixed covariate profile, compare the two periods' predicted distributions and average over a stated population of profiles. That conditional shift splits exactly by channel and by feature. The overall, marginal shift is a mixture, and mixing can cancel. Part of a change is the covariates moving (composition) and part is the relationship moving (structure). The squared distance has a cross term, and the order of the two switches matters. Squared distances from noisy fits are biased upward; a product of two independent halves is not, when each half is unbiased.</p>
+<p>For a fixed covariate profile, compare the two periods' predicted distributions and average over a stated population of profiles. That conditional shift splits exactly by channel and by feature. The overall, marginal shift is a mixture, and mixing can cancel. Part of a change is the covariates moving (composition) and part is the relationship moving (structure). The squared distance has a cross term, and the order of the two switches matters. Squared distances from noisy fits are biased upward; a product of two independent halves is not, when each half is unbiased. The order-free split, the two averages, and the separate mass term are taught on <a href="explaining_shifts.html">Explaining a shift</a>.</p>
 <h3>Statement</h3>
 <p><strong>Theorem 2.1.</strong> For a stated covariate law \(P\) (default: period B), \(D_{\mathrm{cond}}(P) = \mathbb{E}_{x\sim P} W_2^2(Q_A(\cdot|x), Q_B(\cdot|x)) = \sum_{k,j} \mathbb{E}_P \varphi_{jk}(x)\).</p>
 <p><strong>Proposition 2.2.</strong> With the same covariates, the marginal \(W_2^2\) is at most the average conditional \(W_2^2\). It can be much smaller. Two groups that swap places have marginal shift 0 and conditional shift 4.</p>

@@ -10,6 +10,8 @@ Regression", AISTATS 2026, PMLR v300, https://proceedings.mlr.press/v300/song26c
 TRACE v0, our own unpublished method, is a binned additive model of the conditional
 quantile function (:class:`traceot.TraceRegressor`). TRACE v1
 (:class:`traceot.TraceV1`) fits orthonormal Legendre channels with Newton steps.
+Shift v2 (:mod:`traceot.shift`) splits a change between two periods into
+composition and structure.
 TRACE v2 (:class:`traceot.TraceHybrid`) fits the mean by squared loss and the
 residual channels by CRPS. The pre-written bar was missed, including a second
 attempt that writes one two-leaf split per visit, so it is not the default.
@@ -18,7 +20,7 @@ attempt that writes one two-leaf split per visit, so it is not the default.
 ADOPT remains a reproduction only.
 """
 
-from . import checks, primitives
+from . import checks, primitives, shift
 from .adopt import ADOPTRegressor
 from .baselines import FrechetMeanRegressor, GlobalFrechetRegressor, L2AdditiveQuantileRegressor
 from .primitives import quantile_grid
@@ -40,4 +42,5 @@ __all__ = [
     "checks",
     "primitives",
     "quantile_grid",
+    "shift",
 ]

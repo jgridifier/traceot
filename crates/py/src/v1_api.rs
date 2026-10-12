@@ -35,7 +35,7 @@ fn slice2<'a>(a: &'a PyReadonlyArray2<'a, f64>) -> PyResult<&'a [f64]> {
         .map_err(|_| PyValueError::new_err("array must be C-contiguous"))
 }
 
-fn mono_from(name: &str) -> PyResult<MonoMode> {
+pub(crate) fn mono_from(name: &str) -> PyResult<MonoMode> {
     match name {
         "none" => Ok(MonoMode::None),
         "pav" => Ok(MonoMode::Pav),
@@ -46,7 +46,7 @@ fn mono_from(name: &str) -> PyResult<MonoMode> {
     }
 }
 
-fn report_from(name: &str) -> PyResult<ReportKind> {
+pub(crate) fn report_from(name: &str) -> PyResult<ReportKind> {
     match name {
         "legendre" => Ok(ReportKind::Legendre),
         "hermite" => Ok(ReportKind::Hermite),
@@ -105,7 +105,7 @@ fn config_from(
 
 #[pyclass(name = "TraceV1Model", module = "traceot._core")]
 pub struct PyV1Model {
-    inner: V1Model,
+    pub(crate) inner: V1Model,
 }
 
 #[pymethods]
