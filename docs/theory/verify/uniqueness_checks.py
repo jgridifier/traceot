@@ -219,5 +219,86 @@ d = sum((cB[k] - cA[k]) * mono[k] for k in range(3))
 naive = sum((cB[k] - cA[k]) ** 2 * inner(mono[k], mono[k]) for k in range(3))
 check("XO non-orthogonal basis: sum of per-channel terms != W2^2", abs(naive - inner(d, d)) > 1e-3, f"gap={naive-inner(d,d):.3f}")
 
+
+# ---------- v2 additions ----------
+# U8: lambda_2 gap of balanced mixture = ED/8 ; general weight pi(1-pi)/2 * ED
+from math import erf, sqrt, pi as PI, exp
+def e_abs_normal(mu, s):  # E|Z|, Z~N(mu,s^2)
+    return s * sqrt(2 / PI) * exp(-mu * mu / (2 * s * s)) + mu * erf(mu / (s * sqrt(2)))
+ED = 2 * e_abs_normal(3, sqrt(2)) - 2 * e_abs_normal(0, sqrt(2))
+check("U8 balanced-mixture lambda_2 gap = ED/8", abs(gap - ED / 8) < 3e-3, f"gap={gap:.4f} ED/8={ED/8:.4f}")
+pw = 0.3
+m = rng.random(N) < pw
+mixw = np.where(m, y1, y2)
+gw = lmom(mixw)[1] - (pw * l1[0][1] + (1 - pw) * l1[1][1])
+check("U8a weight-pi gap = pi(1-pi)/2 * ED", abs(gw - pw * (1 - pw) / 2 * ED) < 5e-3, f"{gw:.4f} vs {pw*(1-pw)/2*ED:.4f}")
+qmix = np.sort(mix)  # 2N order statistics
+qbar = 1.5 + np.repeat(np.sort(y1), 2)  # barycenter N(1.5,1): quantile function of y1 shifted
+w2bm = float(np.mean((qmix - qbar) ** 2))
+check("U8b barycenter-vs-marginal W2^2 is NOT ED/8", abs(w2bm - ED / 8) > 0.1, f"W2^2={w2bm:.4f} vs ED/8={ED/8:.4f}")
+
+# U9: centring moves only structure pieces between feature and intercept
+Gc = Gt.copy(); dA, dB = 0.7, -1.9
+Gc[:, 2, :, 0] += dA; Gc[:, 2, :, 1] += dB; Gc[:, 0, :, 0] -= dA; Gc[:, 0, :, 1] -= dB
+phc, dcc = trace_rule(Gc)
+check("U9 centring: comp pieces and channel totals unchanged", np.allclose(phc[:, :, 0], phi[:, :, 0]) and np.allclose(dcc, dcb))
+check("U9b centring: feature/intercept struct pieces move by +-w(dB-dA)dc", np.allclose(phc[:, 2, 1] - phi[:, 2, 1], (dB - dA) * dcb / (2 * np.arange(4) + 1)) and not np.allclose(phc[:, 2, 1], phi[:, 2, 1]))
+
+# XF2: closed counterexample, Owen value, and period relabelling of the switch game
+def owen(v, n, blocks):
+    phi = np.zeros(n); cnt = 0
+    for bo in permutations(range(len(blocks))):
+        def rec(i, order):
+            nonlocal cnt
+            if i == len(bo):
+                phi[:] += path(v, n, order); cnt += 1; return
+            for inner_o in permutations(blocks[bo[i]]):
+                rec(i + 1, order + list(inner_o))
+        rec(0, [])
+    return phi / cnt
+G1 = np.array([[0.0, 0.0], [1.0, 3.0]])
+a1 = stage1_trace(G1); tr1 = (1 / 3) * a1 * a1.sum()
+sw1 = shapley(lambda S: (1 / 3) * (G1[int(0 in S), int(1 in S)] - G1[0, 0]) ** 2, 2)
+check("XF2 G=[[0,0],[1,3]]: TRACE (2,1), switch Shapley (5/3,4/3)", np.allclose(tr1, [2, 1]) and np.allclose(sw1, [5 / 3, 4 / 3]))
+def sw_game(Gf_):
+    pp = Gf_.shape[0]
+    return lambda S: wk * sum(Gf_[j, int(2 * j in S), int(2 * j + 1 in S)] - Gf_[j, 0, 0] for j in range(pp)) ** 2
+Gr = rng.normal(size=(2, 2, 2))
+blocks = [[0, 1], [2, 3]]
+ow = owen(sw_game(Gr), 4, blocks); shv = shapley(sw_game(Gr), 4)
+ar = np.concatenate([stage1_trace(Gr[j]) for j in range(2)]); trr = wk * ar * ar.sum()
+check("XF2b Owen efficient", abs(ow.sum() - trr.sum()) < TOL)
+check("XF2c TRACE, switch-Shapley, Owen pairwise different (random 2-feature case)",
+      min(np.max(abs(ow - trr)), np.max(abs(ow - shv)), np.max(abs(shv - trr))) > 1e-3,
+      f"|Ow-TR|={np.max(abs(ow-trr)):.3f} |Sh-TR|={np.max(abs(shv-trr)):.3f} |Ow-Sh|={np.max(abs(ow-shv)):.3f}")
+Gs2 = Gr[:, ::-1, ::-1]  # relabel periods
+shs = shapley(sw_game(Gs2), 4); ows = owen(sw_game(Gs2), 4, blocks)
+check("XF2e switch-Shapley and Owen are NOT invariant to period relabelling (TRACE is, U6)",
+      np.max(abs(shs - shv)) > 1e-3 and np.max(abs(ows - ow)) > 1e-3, f"Sh change={np.max(abs(shs-shv)):.3f} Owen change={np.max(abs(ows-ow)):.3f}")
+sym_sh = 0.5 * (shv + shs); sym_ow = 0.5 * (ow + ows)
+check("XF2f period-symmetrised switch Shapley and Owen both EQUAL TRACE (Theorem 4)",
+      np.allclose(sym_sh, trr, atol=1e-10) and np.allclose(sym_ow, trr, atol=1e-10), f"|symSh-TR|={np.max(abs(sym_sh-trr)):.1e}")
+
+# U10: Theorem 4 in general: K channels, p features + intercept, game V_sym(S) = <Qbar_B - Qbar_A, Qbar_S - Qbar_A>
+ok = True
+for _ in range(10):
+    Kk, pp = 3, 2
+    Gq = rng.normal(size=(Kk, pp, 2, 2))
+    pl = [(k, j, r) for k in range(Kk) for j in range(pp) for r in range(2)]
+    def Hs(S):  # coefficient vector of Qbar_S - Qbar_A
+        return np.array([sum(Gq[k, j, int((k, j, 0) in S), int((k, j, 1) in S)] - Gq[k, j, 0, 0] for j in range(pp)) for k in range(Kk)])
+    wv = 1 / (2 * np.arange(Kk) + 1); D = Hs(set(pl))
+    VA = lambda S: float(np.sum(wv * Hs({pl[m] for m in S}) ** 2))
+    VBd = lambda S: float(np.sum(wv * D ** 2) - np.sum(wv * (D - Hs({pl[m] for m in S})) ** 2))  # dual of B-anchored game
+    Vs = lambda S: float(np.sum(wv * D * Hs({pl[m] for m in S})))
+    shs_ = shapley(Vs, len(pl))
+    trq = np.array([wv[k] * stage1_trace(Gq[k, j])[r] * D[k] for k, j, r in pl])
+    ok &= np.allclose(shs_, trq, atol=1e-9)
+    ok &= np.allclose(0.5 * (shapley(VA, len(pl)) + shapley(VBd, len(pl))), trq, atol=1e-9)
+check("U10 Theorem 4: Shapley of symmetrised switch game = TRACE (K=3, p=2, 12 players)", ok)
+ar_n = np.concatenate([stage1_trace(Gr[j]) for j in range(2)])
+check("XF2d additive tables: Owen = Shapley = TRACE", (lambda Ga: np.allclose(owen(sw_game(Ga), 4, blocks), wk * np.concatenate([stage1_trace(Ga[j]) for j in range(2)]) * sum(stage1_trace(Ga[j]).sum() for j in range(2)), atol=1e-10))(
+    (lambda Ga: (Ga.__setitem__((slice(None), 1, 1), Ga[:, 1, 0] + Ga[:, 0, 1] - Ga[:, 0, 0]), Ga)[1])(rng.normal(size=(2, 2, 2)))))
+
 print("\nALL PASS" if not fails else f"\nFAILED: {fails}")
 raise SystemExit(1 if fails else 0)
