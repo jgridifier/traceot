@@ -111,3 +111,21 @@ A2 scenarios. H8(c) placebo unchanged (secondary), using the joint test.
 Unchanged: every miss is recorded with scenario, size, replication and value, and stays on
 record. The withdrawn H7 scenarios and the union-band H8(a) are reported as "withdrawn by
 Amendment 1 before any result".
+
+## Deviations logged after this amendment (before any method ran on the new scenarios)
+
+* **D1 (scenario code, 2026-10-12).** Building the oracle truth, the λ₁ check `|Δλ₁| ≤ 2e-3` failed
+  for `tail_comp` (−2.03e-3) and `shape_mixed` (−2.24e-3). λ₁ is equal by construction (every law
+  has mean 0), so this is Monte Carlo noise (SE ≈ √(2·sd_A²/2·10⁶) ≈ 1.8e-3). The check is
+  replaced by `|Δλ₁| ≤ 4·SE`; λ₂ is matched by calibration to ≤ 1.1e-7 in all five scenarios.
+  No scenario or bar was changed. Only the oracle truth was looked at; no method ran.
+* **D2 (disclosure, no change).** The oracle shows small planted signals on the graded channels
+  (Shapley truth, L-moment scale): `skew_struct` struct λ₃ = 0.050; `tail_struct` struct λ₄ = 0.0097;
+  `skew_comp` comp λ₃ = 0.040; `tail_comp` comp λ₄ = 0.0043; `shape_mixed` λ₃ comp +0.040 / struct
+  −0.054. With `r_k ≤ 0.25` the `tail_*` scenarios require absolute errors of about 0.002 and 0.001,
+  which may be infeasible at these sample sizes for any method. The bars are kept as frozen; a miss
+  there will be reported as a failure, with this note. Ungraded channels also move (e.g. λ₄ in
+  `skew_struct` and `shape_mixed`, ±0.007 on λ₂ pieces that cancel in `skew_comp`, `shape_mixed`)
+  and are reported.
+* **D3 (H8 test calibration note).** The joint max-|t| test with B = 100 rejected 5.75% on a toy
+  Gaussian null (2,000 draws, `sb_h8.py`), consistent with small-B bootstrap quantile noise. No change.
