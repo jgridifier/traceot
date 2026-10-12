@@ -26,7 +26,14 @@ from statistics import NormalDist
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "benchmarks" / "results" / "trace_v2_item1.json"
+# The pre-fix failure stays in trace_v2_item1.json. Later runs pass a path.
+OUT = Path(
+    __import__("os").environ.get(
+        "TRACE_ITEM1_OUT",
+        str(ROOT / "benchmarks" / "results" / "trace_v2_item1.json"),
+    )
+)
+LABEL = __import__("os").environ.get("TRACE_ITEM1_LABEL", "item 1")
 _NORM = NormalDist()
 FRESH = list(range(81001, 81021))
 HISTORICAL = {"s1_period2": 11, "vendor_spend": 44, "scale_small": 0}
@@ -302,6 +309,7 @@ def main() -> None:
         for fut in as_completed(futures):
             rows.append(fut.result())
             payload = {
+                "label": LABEL,
                 "completed": len(rows),
                 "of": len(specs),
                 "seconds": time.perf_counter() - t0,

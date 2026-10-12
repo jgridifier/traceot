@@ -397,6 +397,18 @@ The same step on 16 bins, one seed only, is not 4× off: n=2e4 test MSE 0.0106, 
 
 The 200-round cap is a slow residual, not a step that increases the loss. A negative relative drop is already below the tolerance, so a step that raised pinball would stop by round 2. On vendor seed 44 the locked residual meets \(10^{-10}\) at round 168; on an 8,000-row scale draw it meets it at round 88. The unlocked TraceV1 fits in the baseline meet it in about 50 to 80 rounds. The lock sets the channel-0 component of the joint Newton step to zero after the solve, which keeps \(c_0\) fixed and leaves a shorter step. Thirty-eight of the eighty hybrid tail fits are still above the tolerance at round 200. Items 2 and 3 were not refit.
 
+#### Item 1, edges fixed
+
+Quantile cuts were taken from every row passed to `fit_mean`, including the internal validation slice. They are now taken from the training rows only. Same seeds, same bar, same full-pool booster otherwise. The original row above stays in place. JSON: `benchmarks/results/trace_v2_item1_edges.json`. On the n=2e4 historical seed the test MSE moves from 0.03967 to 0.03827.
+
+| Case | Hybrid MSE | Booster MSE | Ratio | Hybrid CRPS | Booster+conformal CRPS | Raw TRACE CRPS |
+|---|---:|---:|---:|---:|---:|---:|
+| S1 period 2 | 1.309 | 1.213 | 1.08 | 0.608 | 0.578 | 0.576 |
+| Vendor spend | 8.110 | 1.793 | 4.52 | 1.923 | 0.739 | 0.773 |
+| n=2e4, p=10 | 0.0381 | 0.0101 | 3.78 | 0.129 | 0.0566 | 0.0601 |
+
+**Fail.** The MSE ratios are still above 1.01 on every case, and CRPS is still worse than both comparators on every case.
+
 ### Item 2 — smoothed pinball curvature
 
 **Fail.** Candidate: `TraceV1`, `k_fit=8`, learning rate 1.0, 40 rounds, logistic pinball density with bandwidth 0.05 annealed to 0.02 then 0.01, Levenberg damping `1e-3`. Baseline: the same constructor with those two knobs off. The bandwidth and the damping were fixed before the run.

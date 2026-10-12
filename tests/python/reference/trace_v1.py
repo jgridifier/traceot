@@ -190,7 +190,8 @@ def fit_mean(
     codes = []
     for j in range(p):
         col = x[:, j]
-        finite = np.sort(col[np.isfinite(col)])
+        train = col[:train_end]
+        finite = np.sort(train[np.isfinite(train)])
         e = edges_from_sorted(finite, max_bins)
         edges.append(e)
         codes.append(_bin_codes(col, e))

@@ -64,7 +64,9 @@ pub fn fit_mean(x: &[f64], n: usize, p: usize, y: &[f64], cfg: &MeanConfig) -> R
     }
     let n_val = ((cfg.validation_size * n as f64).floor() as usize).min(n - 1);
     let train_end = n - n_val;
-    let (codes, edges, n_bins) = bin_columns(x, n, p, cfg.max_bins)?;
+    // Quantile cuts come from the training rows only. The validation slice is
+    // scored with those cuts, and it does not move them.
+    let (codes, edges, n_bins) = bin_columns(x, n, p, train_end, cfg.max_bins)?;
     let mut intercept = 0.0;
     for i in 0..train_end {
         intercept += y[i];
@@ -265,6 +267,7 @@ fn bin_columns(
     x: &[f64],
     n: usize,
     p: usize,
+    train_end: usize,
     max_bins: usize,
 ) -> Result<(Vec<Vec<u16>>, Vec<Vec<f64>>, Vec<usize>)> {
     let mut codes = Vec::with_capacity(p);
@@ -275,7 +278,11 @@ fn bin_columns(
         for i in 0..n {
             col[i] = x[i * p + j];
         }
-        let mut finite: Vec<f64> = col.iter().copied().filter(|v| v.is_finite()).collect();
+        let mut finite: Vec<f64> = col[..train_end]
+            .iter()
+            .copied()
+            .filter(|v| v.is_finite())
+            .collect();
         finite.sort_by(f64::total_cmp);
         let e = edges_from_sorted(&finite, max_bins)?;
         let mut c = vec![0u16; n];
@@ -363,5 +370,39 @@ mod tests {
         assert!((nonzero[1] - 2.0 * lr).abs() < 1e-12, "{nonzero:?}");
         // The two steps cancel, so the intercept stays at the training mean.
         assert!((model.intercept - 2.0).abs() < 1e-12, "{}", model.intercept);
+    }
+
+    #[test]
+    fn validation_rows_do_not_move_bin_edges() {
+        // Training values lie in [0, 1]. The held-out tail sits at 100. A cut
+        // computed on every row would place an edge on that tail.
+        let n = 20;
+        let mut x = vec![0.0; n];
+        let mut y = vec![0.0; n];
+        for i in 0..16 {
+            x[i] = i as f64 / 15.0;
+            y[i] = 2.0 * x[i];
+        }
+        for i in 16..n {
+            x[i] = 100.0;
+            y[i] = 0.0;
+        }
+        let cfg = MeanConfig {
+            max_bins: 8,
+            learning_rate: 0.4,
+            max_rounds: 2,
+            early_stopping_rounds: 2,
+            early_stopping_tolerance: 1e-8,
+            validation_size: 0.2,
+            min_samples_leaf: 1,
+        };
+        let model = fit_mean(&x, n, 1, &y, &cfg).unwrap();
+        assert!(!model.edges[0].is_empty());
+        for edge in &model.edges[0] {
+            assert!(
+                (0.0..=1.0).contains(edge),
+                "validation row moved an edge to {edge}"
+            );
+        }
     }
 }
