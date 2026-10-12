@@ -9,7 +9,9 @@ mod checks;
 mod dro;
 mod fit;
 mod frechet;
+mod hybrid;
 mod legendre;
+mod meanboost;
 mod shift;
 mod v1fit;
 
@@ -18,9 +20,9 @@ pub use basis::{
     quantile_basis,
 };
 pub use checks::{
-    conformal_pvalues, duplicate_screen, empirical_w2, feature_w2, pearson, pinball_scores,
-    placebo_screen, projection_blur, score_quantiles, target_proxy_screen, DistScore, DupFlag,
-    PlaceboScreen, ProxyFlag, ProxyScreen,
+    conformal_pvalues, crps_quadrature, duplicate_screen, empirical_w2, feature_w2, pearson,
+    pinball_scores, placebo_screen, projection_blur, score_quantiles, target_proxy_screen,
+    DistScore, DupFlag, PlaceboScreen, ProxyFlag, ProxyScreen,
 };
 pub use dro::{
     codes_for_robust, coupling_w1, fit_robust, integrated_pinball_on, max_jump_bound,
@@ -29,18 +31,23 @@ pub use dro::{
 };
 pub use fit::{fit_codes_u16, fit_codes_u8, fit_trace, PairTerm, TraceConfig, TraceModel};
 pub use frechet::{fit_frechet, predict_frechet, weighted_slope, FrechetConfig, FrechetModel};
+pub use hybrid::{
+    fit_hybrid, hybrid_channel_energy, predict_hybrid, predict_mean_channel, HybridModel,
+};
 pub use legendre::{
     a_to_c, a_to_lambda, bernstein_nonnegative, derivative_bernstein, eval_a, eval_a_deriv,
     gauss_legendre_01, hermite_he, hosking_lmoments, k3_monotone, k3_non_representable,
     lambda_to_a, min_derivative_grid, pstar_all, pstar_coef, report_matrix, tau3_from_a,
     weighted_pav, wnorm, GaussLegendre, QuadBasis,
 };
+pub use meanboost::{fit_mean, predict_mean, MeanConfig, MeanModel};
 pub use shift::{
     bootstrap_indices, cross_fit_energy, lmoment_channel_energy, permutation_pvalue,
     shift_conditional, shift_marginal, ConditionalShift, MarginalShift, SplitMix64,
 };
 pub use v1fit::{
-    attribute, channel_energy, channel_slope, codes_of, feature_report_table, fit_v1,
-    monotonicity_report, player_coefficients, predict_quantiles, projection_pair, Attribution,
-    MonoMode, MonoReport, ProjectionPair, ReportKind, V1Config, V1Model,
+    attribute, channel_energy, channel_slope, codes_of, feature_pinball_gains,
+    feature_report_table, fit_v1, leave_feature_gains, monotonicity_report, pinball_gh,
+    player_coefficients, predict_quantiles, projection_pair, Attribution, FeatureGains, MonoMode,
+    MonoReport, ProjectionPair, ReportKind, V1Config, V1Model,
 };

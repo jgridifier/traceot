@@ -404,6 +404,26 @@ pub fn score_quantiles(y: &[f64], q: &[f64], u: &[f64]) -> Result<DistScore> {
     })
 }
 
+/// Gauss-quadrature CRPS: `2 · mean_i Σ_t w_t ρ_{u_t}(y_i − q_{it})`.
+/// `q` is row-major `n × k`. Weights are the quadrature weights, not uniform.
+pub fn crps_quadrature(y: &[f64], q: &[f64], u: &[f64], w: &[f64]) -> Result<f64> {
+    let k = u.len();
+    let n = y.len();
+    if k == 0 || w.len() != k || q.len() != n * k {
+        return Err(TraceError::Shape("crps_quadrature shape".into()));
+    }
+    let mut acc = 0.0;
+    for i in 0..n {
+        let row = &q[i * k..(i + 1) * k];
+        for t in 0..k {
+            let r = y[i] - row[t];
+            let rho = if r >= 0.0 { u[t] * r } else { (u[t] - 1.0) * r };
+            acc += w[t] * rho;
+        }
+    }
+    Ok(2.0 * acc / n.max(1) as f64)
+}
+
 fn contrast_rms(q00: &[f64], q01: &[f64], q10: &[f64], q11: &[f64]) -> f64 {
     let mut s = 0.0;
     for i in 0..q00.len() {

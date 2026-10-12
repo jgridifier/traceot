@@ -99,6 +99,278 @@ def robust_risk_breakpoints(intercept, shapes, bins, y, u, kappa, eps, ball="w1"
     return float(best)
 
 
+def edges_from_sorted(x_sorted, max_bins: int):
+    """Order statistics at floor(k n / max_bins), de-duplicated. Matches the Rust binner."""
+    import math
+
+    n = len(x_sorted)
+    if n == 0:
+        return []
+    q = []
+    for k in range(1, max_bins):
+        idx = min(int(math.floor((k / max_bins) * n)), n - 1)
+        q.append(float(x_sorted[idx]))
+    edges = []
+    for v in q:
+        if not edges or v != edges[-1]:
+            edges.append(v)
+    return edges
+
+
+def _bin_codes(col, edges):
+    codes = np.empty(len(col), dtype=np.int64)
+    for i, v in enumerate(col):
+        if not np.isfinite(v):
+            codes[i] = 0
+            continue
+        n_le = 0
+        for e in edges:
+            if e <= v:
+                n_le += 1
+            else:
+                break
+        codes[i] = 1 + n_le
+    return codes
+
+
+def _two_leaf_steps(sum_b, cnt, learning_rate, min_samples_leaf):
+    """One squared-loss cut of the ordered value bins. Ties keep the leftmost cut."""
+    nb = len(sum_b)
+    raw = np.zeros(nb)
+    need = max(int(min_samples_leaf), 1)
+    if nb < 3:
+        return raw
+    pc = np.zeros(nb)
+    ps = np.zeros(nb)
+    for b in range(1, nb):
+        pc[b] = pc[b - 1] + cnt[b]
+        ps[b] = ps[b - 1] + sum_b[b]
+    total_c = pc[nb - 1]
+    total_s = ps[nb - 1]
+    if total_c < need * 2:
+        return raw
+    best_gain = -np.inf
+    best_k = 0
+    for k in range(1, nb - 1):
+        cl = pc[k]
+        cr = total_c - cl
+        if cl < need or cr < need:
+            continue
+        sl = ps[k]
+        sr = total_s - sl
+        gain = (sl * sl) / cl + (sr * sr) / cr - (total_s * total_s) / total_c
+        if gain > best_gain:
+            best_gain = gain
+            best_k = k
+    if best_k == 0:
+        return raw
+    cl = pc[best_k]
+    cr = total_c - cl
+    sl = ps[best_k]
+    sr = total_s - sl
+    left = learning_rate * sl / cl
+    right = learning_rate * sr / cr
+    for b in range(1, best_k + 1):
+        if cnt[b] > 0:
+            raw[b] = left
+    for b in range(best_k + 1, nb):
+        if cnt[b] > 0:
+            raw[b] = right
+    return raw
+
+
+def fit_mean(
+    x,
+    y,
+    max_bins=8,
+    learning_rate=0.5,
+    max_rounds=20,
+    early_stopping_rounds=5,
+    early_stopping_tolerance=1e-8,
+    validation_size=0.0,
+    min_samples_leaf=1,
+):
+    """Cyclic squared-loss histogram booster. The last validation_size fraction is held out."""
+    import math
+
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64).reshape(-1)
+    n, p = x.shape
+    n_val = min(int(math.floor(validation_size * n)), n - 1)
+    train_end = n - n_val
+    edges = []
+    codes = []
+    for j in range(p):
+        col = x[:, j]
+        train = col[:train_end]
+        finite = np.sort(train[np.isfinite(train)])
+        e = edges_from_sorted(finite, max_bins)
+        edges.append(e)
+        codes.append(_bin_codes(col, e))
+    intercept = float(y[:train_end].sum() / train_end)
+    effects = [np.zeros(len(e) + 2) for e in edges]
+    pred = np.full(n, intercept)
+    best_mse = float(np.mean((pred[train_end:] - y[train_end:]) ** 2)) if n_val else 0.0
+    best = (intercept, [e.copy() for e in effects], 0)
+    patience = 0
+    executed = 0
+    for rnd in range(max_rounds):
+        for j in range(p):
+            nb = len(effects[j])
+            sum_b = np.zeros(nb)
+            cnt = np.zeros(nb)
+            for i in range(train_end):
+                b = int(codes[j][i])
+                sum_b[b] += y[i] - pred[i]
+                cnt[b] += 1.0
+            raw = _two_leaf_steps(sum_b, cnt, learning_rate, min_samples_leaf)
+            total = float(cnt.sum())
+            moment = float((cnt * raw).sum())
+            mean = moment / total if total > 0 else 0.0
+            intercept += mean
+            for b in range(nb):
+                if cnt[b] > 0:
+                    effects[j][b] += raw[b] - mean
+            for i in range(n):
+                pred[i] += raw[int(codes[j][i])]
+        executed = rnd + 1
+        if n_val == 0:
+            best = (intercept, [e.copy() for e in effects], executed)
+            continue
+        cur = float(np.mean((pred[train_end:] - y[train_end:]) ** 2))
+        improve = best_mse - cur
+        bar = early_stopping_tolerance * max(abs(best_mse), 1e-12)
+        if improve > bar:
+            best_mse = cur
+            patience = 0
+            best = (intercept, [e.copy() for e in effects], executed)
+        else:
+            patience += 1
+            if patience >= early_stopping_rounds:
+                break
+    if n_val > 0:
+        intercept, effects, best_round = best
+    else:
+        best_round = executed
+    pred = np.full(n, intercept)
+    for j in range(p):
+        for i in range(n):
+            pred[i] += effects[j][int(codes[j][i])]
+    return {
+        "intercept": intercept,
+        "effects": effects,
+        "prediction": pred,
+        "rounds": executed,
+        "best_round": best_round,
+    }
+
+
+def crps_quadrature(y, q, u, w):
+    y = np.asarray(y, dtype=np.float64).reshape(-1)
+    q = np.asarray(q, dtype=np.float64)
+    u = np.asarray(u, dtype=np.float64).reshape(-1)
+    w = np.asarray(w, dtype=np.float64).reshape(-1)
+    acc = 0.0
+    for i, yi in enumerate(y):
+        for t in range(len(u)):
+            r = yi - q[i, t]
+            rho = u[t] * r if r >= 0.0 else (u[t] - 1.0) * r
+            acc += w[t] * rho
+    return 2.0 * acc / max(len(y), 1)
+
+
+def pinball_gh(nodes, weights, basis_e, basis_de, a, y, smooth, tail_gamma):
+    """One-curve pinball score and Hessian. Matches `pinball_gh` in v1fit.rs."""
+    nodes = np.asarray(nodes, dtype=np.float64)
+    weights = np.asarray(weights, dtype=np.float64)
+    basis_e = np.asarray(basis_e, dtype=np.float64)
+    basis_de = np.asarray(basis_de, dtype=np.float64)
+    a = np.asarray(a, dtype=np.float64)
+    k = int(a.size)
+    g = np.zeros(k)
+    h = np.zeros(k * k)
+    for t, u in enumerate(nodes):
+        q = 0.0
+        qp = 0.0
+        for c in range(k):
+            q += a[c] * basis_e[t * k + c]
+            qp += a[c] * basis_de[t * k + c]
+        ind = 1.0 if y < q else 0.0
+        if smooth > 0.0:
+            z = min(40.0, max(-40.0, (q - y) / smooth))
+            sig = 1.0 / (1.0 + math.exp(-z))
+            dens = min(1e6, max(1e-6, sig * (1.0 - sig) / smooth))
+        elif qp > 1e-3:
+            dens = min(40.0, max(1e-2, 1.0 / qp))
+        else:
+            dens = 1.0
+        shape_w = 1.0 if tail_gamma == 0.0 else 1.0 + tail_gamma * (u - 0.5) * (u - 0.5)
+        for c in range(k):
+            mult = shape_w if c >= 2 else 1.0
+            g[c] += weights[t] * mult * (ind - u) * basis_e[t * k + c]
+        for c in range(k):
+            mc = shape_w if c >= 2 else 1.0
+            for d in range(k):
+                md = shape_w if d >= 2 else 1.0
+                h[c * k + d] += (
+                    weights[t]
+                    * math.sqrt(mc)
+                    * math.sqrt(md)
+                    * dens
+                    * basis_e[t * k + c]
+                    * basis_e[t * k + d]
+                )
+    return g, h
+
+
+def leave_feature_gains(nodes, weights, basis_e, players, y, rows, p, k):
+    """Leave-one-feature pinball gains. Matches `leave_feature_gains` in v1fit.rs."""
+    nodes = np.asarray(nodes, dtype=np.float64)
+    weights = np.asarray(weights, dtype=np.float64)
+    basis_e = np.asarray(basis_e, dtype=np.float64)
+    players = np.asarray(players, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    rows = [int(i) for i in rows]
+    nu = int(nodes.size)
+    shape_w = (nodes - 0.5) ** 2
+    sw = float(shape_w.sum())
+    if sw > 0.0:
+        shape_w = shape_w / sw
+
+    def pin_of(coeff, override):
+        total = 0.0
+        for t, i in enumerate(rows):
+            a = coeff[t]
+            for s in range(nu):
+                q = float(np.dot(a, basis_e[s * k : (s + 1) * k]))
+                r = y[i] - q
+                rho = nodes[s] * r if r >= 0.0 else (nodes[s] - 1.0) * r
+                w = shape_w[s] if override else weights[s]
+                total += w * rho
+        return total / len(rows)
+
+    full = np.zeros((len(rows), k))
+    for t, i in enumerate(rows):
+        for j in range(p + 1):
+            sl = i * (p + 1) * k + j * k
+            full[t] += players[sl : sl + k]
+    base = pin_of(full, False)
+    base_shape = pin_of(full, True)
+    gains = np.zeros(p)
+    shape_gains = np.zeros(p)
+    for j in range(p):
+        dropped = full.copy()
+        shape_only = full.copy()
+        for t, i in enumerate(rows):
+            sl = i * (p + 1) * k + (j + 1) * k
+            coef = players[sl : sl + k]
+            dropped[t] -= coef
+            shape_only[t, 2:] -= coef[2:]
+        gains[j] = pin_of(dropped, False) - base
+        shape_gains[j] = pin_of(shape_only, True) - base_shape
+    return gains, shape_gains
+
+
 def max_jump_bound(shapes, kappa, emp, eps, u):
     rbar = max(u, 1.0 - u)
     lip = 0.0

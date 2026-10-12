@@ -62,6 +62,11 @@ class TraceV1(EstimatorMixin):
         mono: str = "pav",
         bernstein_elevation: int = 4,
         reporting: str = "legendre",
+        smooth: float = 0.0,
+        levenberg: float = 0.0,
+        sobolev_lambda: float = 0.0,
+        sobolev_s: float = 1.0,
+        tail_gamma: float = 0.0,
     ):
         self.k_fit = k_fit
         self.k_report = k_report
@@ -75,6 +80,11 @@ class TraceV1(EstimatorMixin):
         self.mono = mono
         self.bernstein_elevation = bernstein_elevation
         self.reporting = reporting
+        self.smooth = smooth
+        self.levenberg = levenberg
+        self.sobolev_lambda = sobolev_lambda
+        self.sobolev_s = sobolev_s
+        self.tail_gamma = tail_gamma
 
     def _kwargs(self) -> dict:
         return dict(
@@ -90,6 +100,11 @@ class TraceV1(EstimatorMixin):
             mono=str(self.mono),
             bernstein_elevation=int(self.bernstein_elevation),
             reporting=str(self.reporting),
+            smooth=float(self.smooth),
+            levenberg=float(self.levenberg),
+            sobolev_lambda=float(self.sobolev_lambda),
+            sobolev_s=float(self.sobolev_s),
+            tail_gamma=float(self.tail_gamma),
         )
 
     def fit(self, X, y):
@@ -118,6 +133,15 @@ class TraceV1(EstimatorMixin):
     def feature_table(self, j: int):
         self._check_fitted()
         return np.asarray(self.model_.feature_table(int(j)))
+
+    def feature_gains(self, X, y, rows):
+        """Held-out pinball gains. A feature is kept when either gain is positive."""
+        self._check_fitted()
+        X = _check_X(X, self.n_features_in_)
+        y = _check_y(y, X.shape[0])
+        rows = np.ascontiguousarray(np.asarray(rows, dtype=np.int64).reshape(-1))
+        raw = self.model_.feature_gains(X, y, rows)
+        return {k: np.asarray(raw[k]) for k in raw}
 
     def channel_energy(self, feature: int, channel: int) -> float:
         self._check_fitted()
@@ -251,3 +275,119 @@ class RobustV1(EstimatorMixin):
         X = _check_X(X, self.n_features_in_)
         y = _check_y(y, X.shape[0])
         return float(self.model_.pinball(X, y))
+
+
+class TraceHybrid(EstimatorMixin):
+    """Squared-loss mean channel, then CRPS residual channels.
+
+    The mean booster uses the additive histogram settings of the mean baseline.
+    Residual channels are the v1 Newton fit with channel 0 held at zero.
+    ``predict(..., project=True)`` is a mean-preserving isotonic map: the
+    residual curve is projected, recentred, and the mean is added back.
+    """
+
+    def __init__(
+        self,
+        k_fit: int = 6,
+        k_report: int = 4,
+        n_u: int = 0,
+        max_bins: int = 16,
+        max_rounds: int = 40,
+        tol: float = 1e-8,
+        min_count: int = 1,
+        ridge: float = 1e-6,
+        learning_rate: float = 1.0,
+        mono: str = "none",
+        bernstein_elevation: int = 4,
+        reporting: str = "legendre",
+        smooth: float = 0.0,
+        levenberg: float = 0.0,
+        sobolev_lambda: float = 0.0,
+        sobolev_s: float = 1.0,
+        tail_gamma: float = 0.0,
+        mean_max_bins: int = 1024,
+        mean_learning_rate: float = 0.04,
+        mean_max_rounds: int = 50000,
+        mean_early_stopping_rounds: int = 100,
+        mean_early_stopping_tolerance: float = 1e-5,
+        mean_validation_size: float = 0.15,
+        mean_min_samples_leaf: int = 4,
+    ):
+        self.k_fit = k_fit
+        self.k_report = k_report
+        self.n_u = n_u
+        self.max_bins = max_bins
+        self.max_rounds = max_rounds
+        self.tol = tol
+        self.min_count = min_count
+        self.ridge = ridge
+        self.learning_rate = learning_rate
+        self.mono = mono
+        self.bernstein_elevation = bernstein_elevation
+        self.reporting = reporting
+        self.smooth = smooth
+        self.levenberg = levenberg
+        self.sobolev_lambda = sobolev_lambda
+        self.sobolev_s = sobolev_s
+        self.tail_gamma = tail_gamma
+        self.mean_max_bins = mean_max_bins
+        self.mean_learning_rate = mean_learning_rate
+        self.mean_max_rounds = mean_max_rounds
+        self.mean_early_stopping_rounds = mean_early_stopping_rounds
+        self.mean_early_stopping_tolerance = mean_early_stopping_tolerance
+        self.mean_validation_size = mean_validation_size
+        self.mean_min_samples_leaf = mean_min_samples_leaf
+
+    def _kwargs(self) -> dict:
+        return dict(
+            k_fit=int(self.k_fit),
+            k_report=int(self.k_report),
+            n_u=int(self.n_u),
+            max_bins=int(self.max_bins),
+            max_rounds=int(self.max_rounds),
+            tol=float(self.tol),
+            min_count=int(self.min_count),
+            ridge=float(self.ridge),
+            learning_rate=float(self.learning_rate),
+            mono=str(self.mono),
+            bernstein_elevation=int(self.bernstein_elevation),
+            reporting=str(self.reporting),
+            smooth=float(self.smooth),
+            levenberg=float(self.levenberg),
+            sobolev_lambda=float(self.sobolev_lambda),
+            sobolev_s=float(self.sobolev_s),
+            tail_gamma=float(self.tail_gamma),
+            mean_max_bins=int(self.mean_max_bins),
+            mean_learning_rate=float(self.mean_learning_rate),
+            mean_max_rounds=int(self.mean_max_rounds),
+            mean_early_stopping_rounds=int(self.mean_early_stopping_rounds),
+            mean_early_stopping_tolerance=float(self.mean_early_stopping_tolerance),
+            mean_validation_size=float(self.mean_validation_size),
+            mean_min_samples_leaf=int(self.mean_min_samples_leaf),
+        )
+
+    def fit(self, X, y):
+        X = _check_X(X)
+        y = _check_y(y, X.shape[0])
+        self.model_ = _core.TraceHybridModel.fit(X, y, **self._kwargs())
+        self.n_features_in_ = X.shape[1]
+        return self
+
+    def _check_fitted(self):
+        if not hasattr(self, "model_"):
+            raise RuntimeError("TraceHybrid is not fitted; call fit() first")
+
+    def predict(self, X, u, project: bool = True):
+        self._check_fitted()
+        X = _check_X(X, self.n_features_in_)
+        u = _check_y(u)
+        return np.asarray(self.model_.predict(X, u, bool(project)))
+
+    def mean(self, X):
+        self._check_fitted()
+        X = _check_X(X, self.n_features_in_)
+        return np.asarray(self.model_.mean(X))
+
+    def channel_energy(self, feature: int, channel: int) -> float:
+        self._check_fitted()
+        return float(self.model_.channel_energy(int(feature), int(channel)))

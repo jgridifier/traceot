@@ -342,3 +342,160 @@ Distribution-valued rows: each row is an exponential sample with scale linear in
 ### Theory disputes
 
 **The T3 oracle is an L2 coefficient. The fitter minimises pinball.** T3 asks for the slope of `x_shape` in the orthonormal He3 channel to be within 30% of 0.12√6 = 0.294. On an unconditional draw from `0.8 z + 0.12 He3(z)`, a Newton fit in the degree-7 Legendre span converges (the loss stops moving, and an independent Newton in NumPy reaches the same point) to a reported He3 coefficient of about 0.118. That point has a lower pinball loss than the L2 projection of the true curve, whose reported coefficient is about 0.18. The report matrix matches a direct Gauss–Legendre inner product to 1e-10, so the gap is not a mis-scaled basis. THEORY.md §1.5 already records that a truncated pinball projection is not the L2 projection (`v1:1.17`). T3's pass bar treats them as the same number. T4 and T6 use the same identification: T4's channel-3 energies are the pinball fit's, compared with L2 oracles, and T6 asks the pinball fit of a pure scale `z` to put at most 5% of the v0 He3 energy into He3. The measured ratio is 0.50. The criteria were not changed.
+
+## v2 baseline, before any fitter change
+
+The corrected tests are frozen in `docs/theory/PREREG_TAIL_v2.md`. The v1 T3, T4 and T6 failures above stay failed. This section scores the fitter that was already on main (`TraceV1`, Newton pinball). The constructor is the one in the pre-registration: `k_fit=8`, `k_report=4`, `n_u=0`, `max_bins=16`, `mono="none"`, `max_rounds=200`, `tol=1e-10`. Checked against the code before the run: `n_u=0` is 12 Gauss–Legendre nodes, the bins are the order statistics at `floor(k n / 16)`, an empty reference basis is `z`, and `channel_energy` is the mean square of the value-bin coefficients. Those settings match, so nothing was adapted. Every fit used 12 nodes. No seed hit the round cap.
+
+| Test | Result | Bar | What happened |
+|---|---|---|---|
+| T3v2 | pass | ≥ 9 of 20 seeds separate in the reference basis | 17 of 20. The other three ratios were 2.98, 2.42 and 2.65. Secondary bands, not a pass condition: 20 of 20 |
+| T3v2-null | pass | false positives ≤ 1 of 20 | 0 of 20. The largest ratio was 0.69 |
+| T4v2 | pass | ≥ 18 of 20 seeds inside the Legendre bands | 20 of 20. 3× separation is impossible in Legendre: the oracle ratio is 0.497 |
+| T6v2 | pass | ≥ 19 of 20 seeds inside the channel-3 band and with ratio ≤ 0.0402 | 19 of 20. Seed 6115 had ratio 0.063 |
+
+Raw rows are in `benchmarks/results/trace_v2_baseline.json`.
+
+## v2 landscape items
+
+The bars are the ones in `docs/research/LANDSCAPE.md` §4. They were not edited after these runs. None of the three items passed, so none of them replaced the default. `TraceRegressor` is still the v0 path. `TraceV1` is still the Newton path. `TraceHybrid`, the smoothed curvature, and the channel ridge are options.
+
+### Item 1 — squared-loss mean, CRPS residual
+
+**Fail.** The mean booster uses 1024 bins, learning rate 0.04, a cap of 50,000 rounds, patience 100, tolerance 1e-5, and a 15% validation slice. Bins thinner than 4 rows are pooled with their neighbours, because a hard leaf gate at 1024 bins takes no steps. There are no bags and no smoothing pass. Residual channels are `k_fit=6`, `k_report=4`, 12 Gauss–Legendre nodes, 16 bins, 40 rounds. Fresh seeds 81001–81020. Historical seeds are in the JSON and are not in the pass set.
+
+| Case | Hybrid MSE | Booster MSE | Ratio | Hybrid CRPS | Booster+conformal CRPS | Raw TRACE CRPS |
+|---|---:|---:|---:|---:|---:|---:|
+| S1 period 2 | 1.386 | 1.213 | 1.14 | 0.649 | 0.578 | 0.576 |
+| Vendor spend | 8.540 | 1.793 | 4.76 | 1.984 | 0.739 | 0.773 |
+| n=2e4, p=10 | 0.0384 | 0.0101 | 3.81 | 0.128 | 0.0566 | 0.0601 |
+
+The MSE bar is ≤ 1.01× on all three cases. The CRPS bar is ≤ the conformal booster on at least two cases, and no case worse than raw TRACE by more than 1%. Every case misses both. The landscape's own reading of an MSE miss this large is that the booster or the binning differs, not that squared loss is the wrong objective for the mean channel. This booster does not smooth adjacent bins and does not bag. The bar was not changed to fit that difference.
+
+#### Follow-up: is the 4× gap a bug?
+
+Checked before merge, on the same generators and the same split, without editing the booster or the bar. The recorded table above is unchanged. There is no corrected re-run. The measurements are in `benchmarks/results/trace_v2_item1_diagnosis.json`.
+
+The mean channel alone, with no residual stage, reproduces the hybrid MSE. On vendor seed 44 the booster's test MSE is 8.45 and `hybrid.mean` is 8.45, against a TraceV1 quadrature mean of 1.98 and the additive booster at 1.80. On the n=2e4 seed the four numbers are 0.0397, 0.0397, 0.0105 and 0.0102. The residual stage is not where the MSE goes.
+
+The residual cannot move \(c_0\). On 12 Gauss–Legendre nodes, \(e_0\) integrates to 1 and \(e_k\) for \(k \ge 1\) integrates to 0 (gap below \(10^{-12}\); covered by `higher_channels_integrate_to_zero_on_the_nodes`). Channel-0 energy of the locked residual is 0. The monotone projection changes the node values and leaves the quadrature mean where it was: the largest shift on these two seeds is about \(10^{-14}\). `hybrid.mean` matches that quadrature, with and without the projection, to about \(10^{-14}\). The reported mean is the booster, not a differently weighted node average.
+
+The squared-loss step is the learning rate times the pooled bin residual. On the n=2e4 seed the first step has mean absolute residual 0.249 and mean absolute update 0.00998, ratio 0.040, and the count-weighted centre is 0. `one_step_is_learning_rate_times_residual` locks that arithmetic. A one-feature draw of \(x + 0.1\,\varepsilon\) reaches validation MSE 0.0135 against a noise floor of 0.01. The same draw with nine noise features stops at validation MSE 0.056.
+
+Training and validation MSE on the two bad seeds:
+
+| Round | n=2e4 train | n=2e4 val | Vendor train | Vendor val |
+|---:|---:|---:|---:|---:|
+| 1 | 0.079 | 0.089 | 11.05 | 12.65 |
+| 21 | 0.011 | 0.051 | 0.996 | 10.22 |
+| 41 | 0.005 | 0.045 | 0.322 | 10.19 |
+| 101 | 0.002 | 0.042 | 0.046 | 10.49 |
+
+The noise floors are about 0.010 and 1.76. Training falls through them. Validation never does, and early stopping restores that valley (best round 99 and 31). On the official fresh seeds, 10 of 20 S1 fits stop at exactly 100 rounds, which is the patience expiring while the intercept is still the best validation model.
+
+The same step on 16 bins, one seed only, is not 4× off: n=2e4 test MSE 0.0106, vendor 2.00. That is a check, not a new item-1 result, and the 1024-bin booster was not retuned. An additive booster with one bag, no smoothing, and a pure cyclic schedule still lands at 0.0103 on the n=2e4 seed, because each of its steps is a two-leaf split inside the histogram. This channel writes a level into every pool on every visit.
+
+The 200-round cap is a slow residual, not a step that increases the loss. A negative relative drop is already below the tolerance, so a step that raised pinball would stop by round 2. On vendor seed 44 the locked residual meets \(10^{-10}\) at round 168; on an 8,000-row scale draw it meets it at round 88. The unlocked TraceV1 fits in the baseline meet it in about 50 to 80 rounds. The lock sets the channel-0 component of the joint Newton step to zero after the solve, which keeps \(c_0\) fixed and leaves a shorter step. Thirty-eight of the eighty hybrid tail fits are still above the tolerance at round 200. Items 2 and 3 were not refit.
+
+#### Item 1, edges fixed
+
+Quantile cuts were taken from every row passed to `fit_mean`, including the internal validation slice. They are now taken from the training rows only. Same seeds, same bar, same full-pool booster otherwise. The original row above stays in place. JSON: `benchmarks/results/trace_v2_item1_edges.json`. On the n=2e4 historical seed the test MSE moves from 0.03967 to 0.03827.
+
+| Case | Hybrid MSE | Booster MSE | Ratio | Hybrid CRPS | Booster+conformal CRPS | Raw TRACE CRPS |
+|---|---:|---:|---:|---:|---:|---:|
+| S1 period 2 | 1.309 | 1.213 | 1.08 | 0.608 | 0.578 | 0.576 |
+| Vendor spend | 8.110 | 1.793 | 4.52 | 1.923 | 0.739 | 0.773 |
+| n=2e4, p=10 | 0.0381 | 0.0101 | 3.78 | 0.129 | 0.0566 | 0.0601 |
+
+**Fail.** The MSE ratios are still above 1.01 on every case, and CRPS is still worse than both comparators on every case.
+
+### Item 1b — pre-registered before the run
+
+Attempt 2 of the item-1 hypothesis. Written down before the run. No result is recorded in this section yet.
+
+- **Change:** replace the full-pool write in `step_feature` with one two-leaf split per feature visit. Keep 1,024 cuts, learning rate 0.04, min leaf 4, the count-weighted centre, and the restore logic. Nothing else changes, and there is no tuning on the three report cases.
+- **Bar:** the same as item 1. MSE ≤ 1.01× the additive booster on all 3 cases, and CRPS ≤ booster+conformal on at least 2 of 3. Use the same seeds. The item-1 scorer also requires CRPS ≤ 1.01× raw TRACE on every case, and a one-sided paired t-test at p < 0.05 on each of those contrasts. A CRPS case counts toward the 2-of-3 only when the mean and the t-test agree.
+- **Disclosure:** this is attempt 2 of the item-1 hypothesis, so a pass is weaker evidence than a first-try pass.
+
+**Fail.** The run used the seeds and the scorer from item 1, after the training-only edge fix, with the two-leaf split as the only further change. JSON: `benchmarks/results/trace_v2_item1b.json`.
+
+| Case | Hybrid MSE | Booster MSE | Ratio | Hybrid CRPS | Booster+conformal CRPS | Raw TRACE CRPS |
+|---|---:|---:|---:|---:|---:|---:|
+| S1 period 2 | 1.243 | 1.213 | 1.025 | 0.590 | 0.578 | 0.576 |
+| Vendor spend | 1.885 | 1.793 | 1.052 | 0.768 | 0.739 | 0.773 |
+| n=2e4, p=10 | 0.01020 | 0.01006 | 1.014 | 0.0573 | 0.0566 | 0.0601 |
+
+MSE is above 1.01× on all three cases. CRPS is above the conformal booster on all three, so the 2-of-3 count is 0. Vendor and n=2e4 are inside 1.01× raw TRACE; S1 is not (ratio 1.025). The default did not change.
+
+Tail tests on this fitter, same frozen bars, written to `benchmarks/results/trace_v2_tail_item1b.json`. The earlier hybrid tail file is unchanged.
+
+| Test | Result |
+|---|---|
+| T3v2 | pass, 18/20 separate. Secondary bands 20/20 |
+| T3v2-null | pass, 0/20 false positives |
+| T4v2 | pass, 20/20 inside the Legendre bands |
+| T6v2 | pass, 19/20 |
+
+### Item 2 — smoothed pinball curvature
+
+**Fail.** Candidate: `TraceV1`, `k_fit=8`, learning rate 1.0, 40 rounds, logistic pinball density with bandwidth 0.05 annealed to 0.02 then 0.01, Levenberg damping `1e-3`. Baseline: the same constructor with those two knobs off. The bandwidth and the damping were fixed before the run.
+
+Leakage is He3 energy of `y = (0.5+x)z` divided by the recorded v0 He3 energy 0.0018508010614343975. Seed 6, the historical T6 seed, gives 0.623. The mean over seeds 83001–83020 is 0.816. The bar is 0.10. The v1 Newton ratio on seed 6 was 0.496.
+
+| Case | Candidate CRPS | Baseline CRPS | Ratio | Better |
+|---|---:|---:|---:|---|
+| S1 period 2 | 0.5993 | 0.5964 | 1.0049 | no |
+| Vendor spend | 0.7642 | 0.7637 | 1.0006 | no |
+| n=2e4, p=10 | 0.057810 | 0.057811 | 1.0000 | yes, paired p = 0.11 |
+
+No case is worse by more than 0.5%. The improvement bar, better on at least two cases with a one-sided paired p < 0.05, is 0 of 3.
+
+### Item 3 — channel-index ridge and tail weight
+
+**Fail.** The span is `k_fit=8`, `k_report=4`, Hermite reporting. The grid, chosen only by validation CRPS, is `s ∈ {1, 2}`, `λ ∈ {1e-4, 1e-3, 1e-2, 1e-1}`, `γ ∈ {0, 1, 4}`. The baseline is `k_fit=3` with no penalty.
+
+The screen keeps `x_shape` on 14 of 50 seeds (84001–84050). The bar is 40 of 50. The He3 energy ratio of `x_shape` to the next feature has mean 0.174 and median 0.155. The bar is a mean of at least 2. Validation CRPS usually selects `s=2` and `λ=0.1`, which is the heavy end of the grid, and that is where the tail energy goes.
+
+| Case | Ridge CRPS | Baseline CRPS | Ratio |
+|---|---:|---:|---:|
+| S1 period 2 | 0.5923 | 0.5996 | 0.988 |
+| Vendor spend | 0.7598 | 0.7664 | 0.991 |
+| n=2e4, p=10 | 0.05777 | 0.05812 | 0.994 |
+
+CRPS is better on all three cases and inside the 0.5% allowance. That part passes. Retention and the energy ratio do not, so the item fails.
+
+### Tail tests after each change
+
+Same frozen bars as the step-1 baseline. Reported separately.
+
+| Fitter | T3v2 | T3v2-null | T4v2 | T6v2 |
+|---|---|---|---|---|
+| Unchanged `TraceV1` (step 1) | pass, 17/20 | pass, 0/20 | pass, 20/20 | pass, 19/20 |
+| Hybrid | pass, 13/20 | pass, 0/20 | pass, 18/20 | pass, 19/20 |
+| Smoothed curvature | pass, 17/20 | pass, 0/20 | pass, 20/20 | pass, 19/20 |
+| Ridge, middle of the grid (`s=1`, `λ=1e-3`, `γ=1`) | pass, 17/20 | pass, 0/20 | pass, 20/20 | pass, 19/20 |
+
+The hybrid residual fit hits the 200-round cap on 38 of 80 runs. The other two fitters do not. JSON: `trace_v2_tail_hybrid.json`, `trace_v2_tail_smooth.json`, `trace_v2_tail_ridge.json`.
+
+## S1–S4 and the booster comparison, re-run
+
+The v0 fitter is the one these four designs call, and that path was not edited. S1 still fails because the screen still drops `x_shape` (shape energy 0; location ratio 14.6; scale ratio 16.4). S2 passes. S3 passes. S4 passes. Wall time for the eight S4 cells is 52.9 s.
+
+**No S4 cell is more than 25% slower than the previous re-run on this machine.** The largest increase is 1e6 × 10, 0.469 s to 0.494 s (+5%). The 1e7 × 100 cell is 38.5 s to 39.0 s (+1%). Peak RSS at 1e7 × 100 is 1696 MB, the same 1.7 GB.
+
+| rows | features | bin (s) | fit (s) | wall (s) | peak RSS (MB) | previous wall (s) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1e4 | 10 | 0.0057 | 0.0077 | 0.0135 | 39 | 0.016 |
+| 1e4 | 100 | 0.0088 | 0.041 | 0.050 | 40 | 0.052 |
+| 1e5 | 10 | 0.011 | 0.065 | 0.077 | 47 | 0.080 |
+| 1e5 | 100 | 0.112 | 0.214 | 0.326 | 56 | 0.327 |
+| 1e6 | 10 | 0.102 | 0.392 | 0.494 | 125 | 0.469 |
+| 1e6 | 100 | 0.825 | 2.12 | 2.94 | 211 | 2.95 |
+| 1e7 | 10 | 0.958 | 5.00 | 5.96 | 838 | 6.07 |
+| 1e7 | 100 | 9.78 | 29.2 | 39.0 | 1696 | 38.5 |
+
+The booster comparison on the same three draws matches the table already in this file to the printed digits. EBM plus conformal residuals still has the lower CRPS on vendor spend (0.743 against 0.770) and on n=2e4 (0.0571 against 0.0605), and the lower MSE of the mean on all three. TRACE raw still has the lower CRPS on S1 period 2 (0.518 against 0.522).
+
+### Disputes
+
+No new dispute. The v1 T3 dispute stays accepted, and the v2 tail bars were not touched. Item 1's miss is the outcome the landscape already described for a booster that is not the same booster. Items 2 and 3 miss their magnitude bars; those bars were not relaxed.

@@ -99,7 +99,7 @@
       "noise3",
       "noise4"
     ],
-    "seconds": 0.05186978400161024
+    "seconds": 0.06846075999965251
   },
   "s2": {
     "names": [
@@ -178,7 +178,7 @@
       "time_split_importance": true
     },
     "pass": true,
-    "seconds": 0.023295495000638766
+    "seconds": 0.021390335999967647
   },
   "s3": {
     "far": 0.07234042553191489,
@@ -190,95 +190,95 @@
       "segment": true
     },
     "pass": true,
-    "seconds": 0.005089653999675647
+    "seconds": 0.005028063998906873
   },
   "s4": {
     "cells": [
       {
         "rows": 10000,
         "features": 10,
-        "bin_seconds": 0.001225210000484367,
-        "fit_seconds": 0.014631427000495023,
-        "wall_seconds": 0.01585663700097939,
-        "peak_rss_mb": 39.40234375,
+        "bin_seconds": 0.005715911001971108,
+        "fit_seconds": 0.007734183000138728,
+        "wall_seconds": 0.013450094002109836,
+        "peak_rss_mb": 39.38671875,
         "pass_cell": true
       },
       {
         "rows": 10000,
         "features": 100,
-        "bin_seconds": 0.008572271002776688,
-        "fit_seconds": 0.04385174200069741,
-        "wall_seconds": 0.0524240130034741,
-        "peak_rss_mb": 39.8828125,
+        "bin_seconds": 0.008807400996374781,
+        "fit_seconds": 0.04085301399936725,
+        "wall_seconds": 0.04966041499574203,
+        "peak_rss_mb": 39.88671875,
         "pass_cell": true
       },
       {
         "rows": 100000,
         "features": 10,
-        "bin_seconds": 0.011323451000862406,
-        "fit_seconds": 0.06817750399932265,
-        "wall_seconds": 0.07950095500018506,
-        "peak_rss_mb": 47.1328125,
+        "bin_seconds": 0.011402236994399573,
+        "fit_seconds": 0.0651679200000217,
+        "wall_seconds": 0.07657015699442127,
+        "peak_rss_mb": 47.46875,
         "pass_cell": true
       },
       {
         "rows": 100000,
         "features": 100,
-        "bin_seconds": 0.11233144199832168,
-        "fit_seconds": 0.21455774499918334,
-        "wall_seconds": 0.326889186997505,
-        "peak_rss_mb": 55.84375,
+        "bin_seconds": 0.1120575559889403,
+        "fit_seconds": 0.21401467499890714,
+        "wall_seconds": 0.32607223098784743,
+        "peak_rss_mb": 56.01171875,
         "pass_cell": true
       },
       {
         "rows": 1000000,
         "features": 10,
-        "bin_seconds": 0.09373976299866627,
-        "fit_seconds": 0.3752981230009027,
-        "wall_seconds": 0.46903788599956897,
-        "peak_rss_mb": 125.359375,
+        "bin_seconds": 0.1022496100031276,
+        "fit_seconds": 0.3922258149996196,
+        "wall_seconds": 0.4944754250027472,
+        "peak_rss_mb": 125.37109375,
         "pass_cell": true
       },
       {
         "rows": 1000000,
         "features": 100,
-        "bin_seconds": 0.8241647340000782,
-        "fit_seconds": 2.1248775589992874,
-        "wall_seconds": 2.9490422929993656,
-        "peak_rss_mb": 211.22265625,
+        "bin_seconds": 0.825393486991743,
+        "fit_seconds": 2.116361942000367,
+        "wall_seconds": 2.94175542899211,
+        "peak_rss_mb": 211.34375,
         "pass_cell": true
       },
       {
         "rows": 10000000,
         "features": 10,
-        "bin_seconds": 0.9914485089975642,
-        "fit_seconds": 5.078195001000495,
-        "wall_seconds": 6.069643509998059,
-        "peak_rss_mb": 837.796875,
+        "bin_seconds": 0.9577108030025556,
+        "fit_seconds": 5.002231043999927,
+        "wall_seconds": 5.959941847002483,
+        "peak_rss_mb": 838.26953125,
         "pass_cell": true
       },
       {
         "rows": 10000000,
         "features": 100,
-        "bin_seconds": 9.711661777997506,
-        "fit_seconds": 28.773252435999893,
-        "wall_seconds": 38.4849142139974,
-        "peak_rss_mb": 1696.32421875,
+        "bin_seconds": 9.782685239002603,
+        "fit_seconds": 29.1903934689999,
+        "wall_seconds": 38.973078708002504,
+        "peak_rss_mb": 1696.47265625,
         "pass_cell": true
       }
     ],
     "ratios": {
-      "p10_1e6_over_1e5": 5.899776751090313,
-      "p100_1e6_over_1e5": 9.021535157178123,
-      "p10_1e5_over_1e4": 5.013733681062047,
-      "p100_1e5_over_1e4": 6.235485768245981
+      "p10_1e6_over_1e5": 6.45780868698981,
+      "p100_1e6_over_1e5": 9.021790724343367,
+      "p10_1e5_over_1e4": 5.6929086876575115,
+      "p100_1e5_over_1e4": 6.566039188673825
     },
     "checks": {
       "all_finished": true,
       "linear_growth": true
     },
     "pass": true,
-    "seconds": 52.616602578998936
+    "seconds": 52.92376988199976
   },
   "criteria": "docs/TRACE_SIMS.md"
 }

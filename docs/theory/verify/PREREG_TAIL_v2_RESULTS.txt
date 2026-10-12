@@ -1,0 +1,100 @@
+PREREG_TAIL_v2 computation, run 2026-10-12 10:25 EDT
+fitter span: K_fit=8, n_u=12 Gauss-Legendre nodes on (0,1), weights = GL weights (no extra tail weight), 16 equal-mass bins, K_report=4, report matrix by 1024-node GL
+
+[A0] Y = 0.8 z + 0.12 He3(z), intercept only, reported Hermite channel 3 (orthonormal He3/sqrt6):
+  population pinball optimum: BFGS 0.112533, Newton 0.112533 (|diff| 4.2e-10)
+  L2 projection into the span then reported: exact 0.205007; 12-node quadrature 0.163545; truth (no span restriction) 0.293939
+
+[A] S1-alt: method 1 (Newton on FOC, 5 GL x-nodes/bin) |grad| 2.1e-14 in 8 it; method 2 (L-BFGS on closed-form loss, 3 GL x-nodes/bin) |grad| 1.3e-09 in 77 it
+  agreement: max|theta1-theta2| 1.54e-05 (tol 5e-05); max rel energy diff 2.63e-04 (tol 0.001) -> PASS
+  basis legendre  energies (rows=features, cols=channels 0..3):
+    x_loc    1.195313e-01 1.162433e-24 2.144916e-27 1.744600e-24   ch3 slope +0.000000
+    x_scale  6.188368e-34 1.121420e-01 4.659415e-34 3.463272e-03   ch3 slope +0.204259
+    x_shape  2.344712e-34 6.333832e-04 4.656864e-34 1.721592e-03   ch3 slope +0.144010
+    oracle separation ratio E(x_shape,3)/max(E(x_loc,3),E(x_scale,3)) = 0.4971 (noise features are 0 at the oracle)
+  basis hermite   energies (rows=features, cols=channels 0..3):
+    x_loc    1.195313e-01 1.986619e-24 3.228056e-13 1.688205e-24   ch3 slope +0.000000
+    x_scale  4.664092e-34 1.157735e-01 1.828620e-32 2.511380e-04   ch3 slope -0.054998
+    x_shape  2.069993e-34 2.257289e-04 6.826640e-34 1.860465e-03   ch3 slope +0.149702
+    oracle separation ratio E(x_shape,3)/max(E(x_loc,3),E(x_scale,3)) = 7.408 (noise features are 0 at the oracle)
+  basis reference energies (rows=features, cols=channels 0..3):
+    x_loc    1.195313e-01 1.986624e-24 2.143655e-27 1.168878e-24   ch3 slope -0.000000
+    x_scale  4.664092e-34 1.157738e-01 1.179730e-33 1.212920e-05   ch3 slope -0.012075
+    x_shape  2.069993e-34 2.257295e-04 1.857497e-34 2.025084e-03   ch3 slope +0.156190
+    oracle separation ratio E(x_shape,3)/max(E(x_loc,3),E(x_scale,3)) = 167 (noise features are 0 at the oracle)
+  (128s)
+
+[A] S1-null: method 1 (Newton on FOC, 5 GL x-nodes/bin) |grad| 2.2e-17 in 8 it; method 2 (L-BFGS on closed-form loss, 3 GL x-nodes/bin) |grad| 3.2e-10 in 57 it
+  agreement: max|theta1-theta2| 1.11e-07 (tol 5e-05); max rel energy diff 2.37e-06 (tol 0.001) -> PASS
+  basis legendre  energies (rows=features, cols=channels 0..3):
+    x_loc    1.195313e-01 3.174775e-33 1.484528e-31 2.203159e-33   ch3 slope -0.000000
+    x_scale  2.593565e-33 1.120515e-01 3.668663e-33 3.403134e-03   ch3 slope +0.202479
+    x_shape  1.358916e-34 2.287042e-34 5.051509e-36 5.454294e-36   ch3 slope +0.000000
+    oracle separation ratio E(x_shape,3)/max(E(x_loc,3),E(x_scale,3)) = 1.603e-33 (noise features are 0 at the oracle)
+  basis hermite   energies (rows=features, cols=channels 0..3):
+    x_loc    1.195313e-01 3.963729e-33 3.228056e-13 2.113460e-32   ch3 slope +0.000000
+    x_scale  2.247414e-33 1.155675e-01 3.063487e-32 2.759647e-04   ch3 slope -0.057659
+    x_shape  1.358916e-34 2.088692e-34 6.871183e-36 1.978622e-35   ch3 slope +0.000000
+    oracle separation ratio E(x_shape,3)/max(E(x_loc,3),E(x_scale,3)) = 7.17e-32 (noise features are 0 at the oracle)
+  basis reference energies (rows=features, cols=channels 0..3):
+    x_loc    1.195313e-01 3.964902e-33 1.554478e-31 2.725124e-33   ch3 slope -0.000000
+    x_scale  2.247414e-33 1.155678e-01 5.269587e-33 1.555956e-05   ch3 slope -0.013690
+    x_shape  1.358916e-34 2.088697e-34 5.051509e-36 2.222127e-35   ch3 slope -0.000000
+    oracle separation ratio E(x_shape,3)/max(E(x_loc,3),E(x_scale,3)) = 1.428e-30 (noise features are 0 at the oracle)
+  (33s)
+
+[A] T6-scale: method 1 (Newton on FOC, 5 GL x-nodes/bin) |grad| 1.0e-17 in 8 it; method 2 (L-BFGS on closed-form loss, 3 GL x-nodes/bin) |grad| 2.9e-09 in 53 it
+  agreement: max|theta1-theta2| 1.18e-07 (tol 5e-05); max rel energy diff 7.34e-07 (tol 0.001) -> PASS
+  basis legendre  energies (rows=features, cols=channels 0..3):
+    x        8.670272e-34 7.786541e-02 2.248571e-33 2.369052e-03   ch3 slope +0.168938
+  basis hermite   energies (rows=features, cols=channels 0..3):
+    x        7.477139e-34 8.031440e-02 2.002542e-32 1.906575e-04   ch3 slope -0.047926
+  basis reference energies (rows=features, cols=channels 0..3):
+    x        7.477139e-34 8.031459e-02 3.149859e-33 1.053715e-05   ch3 slope -0.011267
+  (0s)
+  note: noise features have zero oracle effect (Jensen + independence; see PREREG section 1).
+
+[B] asymptotic power scan (theta-hat ~ N(theta*, H^-1 S H^-1/n), 4000 draws), criterion E(x_shape,3) >= 3 x max other
+  basis      n      P_alt(pass)  P_null(pass)  alt q05/q50 of ratio   null q95/q99 of ratio
+  legendre    2000   0.0000       0.0000          0.30 /   0.68         0.51 /  0.67
+  legendre    4000   0.0000       0.0000          0.30 /   0.61         0.28 /  0.37
+  legendre    8000   0.0000       0.0000          0.31 /   0.56         0.15 /  0.19
+  legendre   16000   0.0000       0.0000          0.34 /   0.53         0.07 /  0.10
+  legendre   32000   0.0000       0.0000          0.37 /   0.51         0.04 /  0.05
+  hermite     2000   0.0092       0.0000          0.62 /   1.26         1.06 /  1.34
+  hermite     4000   0.0825       0.0000          0.93 /   1.81         0.99 /  1.25
+  hermite     8000   0.4148       0.0000          1.48 /   2.78         0.84 /  1.11
+  hermite    16000   0.7963       0.0000          2.24 /   4.06         0.59 /  0.81
+  hermite    32000   0.9640       0.0000          3.16 /   5.24         0.34 /  0.45
+  reference   2000   0.0173       0.0000          0.69 /   1.35         1.12 /  1.37
+  reference   4000   0.1462       0.0000          1.11 /   2.06         1.12 /  1.37
+  reference   8000   0.6825       0.0000          2.03 /   3.49         1.11 /  1.38
+  reference  16000   0.9918       0.0000          3.88 /   6.31         1.09 /  1.39
+  reference  32000   1.0000       0.0000          7.45 /  11.85         1.05 /  1.35
+
+[C] chosen: basis=reference, n=16000, c=3.0; 20000 asymptotic draws
+  per-seed separation pass prob: alt 0.9895, null twin 0.0000
+
+[D] finite-sample Monte Carlo with the reference estimator (smoothed-pinball Newton, h = 0.05 -> 0.02 -> 0.01; seeds 900000+ (T6), 910000+ (alt), 920000+ (null), disjoint from the test seeds)
+  alt  (n=16000, 20 reps): separation passes 19/20 (99% Wilson 0.682..0.994); ratio min 2.35, median 4.90
+  null (n=16000, 10 reps): false positives 0/10 (99% Wilson upper 0.399); ratio max 1.06
+  mean ch3 energies, asymptotic sim vs Monte Carlo (reference basis):
+    x_loc    sim 2.1314e-04  MC 2.0078e-04 (sd 6.88e-05)
+    x_scale  sim 2.9992e-04  MC 3.0037e-04 (sd 1.40e-04)
+    x_shape  sim 2.2721e-03  MC 1.9198e-03 (sd 3.97e-04)
+    noise    sim 2.1334e-04  MC 2.0993e-04
+  consistency bands = Monte Carlo mean +- 3 SD of the reference estimator (used for T3v2-secondary, T4v2, T6v2):
+    T3v2 reference ch3 x_loc    [-5.5779e-06, 4.0714e-04]   T4v2 Legendre ch3 x_loc    [-2.0210e-05, 5.8569e-04]  (Legendre oracle 1.7446e-24)
+    T3v2 reference ch3 x_scale  [-1.1973e-04, 7.2047e-04]   T4v2 Legendre ch3 x_scale  [1.6775e-03, 4.8257e-03]  (Legendre oracle 3.4633e-03)
+    T3v2 reference ch3 x_shape  [7.2875e-04, 3.1109e-03]   T4v2 Legendre ch3 x_shape  [4.5320e-04, 3.0454e-03]  (Legendre oracle 1.7216e-03)
+    T6v2 reference ch3 energy [-3.4938e-04, 3.7530e-03]; ch3/ch1 ratio upper 4.0173e-02  (MC n=2000, 40 reps; oracle ch3 1.0537e-05, oracle ratio 1.312e-04)
+    in-sample check: fraction of MC reps inside all T4v2 bands 1.000
+
+[E] bars over R=20 seeds (bar chosen so that an estimator behaving like the reference fails it with probability <= 0.01):
+  T3v2 separation (primary): rate used min(sim 0.9895, MC Wilson lower 0.6817) = 0.6817 -> pass if >= 9/20; P(fail | rate) = 0.0087; P(fail | sim rate) = 2.09e-19
+  T3v2 null twin: pass if false positives <= 1/20; P(fail) at sim rate 0.0000: 0.00e+00; at MC Wilson upper 0.399: 0.999; at a 5% per-seed FP rate: 0.264
+  T4v2 Legendre consistency (3 bands): rate 0.9919 -> pass if >= 18/20; P(fail) = 0.0005
+  T6v2 scale-leak consistency (2 bands): rate 0.9946 -> pass if >= 19/20; P(fail) = 0.0052
+  T3v2 secondary consistency (3 bands, reported, not a pass condition): rate 0.9919, bar 18/20
+
+end
