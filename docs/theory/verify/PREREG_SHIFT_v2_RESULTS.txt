@@ -217,3 +217,14 @@ that binding was not on the scored path. The binding now returns the order-free
 split as split, and also returns split_anchor_A and split_anchor_B.
 Bar lines above are unchanged.
 
+Speed (B11, not a correctness gate)
+1e6 rows per period, 100 features, 4 CPUs. The fit used 4,000 rows and is not part of the timed section.
+fit_seconds_not_in_decomposition 1.126
+barycenter_seconds 3.921
+explain_seconds 183.923
+peak_rss_mb 1683.1
+explain_order_gap 0
+rss_mb_after_data 1585.8
+rss_mb_after_barycenter 1681.0
+rss_mb_after_explain 1683.1
+
