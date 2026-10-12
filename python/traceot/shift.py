@@ -383,3 +383,82 @@ def permutation_marginal(
             float(logit_tol),
         )
     )
+
+
+def shift_decompose(
+    X_a,
+    y_a,
+    X_b,
+    y_b,
+    seed: int = 0,
+    *,
+    k: int = 6,
+    n_quad: int = 64,
+    n_folds: int = 5,
+    trim_quantile: float = 0.995,
+    logit_ridge: float = 1e-6,
+    logit_iters: int = 25,
+    logit_tol: float = 1e-8,
+    k_fit: int = 4,
+    max_bins: int = 16,
+    max_rounds: int = 6,
+    fit_tol: float = 1e-6,
+    n_boot: int = 0,
+) -> dict:
+    """Composition and structure of a shift between two periods.
+
+    ``X`` is used as given (features arrive centred at the pooled mean).
+    ``split`` maps each statistic to ``(composition, structure)`` for ``mean``,
+    ``sd``, ``q10``, ``q50``, ``q90``, and ``lambda1`` … ``lambdaK`` (channel
+    ``c`` is ``lambda{c+1}``). The counterfactual keeps the structure of period A
+    and the covariates of period B. ``feat_comp`` and ``feat_struct`` are the
+    mean channel, one entry per feature. ``intercept`` is mean structure minus
+    the sum of ``feat_struct``. ``total_w2`` is the outcome ``W2²`` and is not
+    added into the split. ``bands`` holds pointwise 2.5/97.5 bootstrap
+    percentiles; ``n_boot=0`` sets both ends equal to the point.
+
+    Folds are the rank of a row hash modulo ``K``. The hash mixes the seed with
+    every feature without depending on column order, then the rows are sorted
+    by that hash, so a permutation of rows does not change the result.
+    """
+    if seed < 0:
+        raise ValueError("seed must be non-negative")
+    X_a = _check_X(X_a)
+    X_b = _check_X(X_b, X_a.shape[1])
+    y_a = _check_y(y_a, X_a.shape[0])
+    y_b = _check_y(y_b, X_b.shape[0])
+    raw = _as_dict(
+        _core.shift_v2_decompose(
+            X_a,
+            y_a,
+            X_b,
+            y_b,
+            int(seed),
+            int(k),
+            int(n_quad),
+            int(n_folds),
+            float(trim_quantile),
+            float(logit_ridge),
+            int(logit_iters),
+            float(logit_tol),
+            int(k_fit),
+            int(max_bins),
+            int(max_rounds),
+            float(fit_tol),
+            int(n_boot),
+        )
+    )
+    raw["split"] = {name: (float(pair[0]), float(pair[1])) for name, pair in raw["split"].items()}
+    bands = raw["bands"]
+    bands["split"] = {
+        name: (
+            (float(ends[0][0]), float(ends[0][1])),
+            (float(ends[1][0]), float(ends[1][1])),
+        )
+        for name, ends in bands["split"].items()
+    }
+    bands["intercept"] = (float(bands["intercept"][0]), float(bands["intercept"][1]))
+    bands["total_w2"] = (float(bands["total_w2"][0]), float(bands["total_w2"][1]))
+    raw["intercept"] = float(raw["intercept"])
+    raw["total_w2"] = float(raw["total_w2"])
+    return raw

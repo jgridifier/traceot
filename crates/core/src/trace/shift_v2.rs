@@ -12,7 +12,7 @@
 
 use super::legendre::{gauss_legendre_01, pstar_all, GaussLegendre};
 use super::shift::SplitMix64;
-use super::v1fit::{fit_v1, V1Config, V1Model};
+use super::v1fit::{fit_v1, MonoMode, ReportKind, V1Config, V1Model};
 use crate::error::{Result, TraceError};
 use crate::linalg::solve_spd;
 use crate::scalable::binning::bin_column_into;
@@ -459,9 +459,23 @@ fn assign_folds(folds: &mut [usize], k: usize, rng: &mut SplitMix64) {
 fn cross_fit_lp(pooled: &Pooled<'_>, cfg: &ShiftV2Config) -> Result<Vec<f64>> {
     let mut rng = SplitMix64::new(cfg.seed);
     let folds = stratified_folds(pooled.n_a, pooled.n_b, cfg.n_folds, &mut rng);
+    cross_fit_lp_folds(pooled, &folds, cfg.n_folds, cfg)
+}
+
+fn cross_fit_lp_folds(
+    pooled: &Pooled<'_>,
+    folds: &[usize],
+    n_folds: usize,
+    cfg: &ShiftV2Config,
+) -> Result<Vec<f64>> {
     let n = pooled.n();
+    if folds.len() != n {
+        return Err(TraceError::Shape(
+            "fold ids must cover every pooled row".into(),
+        ));
+    }
     let mut lp = vec![0.0; n];
-    for fold in 0..cfg.n_folds {
+    for fold in 0..n_folds {
         let train: Vec<usize> = (0..n).filter(|&i| folds[i] != fold).collect();
         let beta = fit_logit(pooled, &train, cfg)?;
         for i in 0..n {
@@ -1489,6 +1503,629 @@ pub fn permutation_marginal(
     map_reps(reps, &job)
 }
 
+/// Knobs for [`shift_decompose`]. The benchmark entry point, not the
+/// pre-registration path: folds and column order are functions of the seed and
+/// the row contents.
+#[derive(Clone, Debug)]
+pub struct DecomposeConfig {
+    pub seed: u64,
+    /// L-moment channels reported beside the named statistics. `lambda1` is channel 0.
+    pub k: usize,
+    pub n_quad: usize,
+    pub n_folds: usize,
+    pub trim_quantile: f64,
+    pub logit_ridge: f64,
+    pub logit_iters: usize,
+    pub logit_tol: f64,
+    pub k_fit: usize,
+    pub max_bins: usize,
+    pub max_rounds: usize,
+    pub fit_tol: f64,
+    /// Bootstrap replicates for the percentile bands. `0` returns the point as both ends.
+    pub n_boot: usize,
+}
+
+impl Default for DecomposeConfig {
+    fn default() -> Self {
+        Self {
+            seed: 0,
+            k: 6,
+            n_quad: 64,
+            n_folds: 5,
+            trim_quantile: 0.995,
+            logit_ridge: 1e-6,
+            logit_iters: 25,
+            logit_tol: 1e-8,
+            k_fit: 4,
+            max_bins: 16,
+            max_rounds: 6,
+            fit_tol: 1e-6,
+            n_boot: 0,
+        }
+    }
+}
+
+/// One call of the benchmark decomposition. `names[i]` is a statistic whose
+/// composition and structure use the single counterfactual "structure of A,
+/// covariates of B".
+#[derive(Clone, Debug)]
+pub struct ShiftDecompose {
+    pub names: Vec<String>,
+    pub composition: Vec<f64>,
+    pub structure: Vec<f64>,
+    pub feat_comp: Vec<f64>,
+    pub feat_struct: Vec<f64>,
+    pub intercept: f64,
+    pub total_w2: f64,
+    pub boot_reps: usize,
+    pub composition_lo: Vec<f64>,
+    pub composition_hi: Vec<f64>,
+    pub structure_lo: Vec<f64>,
+    pub structure_hi: Vec<f64>,
+    pub feat_comp_lo: Vec<f64>,
+    pub feat_comp_hi: Vec<f64>,
+    pub feat_struct_lo: Vec<f64>,
+    pub feat_struct_hi: Vec<f64>,
+    pub intercept_lo: f64,
+    pub intercept_hi: f64,
+    pub total_w2_lo: f64,
+    pub total_w2_hi: f64,
+}
+
+#[derive(Clone, Debug)]
+struct DecomposePoint {
+    names: Vec<String>,
+    composition: Vec<f64>,
+    structure: Vec<f64>,
+    feat_comp: Vec<f64>,
+    feat_struct: Vec<f64>,
+    intercept: f64,
+    total_w2: f64,
+}
+
+fn canonical_bits(v: f64) -> u64 {
+    if v == 0.0 {
+        0
+    } else {
+        v.to_bits()
+    }
+}
+
+fn mix_bits(mut z: u64) -> u64 {
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+/// Column-commutative id of one row. A permutation of features does not change it.
+fn row_key(seed: u64, x: &[f64], y: f64) -> u64 {
+    let mut h = mix_bits(seed ^ 0xA24B_AED4_963E_E407);
+    for &v in x {
+        h ^= mix_bits(canonical_bits(v) ^ seed.rotate_left(7));
+    }
+    h ^= mix_bits(canonical_bits(y) ^ seed.rotate_left(21));
+    mix_bits(h)
+}
+
+fn reorder_period(x: &[f64], y: &[f64], n: usize, p: usize, seed: u64) -> (Vec<f64>, Vec<f64>) {
+    let mut keys = Vec::with_capacity(n);
+    for i in 0..n {
+        let row = &x[i * p..(i + 1) * p];
+        keys.push((row_key(seed, row, y[i]), canonical_bits(y[i])));
+    }
+    let mut idx: Vec<usize> = (0..n).collect();
+    idx.sort_by(|&i, &j| keys[i].cmp(&keys[j]));
+    let (xo, yo, _) = gather_period(x, y, p, &idx, None);
+    (xo, yo)
+}
+
+fn column_keys(
+    x_a: &[f64],
+    y_a: &[f64],
+    n_a: usize,
+    x_b: &[f64],
+    y_b: &[f64],
+    n_b: usize,
+    p: usize,
+    seed: u64,
+) -> Vec<u64> {
+    let mut row_a = Vec::with_capacity(n_a);
+    for i in 0..n_a {
+        row_a.push(row_key(seed, &x_a[i * p..(i + 1) * p], y_a[i]));
+    }
+    let mut row_b = Vec::with_capacity(n_b);
+    for i in 0..n_b {
+        row_b.push(row_key(seed, &x_b[i * p..(i + 1) * p], y_b[i]));
+    }
+    let mut keys = vec![0u64; p];
+    for j in 0..p {
+        let mut h = 0u64;
+        for i in 0..n_a {
+            h ^= mix_bits(canonical_bits(x_a[i * p + j]) ^ row_a[i]);
+        }
+        for i in 0..n_b {
+            h ^= mix_bits(canonical_bits(x_b[i * p + j]) ^ row_b[i].rotate_left(13));
+        }
+        keys[j] = h;
+    }
+    keys
+}
+
+/// `order[new_column] = old_column`, sorted by a row-order-invariant column id.
+fn canonical_column_order(
+    x_a: &[f64],
+    y_a: &[f64],
+    n_a: usize,
+    x_b: &[f64],
+    y_b: &[f64],
+    n_b: usize,
+    p: usize,
+    seed: u64,
+) -> Vec<usize> {
+    let keys = column_keys(x_a, y_a, n_a, x_b, y_b, n_b, p, seed);
+    let mut order: Vec<usize> = (0..p).collect();
+    order.sort_by(|&a, &b| keys[a].cmp(&keys[b]).then(a.cmp(&b)));
+    order
+}
+
+fn apply_column_order(x: &[f64], n: usize, p: usize, order: &[usize]) -> Vec<f64> {
+    let mut out = vec![0.0; n * p];
+    for i in 0..n {
+        for (new_j, &old_j) in order.iter().enumerate() {
+            out[i * p + new_j] = x[i * p + old_j];
+        }
+    }
+    out
+}
+
+fn scatter_to_original(canon: &[f64], order: &[usize]) -> Vec<f64> {
+    let mut out = vec![0.0; canon.len()];
+    for (new_j, &old_j) in order.iter().enumerate() {
+        out[old_j] = canon[new_j];
+    }
+    out
+}
+
+fn with_squares(x: &[f64], n: usize, p: usize) -> Vec<f64> {
+    let d = p * 2;
+    let mut out = vec![0.0; n * d];
+    for i in 0..n {
+        for j in 0..p {
+            let v = x[i * p + j];
+            out[i * d + j] = v;
+            out[i * d + p + j] = v * v;
+        }
+    }
+    out
+}
+
+fn standardize_pair(a: &mut [f64], n_a: usize, b: &mut [f64], n_b: usize, p: usize) {
+    let n = (n_a + n_b) as f64;
+    for j in 0..p {
+        let mut sum = 0.0;
+        let mut sum2 = 0.0;
+        for i in 0..n_a {
+            let v = a[i * p + j];
+            sum += v;
+            sum2 += v * v;
+        }
+        for i in 0..n_b {
+            let v = b[i * p + j];
+            sum += v;
+            sum2 += v * v;
+        }
+        let mean = sum / n;
+        let var = (sum2 / n - mean * mean).max(0.0);
+        let sd = var.sqrt();
+        if sd > 1e-12 {
+            for i in 0..n_a {
+                a[i * p + j] = (a[i * p + j] - mean) / sd;
+            }
+            for i in 0..n_b {
+                b[i * p + j] = (b[i * p + j] - mean) / sd;
+            }
+        } else {
+            for i in 0..n_a {
+                a[i * p + j] = 0.0;
+            }
+            for i in 0..n_b {
+                b[i * p + j] = 0.0;
+            }
+        }
+    }
+}
+
+/// Balanced folds after the rows have been sorted by [`row_key`]. Rank `i` maps
+/// to fold `i % K`, so the assignment follows the seed through that sort and
+/// does not follow the order the caller stored the rows in.
+fn rank_folds(n_a: usize, n_b: usize, k: usize) -> Vec<usize> {
+    let k = k.max(1);
+    let mut folds = vec![0usize; n_a + n_b];
+    for i in 0..n_a {
+        folds[i] = i % k;
+    }
+    for i in 0..n_b {
+        folds[n_a + i] = i % k;
+    }
+    folds
+}
+
+fn mean_and_sd(y: &[f64]) -> (f64, f64) {
+    let n = y.len() as f64;
+    let mean = y.iter().sum::<f64>() / n;
+    let var = y
+        .iter()
+        .map(|v| {
+            let d = v - mean;
+            d * d
+        })
+        .sum::<f64>()
+        / n;
+    (mean, var.max(0.0).sqrt())
+}
+
+fn weighted_mean_sd(y: &[f64], w: &[f64]) -> (f64, f64) {
+    let n = y.len() as f64;
+    let mean = y.iter().zip(w).map(|(v, wi)| v * wi).sum::<f64>() / n;
+    let var = y
+        .iter()
+        .zip(w)
+        .map(|(v, wi)| {
+            let d = v - mean;
+            wi * d * d
+        })
+        .sum::<f64>()
+        / n;
+    (mean, var.max(0.0).sqrt())
+}
+
+/// Type-7 quantile. Equal weights match NumPy's linear percentile.
+fn weighted_quantile(y: &[f64], w: &[f64], q: f64) -> Result<f64> {
+    let n = y.len();
+    if n == 0 || w.len() != n {
+        return Err(TraceError::Shape(
+            "quantile inputs must be non-empty and the same length".into(),
+        ));
+    }
+    if n == 1 {
+        return Ok(y[0]);
+    }
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|&i, &j| y[i].total_cmp(&y[j]).then(i.cmp(&j)));
+    let mut total = 0.0;
+    for &i in &order {
+        if !w[i].is_finite() || w[i] < 0.0 {
+            return Err(TraceError::InvalidArgument(
+                "weights must be finite and nonnegative".into(),
+            ));
+        }
+        total += w[i];
+    }
+    if !(total > 0.0) {
+        return Err(TraceError::InvalidArgument(
+            "weights must have positive total mass".into(),
+        ));
+    }
+    let q = q.clamp(0.0, 1.0);
+    if q == 0.0 {
+        return Ok(y[order[0]]);
+    }
+    if q == 1.0 {
+        return Ok(y[order[n - 1]]);
+    }
+    let denom = total - w[order[n - 1]];
+    if !(denom > 0.0) {
+        return Ok(y[order[0]]);
+    }
+    let mut cum_excl = 0.0;
+    let mut prev_t = 0.0;
+    let mut prev_y = y[order[0]];
+    for (rank, &i) in order.iter().enumerate() {
+        let t = (cum_excl / denom).min(1.0);
+        if rank > 0 && t + 1e-15 >= q {
+            let span = (t - prev_t).max(1e-15);
+            let frac = ((q - prev_t) / span).clamp(0.0, 1.0);
+            return Ok(prev_y * (1.0 - frac) + y[i] * frac);
+        }
+        prev_t = t;
+        prev_y = y[i];
+        cum_excl += w[i];
+    }
+    Ok(y[order[n - 1]])
+}
+
+fn unweighted_quantile(y: &[f64], q: f64) -> f64 {
+    let mut sorted = y.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    percentile_sorted(&sorted, q)
+}
+
+fn push_split(comp: &mut Vec<f64>, structure: &mut Vec<f64>, c: f64, s: f64) {
+    comp.push(c);
+    structure.push(s);
+}
+
+fn decompose_point(
+    x_a: &[f64],
+    y_a: &[f64],
+    n_a: usize,
+    x_b: &[f64],
+    y_b: &[f64],
+    n_b: usize,
+    cfg: &DecomposeConfig,
+) -> Result<DecomposePoint> {
+    let p = check_period(x_a, y_a, n_a, x_b, y_b, n_b)?;
+    if cfg.k == 0 || cfg.n_folds < 2 {
+        return Err(TraceError::InvalidArgument(
+            "decomposition needs K ≥ 1 and at least two folds".into(),
+        ));
+    }
+    let (xa, ya) = reorder_period(x_a, y_a, n_a, p, cfg.seed);
+    let (xb, yb) = reorder_period(x_b, y_b, n_b, p, cfg.seed);
+    let col_order = canonical_column_order(&xa, &ya, n_a, &xb, &yb, n_b, p, cfg.seed);
+    let xa_m = apply_column_order(&xa, n_a, p, &col_order);
+    let xb_m = apply_column_order(&xb, n_b, p, &col_order);
+
+    let mut xa_z = with_squares(&xa_m, n_a, p);
+    let mut xb_z = with_squares(&xb_m, n_b, p);
+    standardize_pair(&mut xa_z, n_a, &mut xb_z, n_b, p * 2);
+    let folds = rank_folds(n_a, n_b, cfg.n_folds);
+    let logit_cfg = ShiftV2Config {
+        k: cfg.k,
+        n_quad: cfg.n_quad,
+        n_folds: cfg.n_folds,
+        trim_quantile: cfg.trim_quantile,
+        logit_ridge: cfg.logit_ridge,
+        logit_iters: cfg.logit_iters,
+        logit_tol: cfg.logit_tol,
+        seed: cfg.seed,
+    };
+    let pooled = Pooled {
+        x_a: &xa_z,
+        n_a,
+        x_b: &xb_z,
+        n_b,
+        p: p * 2,
+    };
+    let lp = cross_fit_lp_folds(&pooled, &folds, cfg.n_folds, &logit_cfg)?;
+    let prior_a = (n_a as f64 / n_b as f64).ln();
+    let mut w = vec![0.0; n_a];
+    for i in 0..n_a {
+        // 1/ψ reweights period A onto the covariate law of period B.
+        let z = (-lp[i] + prior_a).clamp(-30.0, 30.0);
+        w[i] = z.exp();
+    }
+    trim_and_normalize(&mut w, cfg.trim_quantile)?;
+
+    let (mean_a, sd_a) = mean_and_sd(&ya);
+    let (mean_b, sd_b) = mean_and_sd(&yb);
+    let (mean_c, sd_c) = weighted_mean_sd(&ya, &w);
+    let mut composition = Vec::with_capacity(5 + cfg.k);
+    let mut structure = Vec::with_capacity(5 + cfg.k);
+    let mut names = Vec::with_capacity(5 + cfg.k);
+    for (name, a, c, b) in [("mean", mean_a, mean_c, mean_b), ("sd", sd_a, sd_c, sd_b)] {
+        names.push(name.to_string());
+        push_split(&mut composition, &mut structure, c - a, b - c);
+    }
+    for (name, q) in [("q10", 0.10), ("q50", 0.50), ("q90", 0.90)] {
+        let a = unweighted_quantile(&ya, q);
+        let b = unweighted_quantile(&yb, q);
+        let c = weighted_quantile(&ya, &w, q)?;
+        names.push(name.to_string());
+        push_split(&mut composition, &mut structure, c - a, b - c);
+    }
+
+    let quad = Quad::new(cfg.n_quad, cfg.k)?;
+    let qa = quantiles_at(&ya, None, &quad.nodes)?;
+    let qb = quantiles_at(&yb, None, &quad.nodes)?;
+    let qc = quantiles_at(&ya, Some(&w), &quad.nodes)?;
+    let lam_a = lambdas_of(&qa, &quad);
+    let lam_b = lambdas_of(&qb, &quad);
+    let lam_c = lambdas_of(&qc, &quad);
+    for c in 0..cfg.k {
+        names.push(format!("lambda{}", c + 1));
+        push_split(
+            &mut composition,
+            &mut structure,
+            lam_c[c] - lam_a[c],
+            lam_b[c] - lam_c[c],
+        );
+    }
+    let total_w2 = w2_quad(&qa, &qb, &quad.weights);
+
+    let v1 = V1Config {
+        k_fit: cfg.k_fit,
+        k_report: cfg.k_fit,
+        n_u: 0,
+        max_bins: cfg.max_bins,
+        max_rounds: cfg.max_rounds,
+        tol: cfg.fit_tol,
+        min_count: 1,
+        ridge: 1e-6,
+        learning_rate: 1.0,
+        mono: MonoMode::None,
+        bernstein_elevation: 4,
+        reporting: ReportKind::Legendre,
+        reference: Vec::new(),
+        lock_mean: false,
+        smooth: 0.0,
+        levenberg: 0.0,
+        sobolev_lambda: 0.0,
+        sobolev_s: 0.0,
+        tail_gamma: 0.0,
+    };
+    let model_a = fit_v1(&xa_m, n_a, p, &ya, &v1)?;
+    let model_b = fit_v1(&xb_m, n_b, p, &yb, &v1)?;
+    let g_aa = mean_effects(&model_a, &xa_m, n_a)?;
+    let g_ab = mean_effects(&model_a, &xb_m, n_b)?;
+    let g_ba = mean_effects(&model_b, &xa_m, n_a)?;
+    let g_bb = mean_effects(&model_b, &xb_m, n_b)?;
+    let k_fit = model_a.k_fit;
+    let mut feat_comp_c = vec![0.0; p];
+    let mut feat_struct_c = vec![0.0; p];
+    for j in 0..p {
+        let aa = g_aa[j * k_fit];
+        let ab = g_ab[j * k_fit];
+        let ba = g_ba[j * k_fit];
+        let bb = g_bb[j * k_fit];
+        let delta_a = ba - aa;
+        let delta_b = bb - ab;
+        feat_comp_c[j] = ab - aa;
+        // Pooled 50/50 law, the same centring the benchmark uses for a slope change.
+        feat_struct_c[j] = delta_b - 0.5 * (delta_a + delta_b);
+    }
+    let feat_comp = scatter_to_original(&feat_comp_c, &col_order);
+    let feat_struct = scatter_to_original(&feat_struct_c, &col_order);
+    let mean_struct = structure[0];
+    let intercept = mean_struct - feat_struct.iter().sum::<f64>();
+    Ok(DecomposePoint {
+        names,
+        composition,
+        structure,
+        feat_comp,
+        feat_struct,
+        intercept,
+        total_w2,
+    })
+}
+
+fn point_bands(point: DecomposePoint) -> ShiftDecompose {
+    ShiftDecompose {
+        composition_lo: point.composition.clone(),
+        composition_hi: point.composition.clone(),
+        structure_lo: point.structure.clone(),
+        structure_hi: point.structure.clone(),
+        feat_comp_lo: point.feat_comp.clone(),
+        feat_comp_hi: point.feat_comp.clone(),
+        feat_struct_lo: point.feat_struct.clone(),
+        feat_struct_hi: point.feat_struct.clone(),
+        intercept_lo: point.intercept,
+        intercept_hi: point.intercept,
+        total_w2_lo: point.total_w2,
+        total_w2_hi: point.total_w2,
+        boot_reps: 0,
+        names: point.names,
+        composition: point.composition,
+        structure: point.structure,
+        feat_comp: point.feat_comp,
+        feat_struct: point.feat_struct,
+        intercept: point.intercept,
+        total_w2: point.total_w2,
+    }
+}
+
+fn band_of(col: &mut [f64]) -> (f64, f64) {
+    col.sort_by(f64::total_cmp);
+    (percentile_sorted(col, 0.025), percentile_sorted(col, 0.975))
+}
+
+fn attach_bands(point: DecomposePoint, draws: &[DecomposePoint]) -> ShiftDecompose {
+    let reps = draws.len();
+    let n_stat = point.composition.len();
+    let p = point.feat_comp.len();
+    let mut composition_lo = vec![0.0; n_stat];
+    let mut composition_hi = vec![0.0; n_stat];
+    let mut structure_lo = vec![0.0; n_stat];
+    let mut structure_hi = vec![0.0; n_stat];
+    for j in 0..n_stat {
+        let mut col: Vec<f64> = draws.iter().map(|d| d.composition[j]).collect();
+        let (lo, hi) = band_of(&mut col);
+        composition_lo[j] = lo;
+        composition_hi[j] = hi;
+        let mut col: Vec<f64> = draws.iter().map(|d| d.structure[j]).collect();
+        let (lo, hi) = band_of(&mut col);
+        structure_lo[j] = lo;
+        structure_hi[j] = hi;
+    }
+    let mut feat_comp_lo = vec![0.0; p];
+    let mut feat_comp_hi = vec![0.0; p];
+    let mut feat_struct_lo = vec![0.0; p];
+    let mut feat_struct_hi = vec![0.0; p];
+    for j in 0..p {
+        let mut col: Vec<f64> = draws.iter().map(|d| d.feat_comp[j]).collect();
+        let (lo, hi) = band_of(&mut col);
+        feat_comp_lo[j] = lo;
+        feat_comp_hi[j] = hi;
+        let mut col: Vec<f64> = draws.iter().map(|d| d.feat_struct[j]).collect();
+        let (lo, hi) = band_of(&mut col);
+        feat_struct_lo[j] = lo;
+        feat_struct_hi[j] = hi;
+    }
+    let mut intercepts: Vec<f64> = draws.iter().map(|d| d.intercept).collect();
+    let (intercept_lo, intercept_hi) = band_of(&mut intercepts);
+    let mut totals: Vec<f64> = draws.iter().map(|d| d.total_w2).collect();
+    let (total_w2_lo, total_w2_hi) = band_of(&mut totals);
+    ShiftDecompose {
+        names: point.names,
+        composition: point.composition,
+        structure: point.structure,
+        feat_comp: point.feat_comp,
+        feat_struct: point.feat_struct,
+        intercept: point.intercept,
+        total_w2: point.total_w2,
+        boot_reps: reps,
+        composition_lo,
+        composition_hi,
+        structure_lo,
+        structure_hi,
+        feat_comp_lo,
+        feat_comp_hi,
+        feat_struct_lo,
+        feat_struct_hi,
+        intercept_lo,
+        intercept_hi,
+        total_w2_lo,
+        total_w2_hi,
+    }
+}
+
+/// Benchmark decomposition.
+///
+/// Statistics use the counterfactual with the structure of period A and the
+/// covariates of period B, estimated by cross-fitted period odds. The odds
+/// model is an intercept plus each feature and its square. Folds are the rank
+/// of a column-commutative row hash modulo `K`, so a permutation of rows does
+/// not change the fit. Feature shares are the mean channel of the additive
+/// fit, centred at the 50/50 pooled covariate law. `intercept` closes
+/// `mean` structure: it is that structure minus the sum of `feat_struct`.
+/// `total_w2` is the quadrature `W2²` between the two outcome quantile functions
+/// and is not a sum of the split. Bands are pointwise 2.5/97.5 percentiles of
+/// a stratified row bootstrap; with `n_boot == 0` both ends equal the point.
+pub fn shift_decompose(
+    x_a: &[f64],
+    y_a: &[f64],
+    n_a: usize,
+    x_b: &[f64],
+    y_b: &[f64],
+    n_b: usize,
+    cfg: &DecomposeConfig,
+) -> Result<ShiftDecompose> {
+    let p = check_period(x_a, y_a, n_a, x_b, y_b, n_b)?;
+    let point = decompose_point(x_a, y_a, n_a, x_b, y_b, n_b, cfg)?;
+    if cfg.n_boot == 0 {
+        return Ok(point_bands(point));
+    }
+    let (xa, ya) = reorder_period(x_a, y_a, n_a, p, cfg.seed);
+    let (xb, yb) = reorder_period(x_b, y_b, n_b, p, cfg.seed);
+    let boot_cfg = DecomposeConfig {
+        n_boot: 0,
+        ..cfg.clone()
+    };
+    let draws = map_reps(cfg.n_boot, &|b| {
+        let mut rng = SplitMix64::new(
+            cfg.seed
+                .wrapping_add(b as u64)
+                .wrapping_mul(0xD1B5_4A32_D192_ED03),
+        );
+        let ia = resample_indices(n_a, n_a, &mut rng);
+        let ib = resample_indices(n_b, n_b, &mut rng);
+        let (x1, y1, _) = gather_period(&xa, &ya, p, &ia, None);
+        let (x2, y2, _) = gather_period(&xb, &yb, p, &ib, None);
+        decompose_point(&x1, &y1, n_a, &x2, &y2, n_b, &boot_cfg)
+    })?;
+    Ok(attach_bands(point, &draws))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1744,5 +2381,121 @@ mod tests {
             hi - lo > 1e-3,
             "bootstrap W2 range {lo}..{hi} is too small to be a resample"
         );
+    }
+
+    fn toy_periods(seed: u64) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, usize, usize) {
+        let n = 180;
+        let p = 3;
+        let mut rng = SplitMix64::new(seed);
+        let mut x_a = vec![0.0; n * p];
+        let mut x_b = vec![0.0; n * p];
+        let mut y_a = vec![0.0; n];
+        let mut y_b = vec![0.0; n];
+        for i in 0..n {
+            for j in 0..p {
+                x_a[i * p + j] = normal(&mut rng);
+                x_b[i * p + j] = normal(&mut rng);
+            }
+            x_b[i * p] += 0.4;
+            y_a[i] = x_a[i * p] - 0.5 * x_a[i * p + 1] + 0.3 * normal(&mut rng);
+            y_b[i] = 0.2 + 1.3 * x_b[i * p] - 0.5 * x_b[i * p + 1] + 0.3 * normal(&mut rng);
+        }
+        (x_a, y_a, x_b, y_b, n, p)
+    }
+
+    fn fast_decomp() -> DecomposeConfig {
+        DecomposeConfig {
+            seed: 11,
+            k: 3,
+            n_quad: 16,
+            n_folds: 2,
+            k_fit: 3,
+            max_bins: 8,
+            max_rounds: 4,
+            n_boot: 0,
+            ..DecomposeConfig::default()
+        }
+    }
+
+    #[test]
+    fn equal_weights_match_the_unweighted_percentile() {
+        let y = [0.2, -1.0, 0.5, 3.0, 0.0, 1.2];
+        let w = vec![1.0; y.len()];
+        for q in [0.1, 0.5, 0.9] {
+            let got = weighted_quantile(&y, &w, q).unwrap();
+            let mut sorted = y.to_vec();
+            sorted.sort_by(f64::total_cmp);
+            let expect = percentile_sorted(&sorted, q);
+            assert!((got - expect).abs() < 1e-12, "{got} vs {expect} at {q}");
+        }
+    }
+
+    #[test]
+    fn decompose_is_invariant_to_row_and_column_order() {
+        let (x_a, y_a, x_b, y_b, n, p) = toy_periods(4);
+        let cfg = fast_decomp();
+        let base = shift_decompose(&x_a, &y_a, n, &x_b, &y_b, n, &cfg).unwrap();
+        let rev_a: Vec<usize> = (0..n).rev().collect();
+        let mut rev_b: Vec<usize> = (0..n).collect();
+        rev_b.swap(0, n - 1);
+        rev_b.swap(3, 9);
+        let (xa, ya, _) = gather_period(&x_a, &y_a, p, &rev_a, None);
+        let (xb, yb, _) = gather_period(&x_b, &y_b, p, &rev_b, None);
+        let row = shift_decompose(&xa, &ya, n, &xb, &yb, n, &cfg).unwrap();
+        for i in 0..base.composition.len() {
+            assert!((base.composition[i] - row.composition[i]).abs() < 1e-9);
+            assert!((base.structure[i] - row.structure[i]).abs() < 1e-9);
+        }
+        for j in 0..p {
+            assert!((base.feat_comp[j] - row.feat_comp[j]).abs() < 1e-9);
+            assert!((base.feat_struct[j] - row.feat_struct[j]).abs() < 1e-9);
+        }
+        assert!((base.intercept - row.intercept).abs() < 1e-9);
+        assert!((base.total_w2 - row.total_w2).abs() < 1e-9);
+        let mean_gap = y_b.iter().sum::<f64>() / n as f64 - y_a.iter().sum::<f64>() / n as f64;
+        assert!((base.composition[0] + base.structure[0] - mean_gap).abs() < 1e-9);
+        let feat_sum: f64 = base.feat_struct.iter().sum();
+        assert!((base.intercept + feat_sum - base.structure[0]).abs() < 1e-9);
+        assert!(base.names.iter().any(|n| n == "q90"));
+        assert!(base.names.iter().any(|n| n == "lambda1"));
+        assert_eq!(base.boot_reps, 0);
+
+        // Swap columns 0 and 2. Shares move with the column; statistics stay.
+        let swap = |x: &[f64]| {
+            let mut o = x.to_vec();
+            for i in 0..n {
+                o.swap(i * p, i * p + 2);
+            }
+            o
+        };
+        let col = shift_decompose(&swap(&x_a), &y_a, n, &swap(&x_b), &y_b, n, &cfg).unwrap();
+        for i in 0..base.composition.len() {
+            assert!(
+                (base.composition[i] - col.composition[i]).abs() < 1e-8,
+                "{} comp {} vs {}",
+                base.names[i],
+                base.composition[i],
+                col.composition[i]
+            );
+            assert!((base.structure[i] - col.structure[i]).abs() < 1e-8);
+        }
+        assert!((base.feat_comp[0] - col.feat_comp[2]).abs() < 1e-8);
+        assert!((base.feat_comp[2] - col.feat_comp[0]).abs() < 1e-8);
+        assert!((base.feat_comp[1] - col.feat_comp[1]).abs() < 1e-8);
+        assert!((base.feat_struct[0] - col.feat_struct[2]).abs() < 1e-8);
+        assert!((base.total_w2 - col.total_w2).abs() < 1e-8);
+    }
+
+    #[test]
+    fn decompose_bands_have_width_when_the_sample_moves() {
+        let (x_a, y_a, x_b, y_b, n, _) = toy_periods(8);
+        let mut cfg = fast_decomp();
+        cfg.n_boot = 6;
+        cfg.max_rounds = 3;
+        let got = shift_decompose(&x_a, &y_a, n, &x_b, &y_b, n, &cfg).unwrap();
+        assert_eq!(got.boot_reps, 6);
+        assert!(got.total_w2_hi + 1e-12 >= got.total_w2_lo);
+        assert!(got.composition_hi[0] + 1e-12 >= got.composition_lo[0]);
+        assert_eq!(got.feat_comp_lo.len(), 3);
     }
 }

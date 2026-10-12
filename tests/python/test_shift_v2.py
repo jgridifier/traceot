@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from traceot import TraceV1, shift
+from traceot import TraceV1, shift, shift_decompose
 
 
 def test_quadratic_phi_matches_the_closed_form_and_keeps_a_negative():
@@ -80,3 +80,35 @@ def test_bands_mark_a_constant_replicate_as_unresolved_at_zero_only_when_away():
     band = shift.bands(point, replicates)
     assert band["resolved"][0] is False
     assert band["lo"][1] <= 2.0 <= band["hi"][1]
+
+
+def test_shift_decompose_matches_the_adapter_and_ignores_row_order():
+    rng = np.random.default_rng(2)
+    n, p = 160, 3
+    x_a = rng.normal(size=(n, p))
+    x_b = rng.normal(size=(n, p))
+    x_b[:, 0] += 0.35
+    y_a = x_a[:, 0] - 0.4 * x_a[:, 1] + 0.2 * rng.normal(size=n)
+    y_b = 0.15 + 1.2 * x_b[:, 0] - 0.4 * x_b[:, 1] + 0.2 * rng.normal(size=n)
+    kw = dict(k=3, n_quad=16, n_folds=2, k_fit=3, max_bins=8, max_rounds=4, n_boot=4)
+    base = shift_decompose(x_a, y_a, x_b, y_b, seed=5, **kw)
+    order_a = rng.permutation(n)
+    order_b = rng.permutation(n)
+    perm = shift_decompose(x_a[order_a], y_a[order_a], x_b[order_b], y_b[order_b], seed=5, **kw)
+    for name in ("mean", "sd", "q10", "q50", "q90", "lambda1"):
+        assert name in base["split"]
+        assert np.allclose(base["split"][name], perm["split"][name], atol=1e-8)
+    assert np.allclose(base["feat_comp"], perm["feat_comp"], atol=1e-8)
+    assert np.allclose(base["feat_struct"], perm["feat_struct"], atol=1e-8)
+    comp, struct = base["split"]["mean"]
+    assert abs((comp + struct) - (y_b.mean() - y_a.mean())) < 1e-8
+    assert abs(base["intercept"] + base["feat_struct"].sum() - struct) < 1e-8
+    assert base["total_w2"] > 0
+    assert base["bands"]["reps"] == 4
+    assert base["bands"]["total_w2"][1] >= base["bands"]["total_w2"][0]
+    cols = np.array([2, 0, 1])
+    inv = np.argsort(cols)
+    swapped = shift_decompose(x_a[:, cols], y_a, x_b[:, cols], y_b, seed=5, **kw)
+    assert np.allclose(base["split"]["q50"], swapped["split"]["q50"], atol=1e-7)
+    assert np.allclose(base["feat_comp"], swapped["feat_comp"][inv], atol=1e-7)
+    assert np.allclose(base["feat_struct"], swapped["feat_struct"][inv], atol=1e-7)

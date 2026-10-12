@@ -6,13 +6,13 @@ use numpy::ndarray::{Array1, Array2};
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList};
 use traceot_core::trace::{
     barycenter_view, bootstrap_barycenter, bootstrap_entry_exit, bootstrap_marginal,
     entry_exit_from_models, entry_exit_split, explain_shift, hk_mass, marginal_from_laws,
     marginal_view, percentile_bands, permutation_marginal, permutation_w2_floor, quadratic_shapley,
-    sample_lambda, BaryView, EntryExit, MarginalView, PercentileBand, ShiftReport, ShiftV2Config,
-    V1Config,
+    sample_lambda, shift_decompose, BaryView, DecomposeConfig, EntryExit, MarginalView,
+    PercentileBand, ShiftDecompose, ShiftReport, ShiftV2Config, V1Config,
 };
 use traceot_core::TraceError;
 
@@ -719,6 +719,112 @@ fn shift_v2_permutation_marginal<'py>(
     Ok(d)
 }
 
+fn pair<'py>(py: Python<'py>, a: f64, b: f64) -> PyResult<Bound<'py, PyList>> {
+    PyList::new(py, [a, b])
+}
+
+fn band_pair<'py>(
+    py: Python<'py>,
+    lo_a: f64,
+    hi_a: f64,
+    lo_b: f64,
+    hi_b: f64,
+) -> PyResult<Bound<'py, PyList>> {
+    let left = pair(py, lo_a, hi_a)?;
+    let right = pair(py, lo_b, hi_b)?;
+    PyList::new(py, [left, right])
+}
+
+fn put_decompose<'py>(py: Python<'py>, got: &ShiftDecompose) -> PyResult<Bound<'py, PyDict>> {
+    let split = PyDict::new(py);
+    let split_bands = PyDict::new(py);
+    for i in 0..got.names.len() {
+        let name = got.names[i].as_str();
+        split.set_item(name, pair(py, got.composition[i], got.structure[i])?)?;
+        split_bands.set_item(
+            name,
+            band_pair(
+                py,
+                got.composition_lo[i],
+                got.composition_hi[i],
+                got.structure_lo[i],
+                got.structure_hi[i],
+            )?,
+        )?;
+    }
+    let feat_comp_band = PyDict::new(py);
+    feat_comp_band.set_item("lo", arr1(py, got.feat_comp_lo.clone()))?;
+    feat_comp_band.set_item("hi", arr1(py, got.feat_comp_hi.clone()))?;
+    let feat_struct_band = PyDict::new(py);
+    feat_struct_band.set_item("lo", arr1(py, got.feat_struct_lo.clone()))?;
+    feat_struct_band.set_item("hi", arr1(py, got.feat_struct_hi.clone()))?;
+    let bands = PyDict::new(py);
+    bands.set_item("reps", got.boot_reps)?;
+    bands.set_item("split", split_bands)?;
+    bands.set_item("feat_comp", feat_comp_band)?;
+    bands.set_item("feat_struct", feat_struct_band)?;
+    bands.set_item("intercept", pair(py, got.intercept_lo, got.intercept_hi)?)?;
+    bands.set_item("total_w2", pair(py, got.total_w2_lo, got.total_w2_hi)?)?;
+    let d = PyDict::new(py);
+    d.set_item("split", split)?;
+    d.set_item("feat_comp", arr1(py, got.feat_comp.clone()))?;
+    d.set_item("feat_struct", arr1(py, got.feat_struct.clone()))?;
+    d.set_item("intercept", got.intercept)?;
+    d.set_item("total_w2", got.total_w2)?;
+    d.set_item("bands", bands)?;
+    Ok(d)
+}
+
+#[pyfunction]
+#[pyo3(signature = (
+    x_a, y_a, x_b, y_b, seed=0, k=6, n_quad=64, n_folds=5, trim_quantile=0.995,
+    logit_ridge=1e-6, logit_iters=25, logit_tol=1e-8, k_fit=4, max_bins=16,
+    max_rounds=6, fit_tol=1e-6, n_boot=0
+))]
+fn shift_v2_decompose<'py>(
+    py: Python<'py>,
+    x_a: PyReadonlyArray2<'py, f64>,
+    y_a: PyReadonlyArray1<'py, f64>,
+    x_b: PyReadonlyArray2<'py, f64>,
+    y_b: PyReadonlyArray1<'py, f64>,
+    seed: u64,
+    k: usize,
+    n_quad: usize,
+    n_folds: usize,
+    trim_quantile: f64,
+    logit_ridge: f64,
+    logit_iters: usize,
+    logit_tol: f64,
+    k_fit: usize,
+    max_bins: usize,
+    max_rounds: usize,
+    fit_tol: f64,
+    n_boot: usize,
+) -> PyResult<Bound<'py, PyDict>> {
+    let (na, _) = x_a.as_array().dim();
+    let (nb, _) = x_b.as_array().dim();
+    let cfg = DecomposeConfig {
+        seed,
+        k,
+        n_quad,
+        n_folds,
+        trim_quantile,
+        logit_ridge,
+        logit_iters,
+        logit_tol,
+        k_fit,
+        max_bins,
+        max_rounds,
+        fit_tol,
+        n_boot,
+    };
+    let (xa, ya, xb, yb) = (slice2(&x_a)?, slice1(&y_a)?, slice2(&x_b)?, slice1(&y_b)?);
+    let got = py
+        .detach(|| shift_decompose(xa, ya, na, xb, yb, nb, &cfg))
+        .map_err(err)?;
+    put_decompose(py, &got)
+}
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(shift_v2_sample_lambda, m)?)?;
     m.add_function(wrap_pyfunction!(shift_v2_from_laws, m)?)?;
@@ -735,5 +841,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(shift_v2_bands, m)?)?;
     m.add_function(wrap_pyfunction!(shift_v2_permutation_w2, m)?)?;
     m.add_function(wrap_pyfunction!(shift_v2_permutation_marginal, m)?)?;
+    m.add_function(wrap_pyfunction!(shift_v2_decompose, m)?)?;
     Ok(())
 }
