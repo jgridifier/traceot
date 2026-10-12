@@ -52,6 +52,18 @@ pub struct V1Config {
     pub reporting: ReportKind,
     /// Optional reference quantile curve on the fine grid (length 1024). Empty uses `z`.
     pub reference: Vec<f64>,
+    /// Keep Legendre channel 0 at 0. The caller supplies an already-centred outcome.
+    pub lock_mean: bool,
+    /// Logistic bandwidth for the Hessian density. `0` keeps the derivative quotient.
+    pub smooth: f64,
+    /// Extra Levenberg damping on the Newton diagonal, in the same units as `ridge`.
+    pub levenberg: f64,
+    /// Sobolev ridge λ in λ Σ_k k^{2s} a_k². `0` keeps the uniform `ridge` only.
+    pub sobolev_lambda: f64,
+    /// Exponent s in the Sobolev ridge. Used only when `sobolev_lambda > 0`.
+    pub sobolev_s: f64,
+    /// Tail multiplier 1 + γ(u−½)² on channels k ≥ 2. `0` leaves every channel unweighted.
+    pub tail_gamma: f64,
 }
 
 impl Default for V1Config {
@@ -70,6 +82,12 @@ impl Default for V1Config {
             bernstein_elevation: 4,
             reporting: ReportKind::Legendre,
             reference: Vec::new(),
+            lock_mean: false,
+            smooth: 0.0,
+            levenberg: 0.0,
+            sobolev_lambda: 0.0,
+            sobolev_s: 0.0,
+            tail_gamma: 0.0,
         }
     }
 }
@@ -97,6 +115,12 @@ pub struct V1Model {
     pub bernstein_lift: f64,
     pub train_loss: f64,
     pub rounds: usize,
+    pub lock_mean: bool,
+    pub smooth: f64,
+    pub levenberg: f64,
+    pub sobolev_lambda: f64,
+    pub sobolev_s: f64,
+    pub tail_gamma: f64,
 }
 
 /// Per-row Shapley shares in orthonormal units, plus the truncation and PAV lines.
@@ -161,6 +185,12 @@ pub fn fit_v1(x: &[f64], n: usize, p: usize, y: &[f64], cfg: &V1Config) -> Resul
         bernstein_lift: 0.0,
         train_loss: 0.0,
         rounds: 0,
+        lock_mean: cfg.lock_mean,
+        smooth: 0.0,
+        levenberg: cfg.levenberg,
+        sobolev_lambda: cfg.sobolev_lambda,
+        sobolev_s: cfg.sobolev_s,
+        tail_gamma: cfg.tail_gamma,
     };
     for j in 0..p {
         model.effects.push(vec![0.0; model.n_bins[j] * cfg.k_fit]);
@@ -175,13 +205,19 @@ pub fn fit_v1(x: &[f64], n: usize, p: usize, y: &[f64], cfg: &V1Config) -> Resul
     if y.len() >= cfg.k_fit {
         let lam = hosking_lmoments(y, cfg.k_fit)?;
         model.intercept = lambda_to_a(&lam);
-    } else {
+        if cfg.lock_mean {
+            model.intercept[0] = 0.0;
+        }
+    } else if !cfg.lock_mean {
         model.intercept[0] = y.iter().sum::<f64>() / n as f64;
     }
     let mut a_rows = vec![0.0; n * cfg.k_fit];
     scatter_all(&model, &codes, &mut a_rows);
     let mut prev = pinball_loss(&model.basis, &a_rows, y);
     for round in 0..cfg.max_rounds {
+        if cfg.smooth > 0.0 {
+            model.smooth = anneal_bandwidth(cfg.smooth, round, cfg.max_rounds);
+        }
         newton_round(&mut model, &codes, y, &mut a_rows, cfg)?;
         let loss = pinball_loss(&model.basis, &a_rows, y);
         model.rounds = round + 1;
@@ -213,9 +249,11 @@ fn newton_round(
     let n = y.len();
     let k = model.k_fit;
     let p = codes.len();
-    let (g, h) = accumulate_block(model, a_rows, y, None, codes);
-    let step = solve_block(&h, &g, k, cfg.ridge, n as f64)?;
-    linesearch_intercept(model, a_rows, y, &step, cfg.learning_rate);
+    if !model.lock_mean {
+        let (g, h) = accumulate_block(model, a_rows, y, None, codes);
+        let step = solve_block(model, &h, &g, k, cfg.ridge, n as f64)?;
+        linesearch_intercept(model, a_rows, y, &step, cfg.learning_rate);
+    }
     for j in 0..p {
         let nb = model.n_bins[j];
         let mut g_bins = vec![0.0; nb * k];
@@ -237,13 +275,17 @@ fn newton_round(
             if count < cfg.min_count {
                 continue;
             }
-            let step = solve_block(
+            let mut step = solve_block(
+                model,
                 &h_bins[b * k * k..(b + 1) * k * k],
                 &g_bins[b * k..(b + 1) * k],
                 k,
                 cfg.ridge,
                 count as f64,
             )?;
+            if model.lock_mean {
+                step[0] = 0.0;
+            }
             // Bins of one feature partition the rows, so each block is scored
             // on its own rows. A step that raises pinball is shortened, not
             // allowed to reject the other blocks.
@@ -363,44 +405,125 @@ fn scale(step: &[f64], lr: f64) -> Vec<f64> {
     s
 }
 
-fn solve_block(h: &[f64], g: &[f64], k: usize, ridge: f64, count: f64) -> Result<Vec<f64>> {
+fn anneal_bandwidth(h0: f64, round: usize, max_rounds: usize) -> f64 {
+    let third = (max_rounds / 3).max(1);
+    if round < third {
+        h0
+    } else if round < 2 * third {
+        h0 * 0.4
+    } else {
+        h0 * 0.2
+    }
+}
+
+fn solve_block(
+    model: &V1Model,
+    h: &[f64],
+    g: &[f64],
+    k: usize,
+    ridge: f64,
+    count: f64,
+) -> Result<Vec<f64>> {
     let mut a = h.to_vec();
-    let diag = ridge * count.max(1.0);
+    let scale = count.max(1.0);
     for i in 0..k {
+        let mut diag = ridge * scale;
+        if model.levenberg != 0.0 {
+            diag += model.levenberg * scale;
+        }
+        if model.sobolev_lambda != 0.0 {
+            let kk = i as f64;
+            diag += model.sobolev_lambda * scale * kk.powf(2.0 * model.sobolev_s);
+        }
         a[i * k + i] += diag;
     }
     let step = match solve_spd(&a, k, g) {
         Ok(sol) => sol.into_iter().map(|v| -v).collect::<Vec<_>>(),
-        Err(_) => g.iter().map(|v| -v / (diag + 1.0)).collect(),
+        Err(_) => g
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let mut diag = ridge * scale;
+                if model.levenberg != 0.0 {
+                    diag += model.levenberg * scale;
+                }
+                if model.sobolev_lambda != 0.0 {
+                    diag += model.sobolev_lambda * scale * (i as f64).powf(2.0 * model.sobolev_s);
+                }
+                -v / (diag + 1.0)
+            })
+            .collect(),
     };
     Ok(step)
 }
 
 fn row_gh(model: &V1Model, a: &[f64], y: f64) -> (Vec<f64>, Vec<f64>) {
-    let k = model.k_fit;
-    let nu = model.basis.n_u();
+    pinball_gh(
+        &model.basis.nodes,
+        &model.basis.weights,
+        &model.basis.e,
+        &model.basis.de,
+        a,
+        y,
+        model.smooth,
+        model.tail_gamma,
+    )
+}
+
+/// Pinball score and CRPS Hessian of one curve.
+///
+/// `smooth > 0` replaces the derivative-quotient density with the logistic
+/// density of a smoothed pinball, bandwidth `smooth`. Channels `k ≥ 2` are
+/// multiplied by `1 + tail_gamma (u−½)²`. The Hessian uses the geometric mean
+/// of the two channel weights so the matrix stays symmetric.
+pub fn pinball_gh(
+    nodes: &[f64],
+    weights: &[f64],
+    basis_e: &[f64],
+    basis_de: &[f64],
+    a: &[f64],
+    y: f64,
+    smooth: f64,
+    tail_gamma: f64,
+) -> (Vec<f64>, Vec<f64>) {
+    let k = a.len();
+    let nu = nodes.len();
     let mut g = vec![0.0; k];
     let mut h = vec![0.0; k * k];
     for t in 0..nu {
         let mut q = 0.0;
         let mut qp = 0.0;
         for c in 0..k {
-            q += a[c] * model.basis.e[t * k + c];
-            qp += a[c] * model.basis.de[t * k + c];
+            q += a[c] * basis_e[t * k + c];
+            qp += a[c] * basis_de[t * k + c];
         }
-        let w = model.basis.weights[t];
+        let w = weights[t];
+        let u = nodes[t];
         let ind = if y < q { 1.0 } else { 0.0 };
-        let dens = if qp > 1e-3 {
+        let dens = if smooth > 0.0 {
+            let z = ((q - y) / smooth).clamp(-40.0, 40.0);
+            let sig = 1.0 / (1.0 + (-z).exp());
+            (sig * (1.0 - sig) / smooth).clamp(1e-6, 1e6)
+        } else if qp > 1e-3 {
             (1.0 / qp).clamp(1e-2, 40.0)
         } else {
             1.0
         };
+        let shape_w = if tail_gamma == 0.0 {
+            1.0
+        } else {
+            1.0 + tail_gamma * (u - 0.5) * (u - 0.5)
+        };
         for c in 0..k {
-            g[c] += w * (ind - model.basis.nodes[t]) * model.basis.e[t * k + c];
+            let mult = if c >= 2 { shape_w } else { 1.0 };
+            g[c] += w * mult * (ind - u) * basis_e[t * k + c];
         }
         for c in 0..k {
+            let mc = if c >= 2 { shape_w } else { 1.0 };
             for d in 0..k {
-                h[c * k + d] += w * dens * model.basis.e[t * k + c] * model.basis.e[t * k + d];
+                let md = if d >= 2 { shape_w } else { 1.0 };
+                h[c * k + d] +=
+                    w * mc.sqrt() * md.sqrt() * dens * basis_e[t * k + c] * basis_e[t * k + d];
             }
         }
     }
@@ -600,6 +723,163 @@ pub fn player_coefficients(model: &V1Model, x: &[f64], n: usize) -> Result<Vec<f
         }
     }
     Ok(out)
+}
+
+/// Held-out pinball gains. A feature is selected when either gain is positive.
+#[derive(Clone, Debug)]
+pub struct FeatureGains {
+    pub gains: Vec<f64>,
+    pub shape_gains: Vec<f64>,
+    pub selected: Vec<bool>,
+}
+
+/// Leave-one-feature pinball gains on `rows`.
+///
+/// `players` is `n × (p+1) × k`, player 0 the intercept. The overall gain is the
+/// quadrature pinball with that feature removed, minus the full pinball. The
+/// shape gain removes only channels `k ≥ 2` and scores with weights `(u−½)²`
+/// normalised to sum to one, the same tail weights as the v0 screen.
+pub fn leave_feature_gains(
+    nodes: &[f64],
+    weights: &[f64],
+    basis_e: &[f64],
+    players: &[f64],
+    y: &[f64],
+    rows: &[usize],
+    p: usize,
+    k: usize,
+) -> Result<(Vec<f64>, Vec<f64>)> {
+    let n = y.len();
+    let nu = nodes.len();
+    if nu == 0 || k == 0 || rows.is_empty() {
+        return Err(TraceError::InvalidArgument(
+            "leave-one-feature gains need nodes, channels and rows".into(),
+        ));
+    }
+    if players.len() != n * (p + 1) * k || basis_e.len() != nu * k || weights.len() != nu {
+        return Err(TraceError::Shape(
+            "leave-one-feature gain shapes disagree".into(),
+        ));
+    }
+    let mut shape_w = vec![0.0; nu];
+    let mut sw = 0.0;
+    for (t, &u) in nodes.iter().enumerate() {
+        let d = u - 0.5;
+        shape_w[t] = d * d;
+        sw += shape_w[t];
+    }
+    if sw > 0.0 {
+        for v in &mut shape_w {
+            *v /= sw;
+        }
+    }
+    let mut full = vec![0.0; rows.len() * k];
+    for (t, &i) in rows.iter().enumerate() {
+        if i >= n {
+            return Err(TraceError::InvalidArgument(
+                "validation row is out of range".into(),
+            ));
+        }
+        for j in 0..=p {
+            for c in 0..k {
+                full[t * k + c] += players[i * (p + 1) * k + j * k + c];
+            }
+        }
+    }
+    let base = mean_pinball(nodes, weights, basis_e, &full, y, rows, None);
+    let base_shape = mean_pinball(nodes, weights, basis_e, &full, y, rows, Some(&shape_w));
+    let mut gains = vec![0.0; p];
+    let mut shape_gains = vec![0.0; p];
+    for j in 0..p {
+        let mut dropped = full.clone();
+        let mut shape_only = full.clone();
+        for (t, &i) in rows.iter().enumerate() {
+            for c in 0..k {
+                let coef = players[i * (p + 1) * k + (j + 1) * k + c];
+                dropped[t * k + c] -= coef;
+                if c >= 2 {
+                    shape_only[t * k + c] -= coef;
+                }
+            }
+        }
+        gains[j] = mean_pinball(nodes, weights, basis_e, &dropped, y, rows, None) - base;
+        shape_gains[j] = mean_pinball(
+            nodes,
+            weights,
+            basis_e,
+            &shape_only,
+            y,
+            rows,
+            Some(&shape_w),
+        ) - base_shape;
+    }
+    Ok((gains, shape_gains))
+}
+
+fn mean_pinball(
+    nodes: &[f64],
+    weights: &[f64],
+    basis_e: &[f64],
+    a_rows: &[f64],
+    y: &[f64],
+    rows: &[usize],
+    weight_override: Option<&[f64]>,
+) -> f64 {
+    let k = a_rows.len() / rows.len();
+    let mut total = 0.0;
+    for (t, &i) in rows.iter().enumerate() {
+        let a = &a_rows[t * k..(t + 1) * k];
+        for s in 0..nodes.len() {
+            let mut q = 0.0;
+            for c in 0..k {
+                q += a[c] * basis_e[s * k + c];
+            }
+            let u = nodes[s];
+            let r = y[i] - q;
+            let rho = if r >= 0.0 { u * r } else { (u - 1.0) * r };
+            let w = match weight_override {
+                Some(ws) => ws[s],
+                None => weights[s],
+            };
+            total += w * rho;
+        }
+    }
+    total / rows.len() as f64
+}
+
+pub fn feature_pinball_gains(
+    model: &V1Model,
+    x: &[f64],
+    n: usize,
+    y: &[f64],
+    rows: &[usize],
+) -> Result<FeatureGains> {
+    if y.len() != n {
+        return Err(TraceError::Shape("X and y have different lengths".into()));
+    }
+    let p = model.edges.len();
+    let k = model.k_fit;
+    let players = player_coefficients(model, x, n)?;
+    let (gains, shape_gains) = leave_feature_gains(
+        &model.basis.nodes,
+        &model.basis.weights,
+        &model.basis.e,
+        &players,
+        y,
+        rows,
+        p,
+        k,
+    )?;
+    let selected = gains
+        .iter()
+        .zip(&shape_gains)
+        .map(|(g, s)| *g > 0.0 || *s > 0.0)
+        .collect();
+    Ok(FeatureGains {
+        gains,
+        shape_gains,
+        selected,
+    })
 }
 
 /// Summed curve coefficients in the fitting basis, `n × k_fit`.
@@ -977,6 +1257,13 @@ mod tests {
             ..V1Config::default()
         };
         let model = fit_v1(&x, n, 1, &y, &cfg).unwrap();
+        let rows: Vec<usize> = (150..n).collect();
+        let screen = feature_pinball_gains(&model, &x, n, &y, &rows).unwrap();
+        assert!(
+            screen.selected[0],
+            "location feature gain {}",
+            screen.gains[0]
+        );
         let pred = predict_quantiles(&model, &x, n, &[0.5], false).unwrap();
         let mut err = 0.0;
         for i in 0..n {

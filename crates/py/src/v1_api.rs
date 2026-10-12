@@ -10,13 +10,14 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use traceot_core::trace::{
     attribute, bootstrap_indices, channel_energy, channel_slope, coupling_w1, cross_fit_energy,
-    eval_a, feature_report_table, fit_frechet, fit_robust, fit_v1, gauss_legendre_01,
-    hosking_lmoments, integrated_pinball_on, lmoment_channel_energy, max_jump_bound,
-    monotonicity_report, outcome_only_w1_gap, permutation_pvalue, pinball, predict_frechet,
-    predict_quantiles, predict_robust, projection_pair, report_matrix, robust_risk_breakpoints,
-    robust_risk_level, shift_conditional, shift_marginal, weighted_pav, winf_risk, Ball,
-    FrechetConfig, FrechetModel, MonoMode, ReportKind, RobustConfig, RobustModel, V1Config,
-    V1Model,
+    crps_quadrature, eval_a, feature_pinball_gains, feature_report_table, fit_frechet, fit_hybrid,
+    fit_mean, fit_robust, fit_v1, gauss_legendre_01, hosking_lmoments, hybrid_channel_energy,
+    integrated_pinball_on, leave_feature_gains, lmoment_channel_energy, max_jump_bound,
+    monotonicity_report, outcome_only_w1_gap, permutation_pvalue, pinball, pinball_gh,
+    predict_frechet, predict_hybrid, predict_mean, predict_mean_channel, predict_quantiles,
+    predict_robust, projection_pair, report_matrix, robust_risk_breakpoints, robust_risk_level,
+    shift_conditional, shift_marginal, weighted_pav, winf_risk, Ball, FrechetConfig, FrechetModel,
+    HybridModel, MeanConfig, MonoMode, ReportKind, RobustConfig, RobustModel, V1Config, V1Model,
 };
 use traceot_core::TraceError;
 
@@ -93,6 +94,12 @@ fn config_from(
         bernstein_elevation,
         reporting: report_from(reporting)?,
         reference: Vec::new(),
+        lock_mean: false,
+        smooth: 0.0,
+        levenberg: 0.0,
+        sobolev_lambda: 0.0,
+        sobolev_s: 0.0,
+        tail_gamma: 0.0,
     })
 }
 
@@ -106,7 +113,8 @@ impl PyV1Model {
     #[staticmethod]
     #[pyo3(signature = (
         x, y, k_fit=6, k_report=4, n_u=0, max_bins=16, max_rounds=30, tol=1e-9, min_count=1,
-        ridge=1e-6, learning_rate=1.0, mono="pav", bernstein_elevation=4, reporting="legendre"
+        ridge=1e-6, learning_rate=1.0, mono="pav", bernstein_elevation=4, reporting="legendre",
+        smooth=0.0, levenberg=0.0, sobolev_lambda=0.0, sobolev_s=1.0, tail_gamma=0.0
     ))]
     fn fit(
         py: Python<'_>,
@@ -124,9 +132,14 @@ impl PyV1Model {
         mono: &str,
         bernstein_elevation: usize,
         reporting: &str,
+        smooth: f64,
+        levenberg: f64,
+        sobolev_lambda: f64,
+        sobolev_s: f64,
+        tail_gamma: f64,
     ) -> PyResult<Self> {
         let (n, p) = x.as_array().dim();
-        let cfg = config_from(
+        let mut cfg = config_from(
             k_fit,
             k_report,
             n_u,
@@ -140,6 +153,11 @@ impl PyV1Model {
             bernstein_elevation,
             reporting,
         )?;
+        cfg.smooth = smooth;
+        cfg.levenberg = levenberg;
+        cfg.sobolev_lambda = sobolev_lambda;
+        cfg.sobolev_s = sobolev_s;
+        cfg.tail_gamma = tail_gamma;
         let (xs, ys) = (slice2(&x)?, slice1(&y)?);
         let inner = py.detach(|| fit_v1(xs, n, p, ys, &cfg)).map_err(err)?;
         Ok(Self { inner })
@@ -213,6 +231,38 @@ impl PyV1Model {
             self.inner.k_report,
             channel,
         ))
+    }
+
+    /// Held-out pinball gains. `rows` indexes the validation rows.
+    fn feature_gains<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+        y: PyReadonlyArray1<'_, f64>,
+        rows: PyReadonlyArray1<'_, i64>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let (n, _) = x.as_array().dim();
+        let idx: Vec<usize> = rows
+            .as_slice()
+            .map_err(|_| PyValueError::new_err("rows must be C-contiguous"))?
+            .iter()
+            .map(|&v| {
+                if v < 0 {
+                    Err(PyValueError::new_err("row index is negative"))
+                } else {
+                    Ok(v as usize)
+                }
+            })
+            .collect::<PyResult<_>>()?;
+        let (xs, ys) = (slice2(&x)?, slice1(&y)?);
+        let screen = py
+            .detach(|| feature_pinball_gains(&self.inner, xs, n, ys, &idx))
+            .map_err(err)?;
+        let d = PyDict::new(py);
+        d.set_item("gains", screen.gains)?;
+        d.set_item("shape_gains", screen.shape_gains)?;
+        d.set_item("selected", screen.selected)?;
+        Ok(d)
     }
 
     fn channel_slope(
@@ -783,10 +833,277 @@ fn v1_coupling_w1(
     ))
 }
 
+#[pyclass(name = "TraceHybridModel", module = "traceot._core")]
+pub struct PyHybrid {
+    inner: HybridModel,
+}
+
+#[pymethods]
+impl PyHybrid {
+    #[staticmethod]
+    #[pyo3(signature = (
+        x, y,
+        k_fit=6, k_report=4, n_u=0, max_bins=16, max_rounds=40, tol=1e-8, min_count=1,
+        ridge=1e-6, learning_rate=1.0, mono="none", bernstein_elevation=4, reporting="legendre",
+        smooth=0.0, levenberg=0.0, sobolev_lambda=0.0, sobolev_s=1.0, tail_gamma=0.0,
+        mean_max_bins=1024, mean_learning_rate=0.04, mean_max_rounds=50000,
+        mean_early_stopping_rounds=100, mean_early_stopping_tolerance=1e-5,
+        mean_validation_size=0.15, mean_min_samples_leaf=4
+    ))]
+    fn fit(
+        py: Python<'_>,
+        x: PyReadonlyArray2<'_, f64>,
+        y: PyReadonlyArray1<'_, f64>,
+        k_fit: usize,
+        k_report: usize,
+        n_u: usize,
+        max_bins: usize,
+        max_rounds: usize,
+        tol: f64,
+        min_count: u64,
+        ridge: f64,
+        learning_rate: f64,
+        mono: &str,
+        bernstein_elevation: usize,
+        reporting: &str,
+        smooth: f64,
+        levenberg: f64,
+        sobolev_lambda: f64,
+        sobolev_s: f64,
+        tail_gamma: f64,
+        mean_max_bins: usize,
+        mean_learning_rate: f64,
+        mean_max_rounds: usize,
+        mean_early_stopping_rounds: usize,
+        mean_early_stopping_tolerance: f64,
+        mean_validation_size: f64,
+        mean_min_samples_leaf: u64,
+    ) -> PyResult<Self> {
+        let (n, p) = x.as_array().dim();
+        let mut residual = config_from(
+            k_fit,
+            k_report,
+            n_u,
+            max_bins,
+            max_rounds,
+            tol,
+            min_count,
+            ridge,
+            learning_rate,
+            mono,
+            bernstein_elevation,
+            reporting,
+        )?;
+        residual.smooth = smooth;
+        residual.levenberg = levenberg;
+        residual.sobolev_lambda = sobolev_lambda;
+        residual.sobolev_s = sobolev_s;
+        residual.tail_gamma = tail_gamma;
+        let mean = MeanConfig {
+            max_bins: mean_max_bins,
+            learning_rate: mean_learning_rate,
+            max_rounds: mean_max_rounds,
+            early_stopping_rounds: mean_early_stopping_rounds,
+            early_stopping_tolerance: mean_early_stopping_tolerance,
+            validation_size: mean_validation_size,
+            min_samples_leaf: mean_min_samples_leaf,
+        };
+        let (xs, ys) = (slice2(&x)?, slice1(&y)?);
+        let inner = py
+            .detach(|| fit_hybrid(xs, n, p, ys, &mean, &residual))
+            .map_err(err)?;
+        Ok(Self { inner })
+    }
+
+    fn predict<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+        u: PyReadonlyArray1<'_, f64>,
+        project: bool,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let (n, p) = x.as_array().dim();
+        if p != self.inner.mean.edges.len() {
+            return Err(PyValueError::new_err(
+                "feature count does not match the fit",
+            ));
+        }
+        let (xs, us) = (slice2(&x)?, slice1(&u)?);
+        let flat = py
+            .detach(|| predict_hybrid(&self.inner, xs, n, us, project))
+            .map_err(err)?;
+        let nu = us.len();
+        Ok(Array2::from_shape_vec((n, nu), flat)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .into_pyarray(py))
+    }
+
+    fn mean<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let (n, p) = x.as_array().dim();
+        if p != self.inner.mean.edges.len() {
+            return Err(PyValueError::new_err(
+                "feature count does not match the fit",
+            ));
+        }
+        let xs = slice2(&x)?;
+        let out = py
+            .detach(|| predict_mean_channel(&self.inner, xs, n))
+            .map_err(err)?;
+        Ok(Array1::from_vec(out).into_pyarray(py))
+    }
+
+    fn channel_energy(&self, feature: usize, channel: usize) -> PyResult<f64> {
+        hybrid_channel_energy(&self.inner, feature, channel).map_err(err)
+    }
+
+    #[getter]
+    fn rounds(&self) -> usize {
+        self.inner.residual.rounds
+    }
+
+    #[getter]
+    fn mean_rounds(&self) -> usize {
+        self.inner.mean.rounds
+    }
+
+    #[getter]
+    fn u_nodes(&self) -> Vec<f64> {
+        self.inner.residual.basis.nodes.clone()
+    }
+
+    #[getter]
+    fn u_weights(&self) -> Vec<f64> {
+        self.inner.residual.basis.weights.clone()
+    }
+}
+
+#[pyfunction]
+#[pyo3(signature = (
+    x, y, max_bins=8, learning_rate=0.5, max_rounds=20, early_stopping_rounds=5,
+    early_stopping_tolerance=1e-8, validation_size=0.0, min_samples_leaf=1
+))]
+fn v1_fit_mean<'py>(
+    py: Python<'py>,
+    x: PyReadonlyArray2<'_, f64>,
+    y: PyReadonlyArray1<'_, f64>,
+    max_bins: usize,
+    learning_rate: f64,
+    max_rounds: usize,
+    early_stopping_rounds: usize,
+    early_stopping_tolerance: f64,
+    validation_size: f64,
+    min_samples_leaf: u64,
+) -> PyResult<Bound<'py, PyDict>> {
+    let (n, p) = x.as_array().dim();
+    let cfg = MeanConfig {
+        max_bins,
+        learning_rate,
+        max_rounds,
+        early_stopping_rounds,
+        early_stopping_tolerance,
+        validation_size,
+        min_samples_leaf,
+    };
+    let (xs, ys) = (slice2(&x)?, slice1(&y)?);
+    let model = py.detach(|| fit_mean(xs, n, p, ys, &cfg)).map_err(err)?;
+    let pred = py.detach(|| predict_mean(&model, xs, n)).map_err(err)?;
+    let d = PyDict::new(py);
+    d.set_item("intercept", model.intercept)?;
+    d.set_item("rounds", model.rounds)?;
+    d.set_item("best_round", model.best_round)?;
+    d.set_item("train_mse", model.train_mse)?;
+    d.set_item("prediction", Array1::from_vec(pred).into_pyarray(py))?;
+    let effects: Vec<Vec<f64>> = model.effects;
+    d.set_item("effects", effects)?;
+    Ok(d)
+}
+
+#[pyfunction]
+fn v1_pinball_gh<'py>(
+    py: Python<'py>,
+    nodes: PyReadonlyArray1<f64>,
+    weights: PyReadonlyArray1<f64>,
+    basis_e: PyReadonlyArray1<f64>,
+    basis_de: PyReadonlyArray1<f64>,
+    a: PyReadonlyArray1<f64>,
+    y: f64,
+    smooth: f64,
+    tail_gamma: f64,
+) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+    let (g, h) = pinball_gh(
+        slice1(&nodes)?,
+        slice1(&weights)?,
+        slice1(&basis_e)?,
+        slice1(&basis_de)?,
+        slice1(&a)?,
+        y,
+        smooth,
+        tail_gamma,
+    );
+    Ok((
+        Array1::from_vec(g).into_pyarray(py),
+        Array1::from_vec(h).into_pyarray(py),
+    ))
+}
+
+#[pyfunction]
+fn v1_leave_feature_gains<'py>(
+    py: Python<'py>,
+    nodes: PyReadonlyArray1<f64>,
+    weights: PyReadonlyArray1<f64>,
+    basis_e: PyReadonlyArray1<f64>,
+    players: PyReadonlyArray1<f64>,
+    y: PyReadonlyArray1<f64>,
+    rows: PyReadonlyArray1<i64>,
+    p: usize,
+    k: usize,
+) -> PyResult<Bound<'py, PyDict>> {
+    let idx: Vec<usize> = rows
+        .as_slice()
+        .map_err(|_| PyValueError::new_err("rows must be C-contiguous"))?
+        .iter()
+        .map(|&v| v as usize)
+        .collect();
+    let (gains, shape) = leave_feature_gains(
+        slice1(&nodes)?,
+        slice1(&weights)?,
+        slice1(&basis_e)?,
+        slice1(&players)?,
+        slice1(&y)?,
+        &idx,
+        p,
+        k,
+    )
+    .map_err(err)?;
+    let d = PyDict::new(py);
+    d.set_item("gains", gains)?;
+    d.set_item("shape_gains", shape)?;
+    Ok(d)
+}
+
+#[pyfunction]
+fn v1_crps_quadrature(
+    y: PyReadonlyArray1<f64>,
+    q: PyReadonlyArray2<f64>,
+    u: PyReadonlyArray1<f64>,
+    w: PyReadonlyArray1<f64>,
+) -> PyResult<f64> {
+    let ys = slice1(&y)?;
+    let qs = slice2(&q)?;
+    let us = slice1(&u)?;
+    let ws = slice1(&w)?;
+    crps_quadrature(ys, qs, us, ws).map_err(err)
+}
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyV1Model>()?;
     m.add_class::<PyFrechet>()?;
     m.add_class::<PyRobust>()?;
+    m.add_class::<PyHybrid>()?;
     m.add_function(wrap_pyfunction!(v1_gauss_legendre, m)?)?;
     m.add_function(wrap_pyfunction!(v1_hosking, m)?)?;
     m.add_function(wrap_pyfunction!(v1_weighted_pav, m)?)?;
@@ -803,5 +1120,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(v1_permutation_pvalue_lmoment, m)?)?;
     m.add_function(wrap_pyfunction!(v1_bootstrap_indices, m)?)?;
     m.add_function(wrap_pyfunction!(v1_coupling_w1, m)?)?;
+    m.add_function(wrap_pyfunction!(v1_fit_mean, m)?)?;
+    m.add_function(wrap_pyfunction!(v1_crps_quadrature, m)?)?;
+    m.add_function(wrap_pyfunction!(v1_pinball_gh, m)?)?;
+    m.add_function(wrap_pyfunction!(v1_leave_feature_gains, m)?)?;
     Ok(())
 }
