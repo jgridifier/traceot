@@ -129,3 +129,36 @@ Amendment 1 before any result".
   and are reported.
 * **D3 (H8 test calibration note).** The joint max-|t| test with B = 100 rejected 5.75% on a toy
   Gaussian null (2,000 draws, `sb_h8.py`), consistent with small-B bootstrap quantile noise. No change.
+
+## Run-plan deviations (logged 2026-10-12, before any TRACE or new-scenario result was viewed)
+
+TRACE binding: `traceot.shift_decompose` from main `c605797` (merged into this branch), built with
+maturin (release). Pre-run checks of TRACE_ADAPTER_SPEC.md §6 were run on random data and on a
+`null` smoke call inspected only for keys, shapes and run time.
+
+* **D4 (estimand on frozen tracks).** The frozen truth is the A-reference split. To score TRACE on the
+  *same* estimand as the frozen truth and the rivals, the frozen tracks score TRACE's
+  `split_anchor_A` (A-reference). TRACE's default order-free `split` is scored, as secondary, against an
+  order-free oracle truth computed by the same oracle (2e6 draws, seed 99, `Y_c'` added) and stored in
+  `benchmarks/results/trace_claims_truth_orderfree.json`. H8(b) on frozen scenarios uses
+  `split_anchor_A` bands vs frozen truth; on the shape scenarios `lsplit` bands vs Shapley truth (A2).
+* **D5 (TRACE configuration).** `K=4, folds=5, trim=0.99`, other arguments at their defaults
+  (`k_fit=4`, `n_quad=64`), one thread per worker (`RAYON_NUM_THREADS=1`).
+* **D6 (bootstrap streams not named before).** H8(a) extended null: data `seed_of("null200", rep)`,
+  bootstrap rows `seed_of("null200boot", rep)`, method seed per replicate `seed_of("mb", rep, b)`.
+  Shape-scenario coverage: frozen band design streams (`"boot"`, `"mb"`). H6 synthetic: method seed
+  `seed_of("m", rep)` for halves and replicates. Placebo: units in period A split by
+  `seed_of("placebo", k)`; bootstrap resamples units within each pseudo-period with
+  `seed_of("placebo_boot", k)`, B = 100.
+* **D7 (H5 contrast).** Rival B-reference reruns: every rival on `(XB, yB, XA, yA)` with the same seed,
+  pieces negated and roles swapped, on the full accuracy grid of the 11 frozen scenarios.
+  The rivals' totals `θ(y_B) − θ(y_A)` are computed by the harness from the samples.
+* **D8 (H5.2 total).** W2²(F̂_A, F̂_B) for H5.2 is computed by the harness as
+  `mean((sort(y_B) − sort(y_A))²)` (n_A = n_B), not taken from TRACE.
+* **D9 (Holm).** Holm is applied to the tests that have p-values: H6 (4, two-sided paired t),
+  H7 (5, two-sided paired t), H8(a) (1, exact one-sided binomial p for H0: FPR ≥ 0.09, which is ≤ 0.05
+  iff the CP bar passes). H8(b) is a bar without a p-value and is reported as pass/fail only.
+* **D10 (rival results reused).** Rival records for the frozen accuracy, invariance, real and coverage
+  tracks are the existing ShiftBench records (same seeds); rivals are not re-run there. The frozen
+  `scale` track for rivals never completed in the ShiftBench run (the run script stopped before it);
+  TRACE's scale cells are run here; rival scale cells are reported as missing.
