@@ -1,6 +1,7 @@
 """Binding tests for the shift decomposition. Numerics are in the Rust core."""
 
 import numpy as np
+import pytest
 
 from traceot import TraceV1, shift, shift_decompose
 
@@ -82,6 +83,38 @@ def test_bands_mark_a_constant_replicate_as_unresolved_at_zero_only_when_away():
     assert band["lo"][1] <= 2.0 <= band["hi"][1]
 
 
+def test_shift_decompose_rejects_short_samples_and_nonfinite_values():
+    x = np.zeros((4, 1))
+    y = np.zeros(4)
+    with pytest.raises(ValueError):
+        shift_decompose(x, y, x, y, folds=5)
+    bad = y.copy()
+    bad[0] = np.nan
+    with pytest.raises(ValueError):
+        shift_decompose(x, bad, x, y, folds=2)
+
+
+def _assert_channel_sums(got):
+    bary_a = np.asarray(got["bary_a"])
+    bary_phi = np.asarray(got["bary_phi"])
+    dc = bary_a.sum(axis=(1, 2))
+    assert np.allclose(dc, got["bary_dc"], atol=1e-9)
+    assert abs(float(bary_phi.sum()) - got["w2"]["bary"]) < 1e-9
+    marg = float(np.sum(got["marg_phi"]["comp"]) + np.sum(got["marg_phi"]["struct"]))
+    marg += got["resid_phi"]["comp"] + got["resid_phi"]["struct"]
+    assert abs(marg - got["w2"]["marginal"]) < 1e-9
+    assert np.allclose(
+        got["lsplit"]["comp"] + got["lsplit"]["struct"],
+        got["lmom"]["B"] - got["lmom"]["A"],
+        atol=1e-9,
+    )
+    assert abs(got["w2"]["gap"] - (got["w2"]["marginal"] - got["w2"]["bary"])) < 1e-12
+    assert got["config"]["centring"] == "pooled_mean"
+    assert np.allclose(got["feat_comp"], bary_a[0, 1:, 0], atol=0.0)
+    assert np.allclose(got["feat_struct"], bary_a[0, 1:, 1], atol=0.0)
+    assert abs(got["intercept"] - bary_a[0, 0, 1]) < 1e-15
+
+
 def test_shift_decompose_matches_the_adapter_and_ignores_row_order():
     rng = np.random.default_rng(2)
     n, p = 160, 3
@@ -90,25 +123,66 @@ def test_shift_decompose_matches_the_adapter_and_ignores_row_order():
     x_b[:, 0] += 0.35
     y_a = x_a[:, 0] - 0.4 * x_a[:, 1] + 0.2 * rng.normal(size=n)
     y_b = 0.15 + 1.2 * x_b[:, 0] - 0.4 * x_b[:, 1] + 0.2 * rng.normal(size=n)
-    kw = dict(k=3, n_quad=16, n_folds=2, k_fit=3, max_bins=8, max_rounds=4, n_boot=4)
+    kw = dict(k=3, n_quad=16, n_folds=2, k_fit=3, max_bins=8, max_rounds=4, n_boot=0)
     base = shift_decompose(x_a, y_a, x_b, y_b, seed=5, **kw)
     order_a = rng.permutation(n)
     order_b = rng.permutation(n)
     perm = shift_decompose(x_a[order_a], y_a[order_a], x_b[order_b], y_b[order_b], seed=5, **kw)
-    for name in ("mean", "sd", "q10", "q50", "q90", "lambda1"):
+    for name in ("mean", "sd", "q10", "q50", "q90"):
         assert name in base["split"]
-        assert np.allclose(base["split"][name], perm["split"][name], atol=1e-8)
-    assert np.allclose(base["feat_comp"], perm["feat_comp"], atol=1e-8)
-    assert np.allclose(base["feat_struct"], perm["feat_struct"], atol=1e-8)
+        assert np.allclose(base["split"][name], perm["split"][name], atol=1e-9)
+        anchor = 0.5 * (
+            np.array(base["split_anchor_A"][name]) + np.array(base["split_anchor_B"][name])
+        )
+        assert np.allclose(anchor, base["split"][name], atol=1e-12)
+        assert np.allclose(base["split_aref"][name], base["split_anchor_A"][name], atol=0.0)
+    assert "lambda1" not in base["split"]
+    assert np.allclose(base["feat_comp"], perm["feat_comp"], atol=1e-9)
+    assert np.allclose(base["feat_struct"], perm["feat_struct"], atol=1e-9)
     comp, struct = base["split"]["mean"]
-    assert abs((comp + struct) - (y_b.mean() - y_a.mean())) < 1e-8
-    assert abs(base["intercept"] + base["feat_struct"].sum() - struct) < 1e-8
+    assert abs((comp + struct) - (y_b.mean() - y_a.mean())) < 1e-9
     assert base["total_w2"] > 0
-    assert base["bands"]["reps"] == 4
-    assert base["bands"]["total_w2"][1] >= base["bands"]["total_w2"][0]
+    _assert_channel_sums(base)
     cols = np.array([2, 0, 1])
     inv = np.argsort(cols)
     swapped = shift_decompose(x_a[:, cols], y_a, x_b[:, cols], y_b, seed=5, **kw)
-    assert np.allclose(base["split"]["q50"], swapped["split"]["q50"], atol=1e-7)
-    assert np.allclose(base["feat_comp"], swapped["feat_comp"][inv], atol=1e-7)
-    assert np.allclose(base["feat_struct"], swapped["feat_struct"][inv], atol=1e-7)
+    assert np.allclose(base["split"]["q50"], swapped["split"]["q50"], atol=1e-9)
+    assert np.allclose(base["feat_comp"], swapped["feat_comp"][inv], atol=1e-9)
+    assert np.allclose(base["feat_struct"], swapped["feat_struct"][inv], atol=1e-9)
+    assert np.allclose(base["bary_a"][:, 1:], swapped["bary_a"][:, 1:][:, inv], atol=1e-9)
+    assert np.allclose(base["bary_a"][:, 0], swapped["bary_a"][:, 0], atol=1e-9)
+    assert np.allclose(base["interaction"][:, 1:], swapped["interaction"][:, 1:][:, inv], atol=1e-9)
+
+    flipped = shift_decompose(x_b, y_b, x_a, y_a, seed=5, **kw)
+    for name in base["split"]:
+        assert np.allclose(base["split"][name], -np.array(flipped["split"][name]), atol=1e-9)
+        assert np.allclose(
+            base["split_anchor_A"][name], -np.array(flipped["split_anchor_B"][name]), atol=1e-9
+        )
+    assert np.allclose(base["lsplit"]["comp"], -flipped["lsplit"]["comp"], atol=1e-9)
+    assert np.allclose(base["bary_a"], -flipped["bary_a"], atol=1e-9)
+    assert np.allclose(base["bary_phi"], flipped["bary_phi"], atol=1e-9)
+    assert np.allclose(base["marg_phi"]["comp"], flipped["marg_phi"]["comp"], atol=1e-9)
+    assert abs(base["resid_phi"]["comp"] - flipped["resid_phi"]["comp"]) < 1e-9
+    assert abs(base["resid_phi"]["struct"] - flipped["resid_phi"]["struct"]) < 1e-9
+
+    band_kw = dict(kw)
+    band_kw["n_boot"] = 4
+    banded = shift_decompose(x_a, y_a, x_b, y_b, seed=5, **band_kw)
+    assert banded["bands"]["reps"] == 4
+    assert banded["bands"]["critical"] >= 0.0
+    lo, hi = banded["bands"]["split_uniform"]["mean"]
+    assert lo[0] <= banded["split"]["mean"][0] <= hi[0]
+    assert banded["bands"]["total_w2"][1] >= banded["bands"]["total_w2"][0]
+
+    modeled = shift_decompose(x_a, y_a, x_b, y_b, seed=5, return_model=True, **kw)
+    model = modeled["model"]
+    assert model.rearranged is False
+    u = np.linspace(0.05, 0.95, 32)
+    qa = model.predict_quantile(x_a, u, "A")
+    qb = model.predict_quantile(x_b, u, "B")
+    assert qa.shape == (n, u.size)
+    assert qb.shape == (n, u.size)
+    ca = model.coef(x_a, "A")
+    assert ca.shape[0] == n
+    assert ca.shape[1] == modeled["config"]["K_fitted"]

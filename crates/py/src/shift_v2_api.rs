@@ -2,8 +2,8 @@
 
 #![allow(clippy::too_many_arguments)]
 
-use numpy::ndarray::{Array1, Array2};
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::ndarray::{Array1, Array2, Array3};
+use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
@@ -12,7 +12,7 @@ use traceot_core::trace::{
     entry_exit_from_models, entry_exit_split, explain_shift, hk_mass, marginal_from_laws,
     marginal_view, percentile_bands, permutation_marginal, permutation_w2_floor, quadratic_shapley,
     sample_lambda, shift_decompose, BaryView, DecomposeConfig, EntryExit, MarginalView,
-    PercentileBand, ShiftDecompose, ShiftReport, ShiftV2Config, V1Config,
+    PercentileBand, ShiftDecompose, ShiftModelHandle, ShiftReport, ShiftV2Config, V1Config,
 };
 use traceot_core::TraceError;
 
@@ -735,51 +735,253 @@ fn band_pair<'py>(
     PyList::new(py, [left, right])
 }
 
-fn put_decompose<'py>(py: Python<'py>, got: &ShiftDecompose) -> PyResult<Bound<'py, PyDict>> {
-    let split = PyDict::new(py);
-    let split_bands = PyDict::new(py);
-    for i in 0..got.names.len() {
-        let name = got.names[i].as_str();
-        split.set_item(name, pair(py, got.composition[i], got.structure[i])?)?;
-        split_bands.set_item(
-            name,
-            band_pair(
-                py,
-                got.composition_lo[i],
-                got.composition_hi[i],
-                got.structure_lo[i],
-                got.structure_hi[i],
-            )?,
+fn arr3<'py>(
+    py: Python<'py>,
+    v: Vec<f64>,
+    d0: usize,
+    d1: usize,
+    d2: usize,
+) -> Bound<'py, PyArray3<f64>> {
+    Array3::from_shape_vec((d0, d1, d2), v)
+        .expect("shape")
+        .into_pyarray(py)
+}
+
+fn split_dict<'py>(
+    py: Python<'py>,
+    names: &[String],
+    comp: &[f64],
+    structure: &[f64],
+) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    for i in 0..names.len() {
+        d.set_item(names[i].as_str(), pair(py, comp[i], structure[i])?)?;
+    }
+    Ok(d)
+}
+
+fn split_band_dict<'py>(
+    py: Python<'py>,
+    names: &[String],
+    comp_lo: &[f64],
+    comp_hi: &[f64],
+    struct_lo: &[f64],
+    struct_hi: &[f64],
+) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    for i in 0..names.len() {
+        d.set_item(
+            names[i].as_str(),
+            band_pair(py, comp_lo[i], comp_hi[i], struct_lo[i], struct_hi[i])?,
         )?;
     }
+    Ok(d)
+}
+
+fn role_dict<'py>(
+    py: Python<'py>,
+    comp: Vec<f64>,
+    structure: Vec<f64>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("comp", arr1(py, comp))?;
+    d.set_item("struct", arr1(py, structure))?;
+    Ok(d)
+}
+
+/// Fitted period curves for the H5.1b barycenter reconstruction.
+#[pyclass(name = "ShiftModel", module = "traceot._core")]
+struct PyShiftModel {
+    inner: ShiftModelHandle,
+}
+
+#[pymethods]
+impl PyShiftModel {
+    #[getter]
+    fn rearranged(&self) -> bool {
+        self.inner.rearranged()
+    }
+
+    /// `Q_t(u|x)` on the caller's column order. Shape `(n, len(u))`.
+    fn predict_quantile<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+        u: PyReadonlyArray1<'_, f64>,
+        period: &str,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let (n, _) = x.as_array().dim();
+        let (xs, uu) = (slice2(&x)?, slice1(&u)?);
+        let flat = py
+            .detach(|| self.inner.predict_quantile(xs, n, uu, period))
+            .map_err(err)?;
+        let nu = uu.len();
+        Ok(Array2::from_shape_vec((n, nu), flat)
+            .expect("shape")
+            .into_pyarray(py))
+    }
+
+    /// Coefficient-scale `c_{t,k}(x)` before rearrangement. Shape `(n, K_fit)`.
+    fn coef<'py>(
+        &self,
+        py: Python<'py>,
+        x: PyReadonlyArray2<'_, f64>,
+        period: &str,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let (n, _) = x.as_array().dim();
+        let xs = slice2(&x)?;
+        let k = match period {
+            "A" => self.inner.model_a.k_fit,
+            "B" => self.inner.model_b.k_fit,
+            _ => {
+                return Err(PyValueError::new_err("period must be \"A\" or \"B\""));
+            }
+        };
+        let flat = py.detach(|| self.inner.coef(xs, n, period)).map_err(err)?;
+        Ok(Array2::from_shape_vec((n, k), flat)
+            .expect("shape")
+            .into_pyarray(py))
+    }
+}
+
+fn put_decompose<'py>(py: Python<'py>, got: &ShiftDecompose) -> PyResult<Bound<'py, PyDict>> {
+    let p1 = got.p + 1;
+    let k = got.k_reported;
+    let split = split_dict(py, &got.names, &got.composition, &got.structure)?;
+    let split_aref = split_dict(py, &got.names, &got.anchor_a_comp, &got.anchor_a_struct)?;
+    let split_anchor_a = split_dict(py, &got.names, &got.anchor_a_comp, &got.anchor_a_struct)?;
+    let split_anchor_b = split_dict(py, &got.names, &got.anchor_b_comp, &got.anchor_b_struct)?;
+    let lmom = PyDict::new(py);
+    lmom.set_item("A", arr1(py, got.lmom_a.clone()))?;
+    lmom.set_item("B", arr1(py, got.lmom_b.clone()))?;
+    lmom.set_item("C", arr1(py, got.lmom_c.clone()))?;
+    lmom.set_item("Cp", arr1(py, got.lmom_cp.clone()))?;
+    let lsplit = role_dict(py, got.lsplit_comp.clone(), got.lsplit_struct.clone())?;
+    let lsplit_aref = role_dict(
+        py,
+        got.lsplit_aref_comp.clone(),
+        got.lsplit_aref_struct.clone(),
+    )?;
+    let marg_phi = role_dict(py, got.marg_phi_comp.clone(), got.marg_phi_struct.clone())?;
+    let resid_phi = PyDict::new(py);
+    resid_phi.set_item("comp", got.resid_phi_comp)?;
+    resid_phi.set_item("struct", got.resid_phi_struct)?;
+    let w2 = PyDict::new(py);
+    w2.set_item("marginal", got.w2_marginal)?;
+    w2.set_item("bary", got.w2_bary)?;
+    w2.set_item("gap", got.w2_gap)?;
+    let config = PyDict::new(py);
+    config.set_item("K_fitted", got.k_fitted)?;
+    config.set_item("K_reported", got.k_reported)?;
+    config.set_item("folds", got.n_folds)?;
+    config.set_item("trim", got.trim)?;
+    config.set_item("centring", "pooled_mean")?;
+    config.set_item("version", got.version.as_str())?;
+
+    let split_bands = split_band_dict(
+        py,
+        &got.names,
+        &got.composition_lo,
+        &got.composition_hi,
+        &got.structure_lo,
+        &got.structure_hi,
+    )?;
+    let split_uniform = split_band_dict(
+        py,
+        &got.names,
+        &got.composition_ulo,
+        &got.composition_uhi,
+        &got.structure_ulo,
+        &got.structure_uhi,
+    )?;
     let feat_comp_band = PyDict::new(py);
     feat_comp_band.set_item("lo", arr1(py, got.feat_comp_lo.clone()))?;
     feat_comp_band.set_item("hi", arr1(py, got.feat_comp_hi.clone()))?;
+    feat_comp_band.set_item("uniform_lo", arr1(py, got.feat_comp_ulo.clone()))?;
+    feat_comp_band.set_item("uniform_hi", arr1(py, got.feat_comp_uhi.clone()))?;
     let feat_struct_band = PyDict::new(py);
     feat_struct_band.set_item("lo", arr1(py, got.feat_struct_lo.clone()))?;
     feat_struct_band.set_item("hi", arr1(py, got.feat_struct_hi.clone()))?;
+    feat_struct_band.set_item("uniform_lo", arr1(py, got.feat_struct_ulo.clone()))?;
+    feat_struct_band.set_item("uniform_hi", arr1(py, got.feat_struct_uhi.clone()))?;
+    let lsplit_band = PyDict::new(py);
+    lsplit_band.set_item(
+        "comp",
+        role_ends(py, &got.lsplit_comp_lo, &got.lsplit_comp_hi)?,
+    )?;
+    lsplit_band.set_item(
+        "struct",
+        role_ends(py, &got.lsplit_struct_lo, &got.lsplit_struct_hi)?,
+    )?;
+    lsplit_band.set_item(
+        "uniform_comp",
+        role_ends(py, &got.lsplit_comp_ulo, &got.lsplit_comp_uhi)?,
+    )?;
+    lsplit_band.set_item(
+        "uniform_struct",
+        role_ends(py, &got.lsplit_struct_ulo, &got.lsplit_struct_uhi)?,
+    )?;
+    lsplit_band.set_item("critical", got.lsplit_critical)?;
     let bands = PyDict::new(py);
     bands.set_item("reps", got.boot_reps)?;
+    bands.set_item("critical", got.critical)?;
     bands.set_item("split", split_bands)?;
+    bands.set_item("split_uniform", split_uniform)?;
+    bands.set_item("lsplit", lsplit_band)?;
     bands.set_item("feat_comp", feat_comp_band)?;
     bands.set_item("feat_struct", feat_struct_band)?;
+    bands.set_item("feat_critical", got.feat_critical)?;
     bands.set_item("intercept", pair(py, got.intercept_lo, got.intercept_hi)?)?;
     bands.set_item("total_w2", pair(py, got.total_w2_lo, got.total_w2_hi)?)?;
+
     let d = PyDict::new(py);
     d.set_item("split", split)?;
+    d.set_item("split_aref", split_aref)?;
+    d.set_item("split_anchor_A", split_anchor_a)?;
+    d.set_item("split_anchor_B", split_anchor_b)?;
     d.set_item("feat_comp", arr1(py, got.feat_comp.clone()))?;
     d.set_item("feat_struct", arr1(py, got.feat_struct.clone()))?;
     d.set_item("intercept", got.intercept)?;
     d.set_item("total_w2", got.total_w2)?;
+    d.set_item("config", config)?;
+    d.set_item("lmom", lmom)?;
+    d.set_item("lsplit", lsplit)?;
+    d.set_item("lsplit_aref", lsplit_aref)?;
+    d.set_item("bary_a", arr3(py, got.bary_a.clone(), k, p1, 2))?;
+    d.set_item("bary_dc", arr1(py, got.bary_dc.clone()))?;
+    d.set_item("bary_phi", arr3(py, got.bary_phi.clone(), k, p1, 2))?;
+    d.set_item("marg_phi", marg_phi)?;
+    d.set_item("resid_phi", resid_phi)?;
+    d.set_item("w2", w2)?;
+    d.set_item("trim_mass", got.trim_mass)?;
+    d.set_item("interaction", arr2(py, got.interaction.clone(), k, p1))?;
     d.set_item("bands", bands)?;
+    if let Some(model) = &got.model {
+        d.set_item(
+            "model",
+            Py::new(
+                py,
+                PyShiftModel {
+                    inner: model.clone(),
+                },
+            )?,
+        )?;
+    }
+    Ok(d)
+}
+
+fn role_ends<'py>(py: Python<'py>, lo: &[f64], hi: &[f64]) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("lo", arr1(py, lo.to_vec()))?;
+    d.set_item("hi", arr1(py, hi.to_vec()))?;
     Ok(d)
 }
 
 #[pyfunction]
 #[pyo3(signature = (
-    x_a, y_a, x_b, y_b, seed=0, k=6, n_quad=64, n_folds=5, trim_quantile=0.995,
-    logit_ridge=1e-6, logit_iters=25, logit_tol=1e-8, k_fit=4, max_bins=16,
-    max_rounds=6, fit_tol=1e-6, n_boot=0
+    x_a, y_a, x_b, y_b, seed=0, k=4, n_quad=64, n_folds=5, trim_quantile=0.99,
+    logit_ridge=1e-6, logit_iters=40, logit_tol=1e-12, k_fit=4, max_bins=16,
+    max_rounds=6, fit_tol=1e-6, n_boot=0, return_model=false
 ))]
 fn shift_v2_decompose<'py>(
     py: Python<'py>,
@@ -800,6 +1002,7 @@ fn shift_v2_decompose<'py>(
     max_rounds: usize,
     fit_tol: f64,
     n_boot: usize,
+    return_model: bool,
 ) -> PyResult<Bound<'py, PyDict>> {
     let (na, _) = x_a.as_array().dim();
     let (nb, _) = x_b.as_array().dim();
@@ -817,6 +1020,7 @@ fn shift_v2_decompose<'py>(
         max_rounds,
         fit_tol,
         n_boot,
+        return_model,
     };
     let (xa, ya, xb, yb) = (slice2(&x_a)?, slice1(&y_a)?, slice2(&x_b)?, slice1(&y_b)?);
     let got = py
@@ -826,6 +1030,7 @@ fn shift_v2_decompose<'py>(
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyShiftModel>()?;
     m.add_function(wrap_pyfunction!(shift_v2_sample_lambda, m)?)?;
     m.add_function(wrap_pyfunction!(shift_v2_from_laws, m)?)?;
     m.add_function(wrap_pyfunction!(shift_v2_quadratic_phi, m)?)?;

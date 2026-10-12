@@ -385,6 +385,30 @@ def permutation_marginal(
     )
 
 
+def _resolve_alias(primary, alias, default, label: str):
+    if primary is None and alias is None:
+        return default
+    if primary is None:
+        return alias
+    if alias is not None and primary != alias:
+        raise ValueError(f"{label} was given two different values")
+    return primary
+
+
+def _split_pairs(split: dict) -> dict:
+    return {name: (float(pair[0]), float(pair[1])) for name, pair in split.items()}
+
+
+def _band_pairs(split: dict) -> dict:
+    return {
+        name: (
+            (float(ends[0][0]), float(ends[0][1])),
+            (float(ends[1][0]), float(ends[1][1])),
+        )
+        for name, ends in split.items()
+    }
+
+
 def shift_decompose(
     X_a,
     y_a,
@@ -392,37 +416,53 @@ def shift_decompose(
     y_b,
     seed: int = 0,
     *,
-    k: int = 6,
+    K: int | None = None,
+    k: int | None = None,
+    folds: int | None = None,
+    n_folds: int | None = None,
+    trim: float | None = None,
+    trim_quantile: float | None = None,
+    return_model: bool = False,
     n_quad: int = 64,
-    n_folds: int = 5,
-    trim_quantile: float = 0.995,
     logit_ridge: float = 1e-6,
-    logit_iters: int = 25,
-    logit_tol: float = 1e-8,
+    logit_iters: int = 40,
+    logit_tol: float = 1e-12,
     k_fit: int = 4,
     max_bins: int = 16,
     max_rounds: int = 6,
     fit_tol: float = 1e-6,
     n_boot: int = 0,
 ) -> dict:
-    """Composition and structure of a shift between two periods.
+    """Order-free composition/structure split of a shift between two periods.
 
     ``X`` is used as given (features arrive centred at the pooled mean).
-    ``split`` maps each statistic to ``(composition, structure)`` for ``mean``,
-    ``sd``, ``q10``, ``q50``, ``q90``, and ``lambda1`` … ``lambdaK`` (channel
-    ``c`` is ``lambda{c+1}``). The counterfactual keeps the structure of period A
-    and the covariates of period B. ``feat_comp`` and ``feat_struct`` are the
-    mean channel, one entry per feature. ``intercept`` is mean structure minus
-    the sum of ``feat_struct``. ``total_w2`` is the outcome ``W2²`` and is not
-    added into the split. ``bands`` holds pointwise 2.5/97.5 bootstrap
-    percentiles; ``n_boot=0`` sets both ends equal to the point.
+    ``split`` maps ``mean``, ``sd``, ``q10``, ``q50`` and ``q90`` to
+    ``(composition, structure)``, the average of the two orderings, so swapping
+    the periods negates every piece. ``split_anchor_A`` (also ``split_aref``)
+    is ``(θ_C − θ_A, θ_B − θ_C)`` with ``C = (covariates B, structure A)``.
+    ``split_anchor_B`` is the other ordering. L-moments of the four laws live
+    in ``lmom``; their order-free and A-reference splits are ``lsplit`` and
+    ``lsplit_aref``.
 
-    Folds are the rank of a row hash modulo ``K``. The hash mixes the seed with
-    every feature without depending on column order, then the rows are sorted
-    by that hash, so a permutation of rows does not change the result.
+    ``feat_comp`` and ``feat_struct`` are the mean channel (``k = 0``) of the
+    barycenter, one λ₁-scale Shapley piece per feature. ``intercept`` is that
+    channel's intercept structure piece. ``bary_a`` is ``(K, p+1, 2)`` on the
+    raw coefficient scale and ``bary_phi`` the matching ``W2²`` pieces.
+    ``w2`` holds the marginal quantile ``W2²``, the barycenter ``W2²``, and
+    their gap. ``total_w2`` repeats the marginal value.
+
+    ``return_model=True`` adds ``model``, a ``ShiftModel`` with
+    ``predict_quantile(X, u, period)``, ``coef(X, period)`` and ``rearranged``.
+    Folds are ``hash(seed, row) mod folds``. ``n_boot`` draws a stratified
+    bootstrap; ``bands["split"]`` is the pointwise percentile band and
+    ``bands["split_uniform"]`` is the joint max-|t| band across those pieces.
+    ``n_boot=0`` sets every end equal to the point.
     """
     if seed < 0:
         raise ValueError("seed must be non-negative")
+    reported = _resolve_alias(K, k, 4, "K")
+    nfolds = _resolve_alias(folds, n_folds, 5, "folds")
+    trim_q = _resolve_alias(trim, trim_quantile, 0.99, "trim")
     X_a = _check_X(X_a)
     X_b = _check_X(X_b, X_a.shape[1])
     y_a = _check_y(y_a, X_a.shape[0])
@@ -434,10 +474,10 @@ def shift_decompose(
             X_b,
             y_b,
             int(seed),
-            int(k),
+            int(reported),
             int(n_quad),
-            int(n_folds),
-            float(trim_quantile),
+            int(nfolds),
+            float(trim_q),
             float(logit_ridge),
             int(logit_iters),
             float(logit_tol),
@@ -446,19 +486,21 @@ def shift_decompose(
             int(max_rounds),
             float(fit_tol),
             int(n_boot),
+            bool(return_model),
         )
     )
-    raw["split"] = {name: (float(pair[0]), float(pair[1])) for name, pair in raw["split"].items()}
+    for key in ("split", "split_aref", "split_anchor_A", "split_anchor_B"):
+        raw[key] = _split_pairs(raw[key])
     bands = raw["bands"]
-    bands["split"] = {
-        name: (
-            (float(ends[0][0]), float(ends[0][1])),
-            (float(ends[1][0]), float(ends[1][1])),
-        )
-        for name, ends in bands["split"].items()
-    }
+    bands["split"] = _band_pairs(bands["split"])
+    bands["split_uniform"] = _band_pairs(bands["split_uniform"])
     bands["intercept"] = (float(bands["intercept"][0]), float(bands["intercept"][1]))
     bands["total_w2"] = (float(bands["total_w2"][0]), float(bands["total_w2"][1]))
+    bands["critical"] = float(bands["critical"])
+    bands["feat_critical"] = float(bands["feat_critical"])
     raw["intercept"] = float(raw["intercept"])
     raw["total_w2"] = float(raw["total_w2"])
+    raw["trim_mass"] = float(raw["trim_mass"])
+    raw["resid_phi"] = {role: float(value) for role, value in raw["resid_phi"].items()}
+    raw["w2"] = {role: float(value) for role, value in raw["w2"].items()}
     return raw

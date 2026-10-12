@@ -50,9 +50,10 @@ pub use shift_v2::{
     barycenter_view, bootstrap_barycenter, bootstrap_entry_exit, bootstrap_marginal,
     entry_exit_from_models, entry_exit_split, explain_shift, hk_mass, marginal_from_laws,
     marginal_view, mean_curve, percentile_bands, permutation_marginal, permutation_w2_floor,
-    quadratic_shapley, sample_lambda, shapley_two, shift_decompose, w2_from_lambda, BaryDraw,
-    BaryView, DecomposeConfig, EntryExit, MarginalDraw, MarginalView, PercentileBand,
-    PermutationFloor, ShiftDecompose, ShiftReport, ShiftV2Config, TwoPlayer,
+    quadratic_shapley, sample_lambda, shapley_two, shift_core_version, shift_decompose,
+    w2_from_lambda, BaryDraw, BaryView, DecomposeConfig, EntryExit, MarginalDraw, MarginalView,
+    PercentileBand, PermutationFloor, ShiftDecompose, ShiftModelHandle, ShiftReport, ShiftV2Config,
+    TwoPlayer,
 };
 pub use v1fit::{
     attribute, channel_energy, channel_slope, codes_of, feature_pinball_gains,

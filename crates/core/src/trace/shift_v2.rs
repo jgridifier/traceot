@@ -12,7 +12,10 @@
 
 use super::legendre::{gauss_legendre_01, pstar_all, GaussLegendre};
 use super::shift::SplitMix64;
-use super::v1fit::{fit_v1, MonoMode, ReportKind, V1Config, V1Model};
+use super::v1fit::{
+    curve_coefficients, fit_v1, player_coefficients, predict_quantiles, MonoMode, ReportKind,
+    V1Config, V1Model,
+};
 use crate::error::{Result, TraceError};
 use crate::linalg::solve_spd;
 use crate::scalable::binning::bin_column_into;
@@ -1505,11 +1508,13 @@ pub fn permutation_marginal(
 
 /// Knobs for [`shift_decompose`]. The benchmark entry point, not the
 /// pre-registration path: folds and column order are functions of the seed and
-/// the row contents.
+/// the row contents. Defaults match the adapter specification (`K = 4`,
+/// five folds, trim `0.99`).
 #[derive(Clone, Debug)]
 pub struct DecomposeConfig {
     pub seed: u64,
-    /// L-moment channels reported beside the named statistics. `lambda1` is channel 0.
+    /// Channels reported in `lmom`, `bary_*` and `marg_phi`. The fit uses at
+    /// least this many.
     pub k: usize,
     pub n_quad: usize,
     pub n_folds: usize,
@@ -1521,55 +1526,183 @@ pub struct DecomposeConfig {
     pub max_bins: usize,
     pub max_rounds: usize,
     pub fit_tol: f64,
-    /// Bootstrap replicates for the percentile bands. `0` returns the point as both ends.
+    /// Bootstrap replicates. `0` leaves every band equal to the point.
     pub n_boot: usize,
+    /// When set, [`ShiftDecompose::model`] carries the two fitted curves.
+    pub return_model: bool,
 }
 
 impl Default for DecomposeConfig {
     fn default() -> Self {
         Self {
             seed: 0,
-            k: 6,
+            k: 4,
             n_quad: 64,
             n_folds: 5,
-            trim_quantile: 0.995,
+            trim_quantile: 0.99,
             logit_ridge: 1e-6,
-            logit_iters: 25,
-            logit_tol: 1e-8,
+            logit_iters: 40,
+            logit_tol: 1e-12,
             k_fit: 4,
             max_bins: 16,
             max_rounds: 6,
             fit_tol: 1e-6,
             n_boot: 0,
+            return_model: false,
         }
     }
 }
 
-/// One call of the benchmark decomposition. `names[i]` is a statistic whose
-/// composition and structure use the single counterfactual "structure of A,
-/// covariates of B".
+/// Core version string recorded in `config`.
+pub fn shift_core_version() -> &'static str {
+    concat!("traceot-core ", env!("CARGO_PKG_VERSION"))
+}
+
+/// Both period fits, in the canonical column order used internally.
+/// `col_order[canonical] = original`.
+#[derive(Clone, Debug)]
+pub struct ShiftModelHandle {
+    pub model_a: V1Model,
+    pub model_b: V1Model,
+    pub col_order: Vec<usize>,
+}
+
+impl ShiftModelHandle {
+    pub fn rearranged(&self) -> bool {
+        false
+    }
+
+    fn model(&self, period: &str) -> Result<&V1Model> {
+        match period {
+            "A" => Ok(&self.model_a),
+            "B" => Ok(&self.model_b),
+            _ => Err(TraceError::InvalidArgument(
+                "period must be \"A\" or \"B\"".into(),
+            )),
+        }
+    }
+
+    fn align(&self, x: &[f64], n: usize) -> Result<Vec<f64>> {
+        let p = self.col_order.len();
+        if n == 0 || x.len() != n * p {
+            return Err(TraceError::Shape(
+                "X does not match the model feature count".into(),
+            ));
+        }
+        Ok(apply_column_order(x, n, p, &self.col_order))
+    }
+
+    /// Fitted quantile curves. Monotone rearrangement is off (`rearranged` is false).
+    pub fn predict_quantile(
+        &self,
+        x: &[f64],
+        n: usize,
+        u: &[f64],
+        period: &str,
+    ) -> Result<Vec<f64>> {
+        let model = self.model(period)?;
+        let aligned = self.align(x, n)?;
+        predict_quantiles(model, &aligned, n, u, false)
+    }
+
+    /// Coefficient-scale `c_{t,k}(x) = α_k(x) √(2k+1)`, before rearrangement.
+    /// Row-major `n × K_fit`.
+    pub fn coef(&self, x: &[f64], n: usize, period: &str) -> Result<Vec<f64>> {
+        let model = self.model(period)?;
+        let aligned = self.align(x, n)?;
+        let p = self.col_order.len();
+        let k = model.k_fit;
+        let players = player_coefficients(model, &aligned, n)?;
+        let alpha = curve_coefficients(&players, n, p, k);
+        let mut c = vec![0.0; n * k];
+        for i in 0..n {
+            for ch in 0..k {
+                c[i * k + ch] = alpha[i * k + ch] * ((2 * ch + 1) as f64).sqrt();
+            }
+        }
+        Ok(c)
+    }
+}
+
+/// One call of the benchmark decomposition.
+///
+/// `composition` / `structure` are the order-free split of `mean`, `sd`,
+/// `q10`, `q50` and `q90`. `anchor_a_*` is the A-reference path
+/// `(θ_C − θ_A, θ_B − θ_C)` and `anchor_b_*` is the other ordering.
+/// `bary_a` is `(K, p+1, 2)` on the raw `c` scale, player 0 the intercept,
+/// axis 2 `(comp, struct)`.
 #[derive(Clone, Debug)]
 pub struct ShiftDecompose {
     pub names: Vec<String>,
     pub composition: Vec<f64>,
     pub structure: Vec<f64>,
+    pub anchor_a_comp: Vec<f64>,
+    pub anchor_a_struct: Vec<f64>,
+    pub anchor_b_comp: Vec<f64>,
+    pub anchor_b_struct: Vec<f64>,
     pub feat_comp: Vec<f64>,
     pub feat_struct: Vec<f64>,
     pub intercept: f64,
     pub total_w2: f64,
+    pub lmom_a: Vec<f64>,
+    pub lmom_b: Vec<f64>,
+    pub lmom_c: Vec<f64>,
+    pub lmom_cp: Vec<f64>,
+    pub lsplit_comp: Vec<f64>,
+    pub lsplit_struct: Vec<f64>,
+    pub lsplit_aref_comp: Vec<f64>,
+    pub lsplit_aref_struct: Vec<f64>,
+    pub bary_a: Vec<f64>,
+    pub bary_dc: Vec<f64>,
+    pub bary_phi: Vec<f64>,
+    pub marg_phi_comp: Vec<f64>,
+    pub marg_phi_struct: Vec<f64>,
+    pub resid_phi_comp: f64,
+    pub resid_phi_struct: f64,
+    pub w2_marginal: f64,
+    pub w2_bary: f64,
+    pub w2_gap: f64,
+    pub trim_mass: f64,
+    pub interaction: Vec<f64>,
+    pub k_reported: usize,
+    pub k_fitted: usize,
+    pub n_folds: usize,
+    pub trim: f64,
+    pub p: usize,
+    pub version: String,
     pub boot_reps: usize,
+    pub critical: f64,
     pub composition_lo: Vec<f64>,
     pub composition_hi: Vec<f64>,
     pub structure_lo: Vec<f64>,
     pub structure_hi: Vec<f64>,
+    pub composition_ulo: Vec<f64>,
+    pub composition_uhi: Vec<f64>,
+    pub structure_ulo: Vec<f64>,
+    pub structure_uhi: Vec<f64>,
+    pub lsplit_comp_lo: Vec<f64>,
+    pub lsplit_comp_hi: Vec<f64>,
+    pub lsplit_struct_lo: Vec<f64>,
+    pub lsplit_struct_hi: Vec<f64>,
+    pub lsplit_comp_ulo: Vec<f64>,
+    pub lsplit_comp_uhi: Vec<f64>,
+    pub lsplit_struct_ulo: Vec<f64>,
+    pub lsplit_struct_uhi: Vec<f64>,
+    pub lsplit_critical: f64,
     pub feat_comp_lo: Vec<f64>,
     pub feat_comp_hi: Vec<f64>,
     pub feat_struct_lo: Vec<f64>,
     pub feat_struct_hi: Vec<f64>,
+    pub feat_comp_ulo: Vec<f64>,
+    pub feat_comp_uhi: Vec<f64>,
+    pub feat_struct_ulo: Vec<f64>,
+    pub feat_struct_uhi: Vec<f64>,
+    pub feat_critical: f64,
     pub intercept_lo: f64,
     pub intercept_hi: f64,
     pub total_w2_lo: f64,
     pub total_w2_hi: f64,
+    pub model: Option<ShiftModelHandle>,
 }
 
 #[derive(Clone, Debug)]
@@ -1577,10 +1710,39 @@ struct DecomposePoint {
     names: Vec<String>,
     composition: Vec<f64>,
     structure: Vec<f64>,
+    anchor_a_comp: Vec<f64>,
+    anchor_a_struct: Vec<f64>,
+    anchor_b_comp: Vec<f64>,
+    anchor_b_struct: Vec<f64>,
     feat_comp: Vec<f64>,
     feat_struct: Vec<f64>,
     intercept: f64,
     total_w2: f64,
+    lmom_a: Vec<f64>,
+    lmom_b: Vec<f64>,
+    lmom_c: Vec<f64>,
+    lmom_cp: Vec<f64>,
+    lsplit_comp: Vec<f64>,
+    lsplit_struct: Vec<f64>,
+    lsplit_aref_comp: Vec<f64>,
+    lsplit_aref_struct: Vec<f64>,
+    bary_a: Vec<f64>,
+    bary_dc: Vec<f64>,
+    bary_phi: Vec<f64>,
+    marg_phi_comp: Vec<f64>,
+    marg_phi_struct: Vec<f64>,
+    resid_phi_comp: f64,
+    resid_phi_struct: f64,
+    w2_marginal: f64,
+    w2_bary: f64,
+    w2_gap: f64,
+    trim_mass: f64,
+    interaction: Vec<f64>,
+    k_reported: usize,
+    k_fitted: usize,
+    n_folds: usize,
+    trim: f64,
+    p: usize,
 }
 
 fn canonical_bits(v: f64) -> u64 {
@@ -1644,7 +1806,9 @@ fn column_keys(
             h ^= mix_bits(canonical_bits(x_a[i * p + j]) ^ row_a[i]);
         }
         for i in 0..n_b {
-            h ^= mix_bits(canonical_bits(x_b[i * p + j]) ^ row_b[i].rotate_left(13));
+            // Same mix as period A. The column id is then unchanged by a period swap,
+            // so the canonical layout — and the fit — exchange exactly.
+            h ^= mix_bits(canonical_bits(x_b[i * p + j]) ^ row_b[i]);
         }
         keys[j] = h;
     }
@@ -1674,14 +1838,6 @@ fn apply_column_order(x: &[f64], n: usize, p: usize, order: &[usize]) -> Vec<f64
         for (new_j, &old_j) in order.iter().enumerate() {
             out[i * p + new_j] = x[i * p + old_j];
         }
-    }
-    out
-}
-
-fn scatter_to_original(canon: &[f64], order: &[usize]) -> Vec<f64> {
-    let mut out = vec![0.0; canon.len()];
-    for (new_j, &old_j) in order.iter().enumerate() {
-        out[old_j] = canon[new_j];
     }
     out
 }
@@ -1738,18 +1894,6 @@ fn standardize_pair(a: &mut [f64], n_a: usize, b: &mut [f64], n_b: usize, p: usi
 /// Balanced folds after the rows have been sorted by [`row_key`]. Rank `i` maps
 /// to fold `i % K`, so the assignment follows the seed through that sort and
 /// does not follow the order the caller stored the rows in.
-fn rank_folds(n_a: usize, n_b: usize, k: usize) -> Vec<usize> {
-    let k = k.max(1);
-    let mut folds = vec![0usize; n_a + n_b];
-    for i in 0..n_a {
-        folds[i] = i % k;
-    }
-    for i in 0..n_b {
-        folds[n_a + i] = i % k;
-    }
-    folds
-}
-
 fn mean_and_sd(y: &[f64]) -> (f64, f64) {
     let n = y.len() as f64;
     let mean = y.iter().sum::<f64>() / n;
@@ -1840,36 +1984,47 @@ fn unweighted_quantile(y: &[f64], q: f64) -> f64 {
     percentile_sorted(&sorted, q)
 }
 
-fn push_split(comp: &mut Vec<f64>, structure: &mut Vec<f64>, c: f64, s: f64) {
-    comp.push(c);
-    structure.push(s);
+fn orientation_key(x: &[f64], y: &[f64], n: usize, p: usize, seed: u64) -> u64 {
+    let mut h = 0u64;
+    for i in 0..n {
+        let rk = row_key(seed, &x[i * p..(i + 1) * p], y[i]);
+        h ^= mix_bits(rk ^ canonical_bits(y[i]));
+    }
+    h
 }
 
-fn decompose_point(
-    x_a: &[f64],
-    y_a: &[f64],
+/// Period-odds `lp = logit P(A|x)`, with the labelled sample oriented so that
+/// swapping the period arguments refits the same design and only the sign of
+/// `lp` changes.
+fn cross_fit_oriented_lp(
+    xa: &[f64],
+    ya: &[f64],
     n_a: usize,
-    x_b: &[f64],
-    y_b: &[f64],
+    xb: &[f64],
+    yb: &[f64],
     n_b: usize,
+    p: usize,
     cfg: &DecomposeConfig,
-) -> Result<DecomposePoint> {
-    let p = check_period(x_a, y_a, n_a, x_b, y_b, n_b)?;
-    if cfg.k == 0 || cfg.n_folds < 2 {
-        return Err(TraceError::InvalidArgument(
-            "decomposition needs K ≥ 1 and at least two folds".into(),
-        ));
+) -> Result<Vec<f64>> {
+    let flip =
+        orientation_key(xb, yb, n_b, p, cfg.seed) < orientation_key(xa, ya, n_a, p, cfg.seed);
+    let (x1, y1, n1, x2, y2, n2) = if flip {
+        (xb, yb, n_b, xa, ya, n_a)
+    } else {
+        (xa, ya, n_a, xb, yb, n_b)
+    };
+    let mut z1 = with_squares(x1, n1, p);
+    let mut z2 = with_squares(x2, n2, p);
+    standardize_pair(&mut z1, n1, &mut z2, n2, p * 2);
+    let mut folds = Vec::with_capacity(n1 + n2);
+    for i in 0..n1 {
+        let key = row_key(cfg.seed, &x1[i * p..(i + 1) * p], y1[i]);
+        folds.push((key % cfg.n_folds as u64) as usize);
     }
-    let (xa, ya) = reorder_period(x_a, y_a, n_a, p, cfg.seed);
-    let (xb, yb) = reorder_period(x_b, y_b, n_b, p, cfg.seed);
-    let col_order = canonical_column_order(&xa, &ya, n_a, &xb, &yb, n_b, p, cfg.seed);
-    let xa_m = apply_column_order(&xa, n_a, p, &col_order);
-    let xb_m = apply_column_order(&xb, n_b, p, &col_order);
-
-    let mut xa_z = with_squares(&xa_m, n_a, p);
-    let mut xb_z = with_squares(&xb_m, n_b, p);
-    standardize_pair(&mut xa_z, n_a, &mut xb_z, n_b, p * 2);
-    let folds = rank_folds(n_a, n_b, cfg.n_folds);
+    for i in 0..n2 {
+        let key = row_key(cfg.seed, &x2[i * p..(i + 1) * p], y2[i]);
+        folds.push((key % cfg.n_folds as u64) as usize);
+    }
     let logit_cfg = ShiftV2Config {
         k: cfg.k,
         n_quad: cfg.n_quad,
@@ -1881,61 +2036,83 @@ fn decompose_point(
         seed: cfg.seed,
     };
     let pooled = Pooled {
-        x_a: &xa_z,
-        n_a,
-        x_b: &xb_z,
-        n_b,
+        x_a: &z1,
+        n_a: n1,
+        x_b: &z2,
+        n_b: n2,
         p: p * 2,
     };
-    let lp = cross_fit_lp_folds(&pooled, &folds, cfg.n_folds, &logit_cfg)?;
-    let prior_a = (n_a as f64 / n_b as f64).ln();
-    let mut w = vec![0.0; n_a];
-    for i in 0..n_a {
-        // 1/ψ reweights period A onto the covariate law of period B.
-        let z = (-lp[i] + prior_a).clamp(-30.0, 30.0);
-        w[i] = z.exp();
+    let lp_fit = cross_fit_lp_folds(&pooled, &folds, cfg.n_folds, &logit_cfg)?;
+    let mut lp = vec![0.0; n_a + n_b];
+    if !flip {
+        lp.copy_from_slice(&lp_fit);
+    } else {
+        // The fit's positive class is the caller's period B.
+        for i in 0..n_b {
+            lp[n_a + i] = -lp_fit[i];
+        }
+        for i in 0..n_a {
+            lp[i] = -lp_fit[n_b + i];
+        }
     }
-    trim_and_normalize(&mut w, cfg.trim_quantile)?;
+    Ok(lp)
+}
 
-    let (mean_a, sd_a) = mean_and_sd(&ya);
-    let (mean_b, sd_b) = mean_and_sd(&yb);
-    let (mean_c, sd_c) = weighted_mean_sd(&ya, &w);
-    let mut composition = Vec::with_capacity(5 + cfg.k);
-    let mut structure = Vec::with_capacity(5 + cfg.k);
-    let mut names = Vec::with_capacity(5 + cfg.k);
-    for (name, a, c, b) in [("mean", mean_a, mean_c, mean_b), ("sd", sd_a, sd_c, sd_b)] {
-        names.push(name.to_string());
-        push_split(&mut composition, &mut structure, c - a, b - c);
+fn trimmed_share(w_c: &mut [f64], w_cp: &mut [f64], q: f64) -> Result<f64> {
+    let sum_c: f64 = w_c.iter().sum();
+    let sum_cp: f64 = w_cp.iter().sum();
+    let (mass_c, _) = trim_and_normalize(w_c, q)?;
+    let (mass_cp, _) = trim_and_normalize(w_cp, q)?;
+    let denom = sum_c + sum_cp;
+    if !(denom > 0.0) {
+        return Ok(0.0);
     }
-    for (name, q) in [("q10", 0.10), ("q50", 0.50), ("q90", 0.90)] {
-        let a = unweighted_quantile(&ya, q);
-        let b = unweighted_quantile(&yb, q);
-        let c = weighted_quantile(&ya, &w, q)?;
-        names.push(name.to_string());
-        push_split(&mut composition, &mut structure, c - a, b - c);
-    }
+    Ok((mass_c * sum_c + mass_cp * sum_cp) / denom)
+}
 
-    let quad = Quad::new(cfg.n_quad, cfg.k)?;
-    let qa = quantiles_at(&ya, None, &quad.nodes)?;
-    let qb = quantiles_at(&yb, None, &quad.nodes)?;
-    let qc = quantiles_at(&ya, Some(&w), &quad.nodes)?;
-    let lam_a = lambdas_of(&qa, &quad);
-    let lam_b = lambdas_of(&qb, &quad);
-    let lam_c = lambdas_of(&qc, &quad);
-    for c in 0..cfg.k {
-        names.push(format!("lambda{}", c + 1));
-        push_split(
-            &mut composition,
-            &mut structure,
-            lam_c[c] - lam_a[c],
-            lam_b[c] - lam_c[c],
-        );
-    }
-    let total_w2 = w2_quad(&qa, &qb, &quad.weights);
+fn push_stat(point: &mut DecomposePoint, name: &str, a: f64, spec_c: f64, spec_cp: f64, b: f64) {
+    // `shapley_two(A, C, Cp, B)`: comp-first law is spec C, struct-first law is spec Cp.
+    let free = shapley_two(a, spec_c, spec_cp, b);
+    point.names.push(name.to_string());
+    point.composition.push(free.comp);
+    point.structure.push(free.structure);
+    point.anchor_a_comp.push(spec_c - a);
+    point.anchor_a_struct.push(b - spec_c);
+    point.anchor_b_comp.push(b - spec_cp);
+    point.anchor_b_struct.push(spec_cp - a);
+}
 
-    let v1 = V1Config {
-        k_fit: cfg.k_fit,
-        k_report: cfg.k_fit,
+fn at3(k: usize, j: usize, role: usize, p1: usize) -> usize {
+    (k * p1 + j) * 2 + role
+}
+
+fn project_q(q: &[f64], quad: &Quad) -> Vec<f64> {
+    let lam = lambdas_of(q, quad);
+    let k = quad.k;
+    let mut proj = vec![0.0; q.len()];
+    for t in 0..q.len() {
+        let mut s = 0.0;
+        for c in 0..k {
+            let coef = lam[c] * (2 * c + 1) as f64;
+            s += coef * quad.pstar[t * k + c];
+        }
+        proj[t] = s;
+    }
+    proj
+}
+
+fn resid_of(q: &[f64], proj: &[f64]) -> Vec<f64> {
+    q.iter().zip(proj).map(|(a, b)| a - b).collect()
+}
+
+fn dot_quad(a: &[f64], b: &[f64], w: &[f64]) -> f64 {
+    a.iter().zip(b).zip(w).map(|((u, v), wt)| wt * u * v).sum()
+}
+
+fn v1_for(cfg: &DecomposeConfig, k_fit: usize) -> V1Config {
+    V1Config {
+        k_fit,
+        k_report: k_fit,
         n_u: 0,
         max_bins: cfg.max_bins,
         max_rounds: cfg.max_rounds,
@@ -1953,144 +2130,484 @@ fn decompose_point(
         sobolev_lambda: 0.0,
         sobolev_s: 0.0,
         tail_gamma: 0.0,
+    }
+}
+
+fn decompose_point(
+    x_a: &[f64],
+    y_a: &[f64],
+    n_a: usize,
+    x_b: &[f64],
+    y_b: &[f64],
+    n_b: usize,
+    cfg: &DecomposeConfig,
+) -> Result<(DecomposePoint, ShiftModelHandle)> {
+    let p = check_period(x_a, y_a, n_a, x_b, y_b, n_b)?;
+    if cfg.k == 0 || cfg.k_fit == 0 || cfg.n_folds < 2 {
+        return Err(TraceError::InvalidArgument(
+            "decomposition needs K ≥ 1 and at least two folds".into(),
+        ));
+    }
+    if !(cfg.trim_quantile > 0.0 && cfg.trim_quantile <= 1.0) {
+        return Err(TraceError::InvalidArgument(
+            "trim quantile must lie in (0, 1]".into(),
+        ));
+    }
+    let (xa, ya) = reorder_period(x_a, y_a, n_a, p, cfg.seed);
+    let (xb, yb) = reorder_period(x_b, y_b, n_b, p, cfg.seed);
+    let col_order = canonical_column_order(&xa, &ya, n_a, &xb, &yb, n_b, p, cfg.seed);
+    let xa_m = apply_column_order(&xa, n_a, p, &col_order);
+    let xb_m = apply_column_order(&xb, n_b, p, &col_order);
+    let lp = cross_fit_oriented_lp(&xa_m, &ya, n_a, &xb_m, &yb, n_b, p, cfg)?;
+    let prior_b = (n_b as f64 / n_a as f64).ln();
+    let prior_a = (n_a as f64 / n_b as f64).ln();
+    // Spec C = (covariates B, structure A) reweights period A.
+    // Spec Cp = (covariates A, structure B) reweights period B.
+    let mut w_c = vec![0.0; n_a];
+    let mut w_cp = vec![0.0; n_b];
+    for i in 0..n_a {
+        w_c[i] = (-lp[i] + prior_a).clamp(-30.0, 30.0).exp();
+    }
+    for i in 0..n_b {
+        w_cp[i] = (lp[n_a + i] + prior_b).clamp(-30.0, 30.0).exp();
+    }
+    let trim_mass = trimmed_share(&mut w_c, &mut w_cp, cfg.trim_quantile)?;
+
+    let (mean_a, sd_a) = mean_and_sd(&ya);
+    let (mean_b, sd_b) = mean_and_sd(&yb);
+    let (mean_c, sd_c) = weighted_mean_sd(&ya, &w_c);
+    let (mean_cp, sd_cp) = weighted_mean_sd(&yb, &w_cp);
+    let mut point = DecomposePoint {
+        names: Vec::new(),
+        composition: Vec::new(),
+        structure: Vec::new(),
+        anchor_a_comp: Vec::new(),
+        anchor_a_struct: Vec::new(),
+        anchor_b_comp: Vec::new(),
+        anchor_b_struct: Vec::new(),
+        feat_comp: vec![0.0; p],
+        feat_struct: vec![0.0; p],
+        intercept: 0.0,
+        total_w2: 0.0,
+        lmom_a: Vec::new(),
+        lmom_b: Vec::new(),
+        lmom_c: Vec::new(),
+        lmom_cp: Vec::new(),
+        lsplit_comp: Vec::new(),
+        lsplit_struct: Vec::new(),
+        lsplit_aref_comp: Vec::new(),
+        lsplit_aref_struct: Vec::new(),
+        bary_a: Vec::new(),
+        bary_dc: Vec::new(),
+        bary_phi: Vec::new(),
+        marg_phi_comp: Vec::new(),
+        marg_phi_struct: Vec::new(),
+        resid_phi_comp: 0.0,
+        resid_phi_struct: 0.0,
+        w2_marginal: 0.0,
+        w2_bary: 0.0,
+        w2_gap: 0.0,
+        trim_mass,
+        interaction: Vec::new(),
+        k_reported: cfg.k,
+        k_fitted: cfg.k_fit.max(cfg.k),
+        n_folds: cfg.n_folds,
+        trim: cfg.trim_quantile,
+        p,
     };
+    push_stat(&mut point, "mean", mean_a, mean_c, mean_cp, mean_b);
+    push_stat(&mut point, "sd", sd_a, sd_c, sd_cp, sd_b);
+    for (name, q) in [("q10", 0.10), ("q50", 0.50), ("q90", 0.90)] {
+        let a = unweighted_quantile(&ya, q);
+        let b = unweighted_quantile(&yb, q);
+        let c = weighted_quantile(&ya, &w_c, q)?;
+        let cp = weighted_quantile(&yb, &w_cp, q)?;
+        push_stat(&mut point, name, a, c, cp, b);
+    }
+
+    let quad = Quad::new(cfg.n_quad, cfg.k)?;
+    let qa = quantiles_at(&ya, None, &quad.nodes)?;
+    let qb = quantiles_at(&yb, None, &quad.nodes)?;
+    let qc = quantiles_at(&ya, Some(&w_c), &quad.nodes)?;
+    let qcp = quantiles_at(&yb, Some(&w_cp), &quad.nodes)?;
+    point.lmom_a = lambdas_of(&qa, &quad);
+    point.lmom_b = lambdas_of(&qb, &quad);
+    point.lmom_c = lambdas_of(&qc, &quad);
+    point.lmom_cp = lambdas_of(&qcp, &quad);
+    point.lsplit_comp = vec![0.0; cfg.k];
+    point.lsplit_struct = vec![0.0; cfg.k];
+    point.lsplit_aref_comp = vec![0.0; cfg.k];
+    point.lsplit_aref_struct = vec![0.0; cfg.k];
+    point.marg_phi_comp = vec![0.0; cfg.k];
+    point.marg_phi_struct = vec![0.0; cfg.k];
+    for c in 0..cfg.k {
+        let free = shapley_two(
+            point.lmom_a[c],
+            point.lmom_c[c],
+            point.lmom_cp[c],
+            point.lmom_b[c],
+        );
+        point.lsplit_comp[c] = free.comp;
+        point.lsplit_struct[c] = free.structure;
+        point.lsplit_aref_comp[c] = point.lmom_c[c] - point.lmom_a[c];
+        point.lsplit_aref_struct[c] = point.lmom_b[c] - point.lmom_c[c];
+        let delta_c = (point.lmom_b[c] - point.lmom_a[c]) * (2 * c + 1) as f64;
+        let a_comp = free.comp * (2 * c + 1) as f64;
+        let a_struct = free.structure * (2 * c + 1) as f64;
+        let denom = (2 * c + 1) as f64;
+        point.marg_phi_comp[c] = a_comp * delta_c / denom;
+        point.marg_phi_struct[c] = a_struct * delta_c / denom;
+    }
+    let pa = project_q(&qa, &quad);
+    let pb = project_q(&qb, &quad);
+    let pc = project_q(&qc, &quad);
+    let pcp = project_q(&qcp, &quad);
+    let ra = resid_of(&qa, &pa);
+    let rb = resid_of(&qb, &pb);
+    let rc = resid_of(&qc, &pc);
+    let rcp = resid_of(&qcp, &pcp);
+    let nq = qa.len();
+    let mut r_comp = vec![0.0; nq];
+    let mut r_struct = vec![0.0; nq];
+    let mut delta_r = vec![0.0; nq];
+    for t in 0..nq {
+        // G[covariate, structure]: G[B,A] = spec C, G[A,B] = spec Cp.
+        let aa = ra[t];
+        let bb = rb[t];
+        let g_ba = rc[t];
+        let g_ab = rcp[t];
+        r_comp[t] = 0.5 * ((g_ba - aa) + (bb - g_ab));
+        r_struct[t] = 0.5 * ((g_ab - aa) + (bb - g_ba));
+        delta_r[t] = bb - aa;
+    }
+    point.resid_phi_comp = dot_quad(&r_comp, &delta_r, &quad.weights);
+    point.resid_phi_struct = dot_quad(&r_struct, &delta_r, &quad.weights);
+    point.w2_marginal = w2_quad(&qa, &qb, &quad.weights);
+    point.total_w2 = point.w2_marginal;
+
+    let k_fit = cfg.k_fit.max(cfg.k);
+    let v1 = v1_for(cfg, k_fit);
     let model_a = fit_v1(&xa_m, n_a, p, &ya, &v1)?;
     let model_b = fit_v1(&xb_m, n_b, p, &yb, &v1)?;
     let g_aa = mean_effects(&model_a, &xa_m, n_a)?;
     let g_ab = mean_effects(&model_a, &xb_m, n_b)?;
     let g_ba = mean_effects(&model_b, &xa_m, n_a)?;
     let g_bb = mean_effects(&model_b, &xb_m, n_b)?;
-    let k_fit = model_a.k_fit;
-    let mut feat_comp_c = vec![0.0; p];
-    let mut feat_struct_c = vec![0.0; p];
+    let p1 = p + 1;
+    point.bary_a = vec![0.0; cfg.k * p1 * 2];
+    point.bary_phi = vec![0.0; cfg.k * p1 * 2];
+    point.bary_dc = vec![0.0; cfg.k];
+    point.interaction = vec![0.0; cfg.k * p1];
+    let mut w2_bary = 0.0;
+    for c in 0..cfg.k {
+        let scale = ((2 * c + 1) as f64).sqrt();
+        let b_a = model_a.intercept[c];
+        let b_b = model_b.intercept[c];
+        point.bary_a[at3(c, 0, 1, p1)] = (b_b - b_a) * scale;
+        for j_new in 0..p {
+            let aa = g_aa[j_new * k_fit + c];
+            let ab = g_ab[j_new * k_fit + c];
+            let ba = g_ba[j_new * k_fit + c];
+            let bb = g_bb[j_new * k_fit + c];
+            let a_comp = 0.5 * ((ab - aa) + (bb - ba));
+            let a_struct = 0.5 * ((ba - aa) + (bb - ab));
+            let j_old = col_order[j_new];
+            point.bary_a[at3(c, j_old + 1, 0, p1)] = a_comp * scale;
+            point.bary_a[at3(c, j_old + 1, 1, p1)] = a_struct * scale;
+            point.interaction[c * p1 + j_old + 1] = (bb - ab - ba + aa) * scale;
+        }
+        let mut dc = 0.0;
+        for j in 0..p1 {
+            dc += point.bary_a[at3(c, j, 0, p1)] + point.bary_a[at3(c, j, 1, p1)];
+        }
+        point.bary_dc[c] = dc;
+        let denom = (2 * c + 1) as f64;
+        for j in 0..p1 {
+            for role in 0..2 {
+                point.bary_phi[at3(c, j, role, p1)] =
+                    point.bary_a[at3(c, j, role, p1)] * dc / denom;
+            }
+        }
+        w2_bary += dc * dc / denom;
+    }
+    point.w2_bary = w2_bary;
+    point.w2_gap = point.w2_marginal - point.w2_bary;
     for j in 0..p {
-        let aa = g_aa[j * k_fit];
-        let ab = g_ab[j * k_fit];
-        let ba = g_ba[j * k_fit];
-        let bb = g_bb[j * k_fit];
-        let delta_a = ba - aa;
-        let delta_b = bb - ab;
-        feat_comp_c[j] = ab - aa;
-        // Pooled 50/50 law, the same centring the benchmark uses for a slope change.
-        feat_struct_c[j] = delta_b - 0.5 * (delta_a + delta_b);
+        point.feat_comp[j] = point.bary_a[at3(0, j + 1, 0, p1)];
+        point.feat_struct[j] = point.bary_a[at3(0, j + 1, 1, p1)];
     }
-    let feat_comp = scatter_to_original(&feat_comp_c, &col_order);
-    let feat_struct = scatter_to_original(&feat_struct_c, &col_order);
-    let mean_struct = structure[0];
-    let intercept = mean_struct - feat_struct.iter().sum::<f64>();
-    Ok(DecomposePoint {
-        names,
-        composition,
-        structure,
-        feat_comp,
-        feat_struct,
-        intercept,
-        total_w2,
-    })
+    point.intercept = point.bary_a[at3(0, 0, 1, p1)];
+    point.k_fitted = model_a.k_fit;
+    let handle = ShiftModelHandle {
+        model_a,
+        model_b,
+        col_order,
+    };
+    Ok((point, handle))
 }
 
-fn point_bands(point: DecomposePoint) -> ShiftDecompose {
-    ShiftDecompose {
-        composition_lo: point.composition.clone(),
-        composition_hi: point.composition.clone(),
-        structure_lo: point.structure.clone(),
-        structure_hi: point.structure.clone(),
-        feat_comp_lo: point.feat_comp.clone(),
-        feat_comp_hi: point.feat_comp.clone(),
-        feat_struct_lo: point.feat_struct.clone(),
-        feat_struct_hi: point.feat_struct.clone(),
-        intercept_lo: point.intercept,
-        intercept_hi: point.intercept,
-        total_w2_lo: point.total_w2,
-        total_w2_hi: point.total_w2,
-        boot_reps: 0,
-        names: point.names,
-        composition: point.composition,
-        structure: point.structure,
-        feat_comp: point.feat_comp,
-        feat_struct: point.feat_struct,
-        intercept: point.intercept,
-        total_w2: point.total_w2,
+fn interleave(comp: &[f64], structure: &[f64]) -> Vec<f64> {
+    let mut v = Vec::with_capacity(comp.len() * 2);
+    for i in 0..comp.len() {
+        v.push(comp[i]);
+        v.push(structure[i]);
+    }
+    v
+}
+
+fn collapsed_band(comp: &[f64], structure: &[f64]) -> PercentileBand {
+    let v = interleave(comp, structure);
+    let n = v.len();
+    PercentileBand {
+        lo: v.clone(),
+        hi: v.clone(),
+        uniform_lo: v.clone(),
+        uniform_hi: v,
+        sigma: vec![0.0; n],
+        resolved: vec![false; n],
+        critical: 0.0,
     }
 }
 
-fn band_of(col: &mut [f64]) -> (f64, f64) {
-    col.sort_by(f64::total_cmp);
-    (percentile_sorted(col, 0.025), percentile_sorted(col, 0.975))
+fn band_of_pair(
+    comp: &[f64],
+    structure: &[f64],
+    draws: &[DecomposePoint],
+    comp_of: impl Fn(&DecomposePoint) -> &[f64],
+    struct_of: impl Fn(&DecomposePoint) -> &[f64],
+) -> Result<PercentileBand> {
+    if draws.len() < 2 {
+        return Ok(collapsed_band(comp, structure));
+    }
+    let point = interleave(comp, structure);
+    let mut reps = Vec::with_capacity(draws.len() * point.len());
+    for d in draws {
+        reps.extend(interleave(comp_of(d), struct_of(d)));
+    }
+    percentile_bands(&point, &reps, draws.len())
 }
 
-fn attach_bands(point: DecomposePoint, draws: &[DecomposePoint]) -> ShiftDecompose {
-    let reps = draws.len();
-    let n_stat = point.composition.len();
+fn band_of_feat(point: &DecomposePoint, draws: &[DecomposePoint]) -> Result<PercentileBand> {
+    let mut base = point.feat_comp.clone();
+    base.extend_from_slice(&point.feat_struct);
+    if draws.len() < 2 {
+        let n = base.len();
+        return Ok(PercentileBand {
+            lo: base.clone(),
+            hi: base.clone(),
+            uniform_lo: base.clone(),
+            uniform_hi: base,
+            sigma: vec![0.0; n],
+            resolved: vec![false; n],
+            critical: 0.0,
+        });
+    }
+    let mut reps = Vec::with_capacity(draws.len() * base.len());
+    for d in draws {
+        reps.extend_from_slice(&d.feat_comp);
+        reps.extend_from_slice(&d.feat_struct);
+    }
+    percentile_bands(&base, &reps, draws.len())
+}
+
+fn scalar_band(point: f64, draws: &[f64]) -> (f64, f64) {
+    if draws.len() < 2 {
+        return (point, point);
+    }
+    let mut sorted = draws.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    (
+        percentile_sorted(&sorted, 0.025),
+        percentile_sorted(&sorted, 0.975),
+    )
+}
+
+struct PairEnds {
+    comp_lo: Vec<f64>,
+    comp_hi: Vec<f64>,
+    struct_lo: Vec<f64>,
+    struct_hi: Vec<f64>,
+    comp_ulo: Vec<f64>,
+    comp_uhi: Vec<f64>,
+    struct_ulo: Vec<f64>,
+    struct_uhi: Vec<f64>,
+}
+
+fn split_pairs(band: &PercentileBand) -> PairEnds {
+    let n = band.lo.len() / 2;
+    let mut ends = PairEnds {
+        comp_lo: vec![0.0; n],
+        comp_hi: vec![0.0; n],
+        struct_lo: vec![0.0; n],
+        struct_hi: vec![0.0; n],
+        comp_ulo: vec![0.0; n],
+        comp_uhi: vec![0.0; n],
+        struct_ulo: vec![0.0; n],
+        struct_uhi: vec![0.0; n],
+    };
+    for i in 0..n {
+        ends.comp_lo[i] = band.lo[2 * i];
+        ends.struct_lo[i] = band.lo[2 * i + 1];
+        ends.comp_hi[i] = band.hi[2 * i];
+        ends.struct_hi[i] = band.hi[2 * i + 1];
+        ends.comp_ulo[i] = band.uniform_lo[2 * i];
+        ends.struct_ulo[i] = band.uniform_lo[2 * i + 1];
+        ends.comp_uhi[i] = band.uniform_hi[2 * i];
+        ends.struct_uhi[i] = band.uniform_hi[2 * i + 1];
+    }
+    ends
+}
+
+fn assemble(
+    point: DecomposePoint,
+    split_band: PercentileBand,
+    lsplit_band: PercentileBand,
+    feat_band: PercentileBand,
+    intercept_lo: f64,
+    intercept_hi: f64,
+    total_w2_lo: f64,
+    total_w2_hi: f64,
+    boot_reps: usize,
+) -> ShiftDecompose {
+    let split_ends = split_pairs(&split_band);
+    let lsplit_ends = split_pairs(&lsplit_band);
     let p = point.feat_comp.len();
-    let mut composition_lo = vec![0.0; n_stat];
-    let mut composition_hi = vec![0.0; n_stat];
-    let mut structure_lo = vec![0.0; n_stat];
-    let mut structure_hi = vec![0.0; n_stat];
-    for j in 0..n_stat {
-        let mut col: Vec<f64> = draws.iter().map(|d| d.composition[j]).collect();
-        let (lo, hi) = band_of(&mut col);
-        composition_lo[j] = lo;
-        composition_hi[j] = hi;
-        let mut col: Vec<f64> = draws.iter().map(|d| d.structure[j]).collect();
-        let (lo, hi) = band_of(&mut col);
-        structure_lo[j] = lo;
-        structure_hi[j] = hi;
-    }
-    let mut feat_comp_lo = vec![0.0; p];
-    let mut feat_comp_hi = vec![0.0; p];
-    let mut feat_struct_lo = vec![0.0; p];
-    let mut feat_struct_hi = vec![0.0; p];
-    for j in 0..p {
-        let mut col: Vec<f64> = draws.iter().map(|d| d.feat_comp[j]).collect();
-        let (lo, hi) = band_of(&mut col);
-        feat_comp_lo[j] = lo;
-        feat_comp_hi[j] = hi;
-        let mut col: Vec<f64> = draws.iter().map(|d| d.feat_struct[j]).collect();
-        let (lo, hi) = band_of(&mut col);
-        feat_struct_lo[j] = lo;
-        feat_struct_hi[j] = hi;
-    }
-    let mut intercepts: Vec<f64> = draws.iter().map(|d| d.intercept).collect();
-    let (intercept_lo, intercept_hi) = band_of(&mut intercepts);
-    let mut totals: Vec<f64> = draws.iter().map(|d| d.total_w2).collect();
-    let (total_w2_lo, total_w2_hi) = band_of(&mut totals);
+    let feat_comp_lo = feat_band.lo[..p].to_vec();
+    let feat_struct_lo = feat_band.lo[p..].to_vec();
+    let feat_comp_hi = feat_band.hi[..p].to_vec();
+    let feat_struct_hi = feat_band.hi[p..].to_vec();
+    let feat_comp_ulo = feat_band.uniform_lo[..p].to_vec();
+    let feat_struct_ulo = feat_band.uniform_lo[p..].to_vec();
+    let feat_comp_uhi = feat_band.uniform_hi[..p].to_vec();
+    let feat_struct_uhi = feat_band.uniform_hi[p..].to_vec();
     ShiftDecompose {
         names: point.names,
         composition: point.composition,
         structure: point.structure,
+        anchor_a_comp: point.anchor_a_comp,
+        anchor_a_struct: point.anchor_a_struct,
+        anchor_b_comp: point.anchor_b_comp,
+        anchor_b_struct: point.anchor_b_struct,
         feat_comp: point.feat_comp,
         feat_struct: point.feat_struct,
         intercept: point.intercept,
         total_w2: point.total_w2,
-        boot_reps: reps,
-        composition_lo,
-        composition_hi,
-        structure_lo,
-        structure_hi,
+        lmom_a: point.lmom_a,
+        lmom_b: point.lmom_b,
+        lmom_c: point.lmom_c,
+        lmom_cp: point.lmom_cp,
+        lsplit_comp: point.lsplit_comp,
+        lsplit_struct: point.lsplit_struct,
+        lsplit_aref_comp: point.lsplit_aref_comp,
+        lsplit_aref_struct: point.lsplit_aref_struct,
+        bary_a: point.bary_a,
+        bary_dc: point.bary_dc,
+        bary_phi: point.bary_phi,
+        marg_phi_comp: point.marg_phi_comp,
+        marg_phi_struct: point.marg_phi_struct,
+        resid_phi_comp: point.resid_phi_comp,
+        resid_phi_struct: point.resid_phi_struct,
+        w2_marginal: point.w2_marginal,
+        w2_bary: point.w2_bary,
+        w2_gap: point.w2_gap,
+        trim_mass: point.trim_mass,
+        interaction: point.interaction,
+        k_reported: point.k_reported,
+        k_fitted: point.k_fitted,
+        n_folds: point.n_folds,
+        trim: point.trim,
+        p: point.p,
+        version: shift_core_version().to_string(),
+        boot_reps,
+        critical: split_band.critical,
+        composition_lo: split_ends.comp_lo,
+        composition_hi: split_ends.comp_hi,
+        structure_lo: split_ends.struct_lo,
+        structure_hi: split_ends.struct_hi,
+        composition_ulo: split_ends.comp_ulo,
+        composition_uhi: split_ends.comp_uhi,
+        structure_ulo: split_ends.struct_ulo,
+        structure_uhi: split_ends.struct_uhi,
+        lsplit_comp_lo: lsplit_ends.comp_lo,
+        lsplit_comp_hi: lsplit_ends.comp_hi,
+        lsplit_struct_lo: lsplit_ends.struct_lo,
+        lsplit_struct_hi: lsplit_ends.struct_hi,
+        lsplit_comp_ulo: lsplit_ends.comp_ulo,
+        lsplit_comp_uhi: lsplit_ends.comp_uhi,
+        lsplit_struct_ulo: lsplit_ends.struct_ulo,
+        lsplit_struct_uhi: lsplit_ends.struct_uhi,
+        lsplit_critical: lsplit_band.critical,
         feat_comp_lo,
         feat_comp_hi,
         feat_struct_lo,
         feat_struct_hi,
+        feat_comp_ulo,
+        feat_comp_uhi,
+        feat_struct_ulo,
+        feat_struct_uhi,
+        feat_critical: feat_band.critical,
         intercept_lo,
         intercept_hi,
         total_w2_lo,
         total_w2_hi,
+        model: None,
     }
 }
 
-/// Benchmark decomposition.
+fn seal(point: DecomposePoint, draws: &[DecomposePoint]) -> Result<ShiftDecompose> {
+    let split_band = band_of_pair(
+        &point.composition,
+        &point.structure,
+        draws,
+        |d| &d.composition,
+        |d| &d.structure,
+    )?;
+    let lsplit_band = band_of_pair(
+        &point.lsplit_comp,
+        &point.lsplit_struct,
+        draws,
+        |d| &d.lsplit_comp,
+        |d| &d.lsplit_struct,
+    )?;
+    let feat_band = band_of_feat(&point, draws)?;
+    let intercepts: Vec<f64> = draws.iter().map(|d| d.intercept).collect();
+    let totals: Vec<f64> = draws.iter().map(|d| d.total_w2).collect();
+    let (intercept_lo, intercept_hi) = scalar_band(point.intercept, &intercepts);
+    let (total_w2_lo, total_w2_hi) = scalar_band(point.total_w2, &totals);
+    let reps = draws.len();
+    Ok(assemble(
+        point,
+        split_band,
+        lsplit_band,
+        feat_band,
+        intercept_lo,
+        intercept_hi,
+        total_w2_lo,
+        total_w2_hi,
+        reps,
+    ))
+}
+
+fn require_decompose_sample(n_a: usize, n_b: usize, folds: usize) -> Result<()> {
+    if folds < 2 || n_a < 2 * folds || n_b < 2 * folds {
+        return Err(TraceError::InvalidArgument(
+            "each period needs at least twice as many rows as folds".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Order-free composition/structure split, with both anchors and the barycenter pieces.
 ///
-/// Statistics use the counterfactual with the structure of period A and the
-/// covariates of period B, estimated by cross-fitted period odds. The odds
-/// model is an intercept plus each feature and its square. Folds are the rank
-/// of a column-commutative row hash modulo `K`, so a permutation of rows does
-/// not change the fit. Feature shares are the mean channel of the additive
-/// fit, centred at the 50/50 pooled covariate law. `intercept` closes
-/// `mean` structure: it is that structure minus the sum of `feat_struct`.
-/// `total_w2` is the quadrature `W2²` between the two outcome quantile functions
-/// and is not a sum of the split. Bands are pointwise 2.5/97.5 percentiles of
-/// a stratified row bootstrap; with `n_boot == 0` both ends equal the point.
+/// `split` averages the two orderings, so exchanging the period arguments negates
+/// it. `anchor_a` keeps structure A on the covariates of B. Cross-fit folds are
+/// `hash(seed, row) mod folds`. The period-odds fit is oriented so the same
+/// labelled sample is solved whichever period is passed first. Feature shares
+/// are the order-free mean-channel (`k = 0`) barycenter pieces on the `λ₁`
+/// scale, and `intercept` is that channel's intercept structure piece.
+/// `n_boot == 0` sets every band equal to the point. Otherwise bands are
+/// stratified bootstrap percentiles, plus a joint max-|t| uniform band across
+/// the order-free split, across the L-moment channels, and across the feature shares.
 pub fn shift_decompose(
     x_a: &[f64],
     y_a: &[f64],
@@ -2100,30 +2617,40 @@ pub fn shift_decompose(
     n_b: usize,
     cfg: &DecomposeConfig,
 ) -> Result<ShiftDecompose> {
-    let p = check_period(x_a, y_a, n_a, x_b, y_b, n_b)?;
-    let point = decompose_point(x_a, y_a, n_a, x_b, y_b, n_b, cfg)?;
-    if cfg.n_boot == 0 {
-        return Ok(point_bands(point));
+    if x_a.iter().chain(x_b.iter()).any(|v| !v.is_finite()) {
+        return Err(TraceError::InvalidArgument(
+            "features must be finite".into(),
+        ));
     }
-    let (xa, ya) = reorder_period(x_a, y_a, n_a, p, cfg.seed);
-    let (xb, yb) = reorder_period(x_b, y_b, n_b, p, cfg.seed);
-    let boot_cfg = DecomposeConfig {
-        n_boot: 0,
-        ..cfg.clone()
+    let p = check_period(x_a, y_a, n_a, x_b, y_b, n_b)?;
+    require_decompose_sample(n_a, n_b, cfg.n_folds)?;
+    let (point, fitted) = decompose_point(x_a, y_a, n_a, x_b, y_b, n_b, cfg)?;
+    let mut out = if cfg.n_boot == 0 {
+        seal(point, &[])?
+    } else {
+        let (xa, ya) = reorder_period(x_a, y_a, n_a, p, cfg.seed);
+        let (xb, yb) = reorder_period(x_b, y_b, n_b, p, cfg.seed);
+        let boot_cfg = DecomposeConfig {
+            n_boot: 0,
+            return_model: false,
+            ..cfg.clone()
+        };
+        let draws = map_reps(cfg.n_boot, &|b| {
+            let mut rng = SplitMix64::new(
+                cfg.seed
+                    .wrapping_add(b as u64)
+                    .wrapping_mul(0xD1B5_4A32_D192_ED03),
+            );
+            let ia = resample_indices(n_a, n_a, &mut rng);
+            let ib = resample_indices(n_b, n_b, &mut rng);
+            let (x1, y1, _) = gather_period(&xa, &ya, p, &ia, None);
+            let (x2, y2, _) = gather_period(&xb, &yb, p, &ib, None);
+            Ok(decompose_point(&x1, &y1, n_a, &x2, &y2, n_b, &boot_cfg)?.0)
+        })?;
+        seal(point, &draws)?
     };
-    let draws = map_reps(cfg.n_boot, &|b| {
-        let mut rng = SplitMix64::new(
-            cfg.seed
-                .wrapping_add(b as u64)
-                .wrapping_mul(0xD1B5_4A32_D192_ED03),
-        );
-        let ia = resample_indices(n_a, n_a, &mut rng);
-        let ib = resample_indices(n_b, n_b, &mut rng);
-        let (x1, y1, _) = gather_period(&xa, &ya, p, &ia, None);
-        let (x2, y2, _) = gather_period(&xb, &yb, p, &ib, None);
-        decompose_point(&x1, &y1, n_a, &x2, &y2, n_b, &boot_cfg)
-    })?;
-    Ok(attach_bands(point, &draws))
+    out.model = cfg.return_model.then_some(fitted);
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -2454,11 +2981,15 @@ mod tests {
         assert!((base.total_w2 - row.total_w2).abs() < 1e-9);
         let mean_gap = y_b.iter().sum::<f64>() / n as f64 - y_a.iter().sum::<f64>() / n as f64;
         assert!((base.composition[0] + base.structure[0] - mean_gap).abs() < 1e-9);
-        let feat_sum: f64 = base.feat_struct.iter().sum();
-        assert!((base.intercept + feat_sum - base.structure[0]).abs() < 1e-9);
-        assert!(base.names.iter().any(|n| n == "q90"));
-        assert!(base.names.iter().any(|n| n == "lambda1"));
+        assert_eq!(
+            base.names,
+            ["mean", "sd", "q10", "q50", "q90"]
+                .into_iter()
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        );
         assert_eq!(base.boot_reps, 0);
+        assert_pieces_add(&base);
 
         // Swap columns 0 and 2. Shares move with the column; statistics stay.
         let swap = |x: &[f64]| {
@@ -2471,19 +3002,184 @@ mod tests {
         let col = shift_decompose(&swap(&x_a), &y_a, n, &swap(&x_b), &y_b, n, &cfg).unwrap();
         for i in 0..base.composition.len() {
             assert!(
-                (base.composition[i] - col.composition[i]).abs() < 1e-8,
+                (base.composition[i] - col.composition[i]).abs() < 1e-9,
                 "{} comp {} vs {}",
                 base.names[i],
                 base.composition[i],
                 col.composition[i]
             );
-            assert!((base.structure[i] - col.structure[i]).abs() < 1e-8);
+            assert!((base.structure[i] - col.structure[i]).abs() < 1e-9);
         }
-        assert!((base.feat_comp[0] - col.feat_comp[2]).abs() < 1e-8);
-        assert!((base.feat_comp[2] - col.feat_comp[0]).abs() < 1e-8);
-        assert!((base.feat_comp[1] - col.feat_comp[1]).abs() < 1e-8);
-        assert!((base.feat_struct[0] - col.feat_struct[2]).abs() < 1e-8);
-        assert!((base.total_w2 - col.total_w2).abs() < 1e-8);
+        assert!((base.feat_comp[0] - col.feat_comp[2]).abs() < 1e-9);
+        assert!((base.feat_comp[2] - col.feat_comp[0]).abs() < 1e-9);
+        assert!((base.feat_comp[1] - col.feat_comp[1]).abs() < 1e-9);
+        assert!((base.feat_struct[0] - col.feat_struct[2]).abs() < 1e-9);
+        assert!((base.total_w2 - col.total_w2).abs() < 1e-9);
+        let p1 = p + 1;
+        for c in 0..base.k_reported {
+            for role in 0..2 {
+                let at = |view: &ShiftDecompose, j: usize| view.bary_a[(c * p1 + j) * 2 + role];
+                assert!((at(&base, 0) - at(&col, 0)).abs() < 1e-9);
+                assert!((at(&base, 1) - at(&col, 3)).abs() < 1e-9);
+                assert!((at(&base, 3) - at(&col, 1)).abs() < 1e-9);
+                assert!((at(&base, 2) - at(&col, 2)).abs() < 1e-9);
+            }
+            let inter = |view: &ShiftDecompose, j: usize| view.interaction[c * p1 + j];
+            assert!((inter(&base, 0) - inter(&col, 0)).abs() < 1e-9);
+            assert!((inter(&base, 1) - inter(&col, 3)).abs() < 1e-9);
+            assert!((inter(&base, 3) - inter(&col, 1)).abs() < 1e-9);
+        }
+    }
+
+    fn assert_pieces_add(got: &ShiftDecompose) {
+        let p1 = got.p + 1;
+        let mut phi_sum = 0.0;
+        for c in 0..got.k_reported {
+            let mut a_sum = 0.0;
+            let mut channel = 0.0;
+            for j in 0..p1 {
+                for role in 0..2 {
+                    let a = got.bary_a[(c * p1 + j) * 2 + role];
+                    let phi = got.bary_phi[(c * p1 + j) * 2 + role];
+                    a_sum += a;
+                    channel += phi;
+                }
+            }
+            assert!(
+                (a_sum - got.bary_dc[c]).abs() < 1e-9,
+                "channel {c} a-sum {a_sum} vs dc {}",
+                got.bary_dc[c]
+            );
+            let expect = got.bary_dc[c] * got.bary_dc[c] / (2 * c + 1) as f64;
+            assert!((channel - expect).abs() < 1e-9);
+            phi_sum += channel;
+            let dlam = got.lmom_b[c] - got.lmom_a[c];
+            assert!((got.lsplit_comp[c] + got.lsplit_struct[c] - dlam).abs() < 1e-9);
+        }
+        assert!((phi_sum - got.w2_bary).abs() < 1e-9);
+        let marg = got.marg_phi_comp.iter().sum::<f64>()
+            + got.marg_phi_struct.iter().sum::<f64>()
+            + got.resid_phi_comp
+            + got.resid_phi_struct;
+        assert!(
+            (marg - got.w2_marginal).abs() < 1e-9,
+            "marginal pieces {marg} vs {}",
+            got.w2_marginal
+        );
+        for i in 0..got.composition.len() {
+            let comp = 0.5 * (got.anchor_a_comp[i] + got.anchor_b_comp[i]);
+            let structure = 0.5 * (got.anchor_a_struct[i] + got.anchor_b_struct[i]);
+            assert!((comp - got.composition[i]).abs() < 1e-12);
+            assert!((structure - got.structure[i]).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn decompose_rejects_short_samples_and_nonfinite_rows() {
+        let cfg = fast_decomp();
+        let x = [0.0, 1.0];
+        let y = [0.0, 1.0];
+        assert!(shift_decompose(&x, &y, 2, &x, &y, 2, &cfg).is_err());
+        let n = 8;
+        let x = vec![0.0; n];
+        let mut y = vec![0.1; n];
+        y[3] = f64::NAN;
+        assert!(shift_decompose(&x, &y, n, &x, &y, n, &cfg).is_err());
+        let mut x_nan = x.clone();
+        x_nan[1] = f64::NAN;
+        let y_ok = vec![0.1; n];
+        assert!(shift_decompose(&x_nan, &y_ok, n, &x, &y_ok, n, &cfg).is_err());
+    }
+
+    #[test]
+    fn period_swap_negates_the_order_free_split() {
+        let (x_a, y_a, x_b, y_b, n, _) = toy_periods(4);
+        let cfg = fast_decomp();
+        let base = shift_decompose(&x_a, &y_a, n, &x_b, &y_b, n, &cfg).unwrap();
+        let swapped = shift_decompose(&x_b, &y_b, n, &x_a, &y_a, n, &cfg).unwrap();
+        for i in 0..base.composition.len() {
+            assert!(
+                (base.composition[i] + swapped.composition[i]).abs() < 1e-9,
+                "{} comp {} vs {}",
+                base.names[i],
+                base.composition[i],
+                swapped.composition[i]
+            );
+            assert!((base.structure[i] + swapped.structure[i]).abs() < 1e-9);
+            assert!((base.anchor_a_comp[i] + swapped.anchor_b_comp[i]).abs() < 1e-9);
+            assert!((base.anchor_b_comp[i] + swapped.anchor_a_comp[i]).abs() < 1e-9);
+        }
+        for c in 0..base.k_reported {
+            assert!((base.lsplit_comp[c] + swapped.lsplit_comp[c]).abs() < 1e-9);
+            assert!((base.lsplit_struct[c] + swapped.lsplit_struct[c]).abs() < 1e-9);
+        }
+        for (a, b) in base.bary_a.iter().zip(&swapped.bary_a) {
+            assert!((a + b).abs() < 1e-9, "bary_a {a} vs {b}");
+        }
+        for (a, b) in base.bary_phi.iter().zip(&swapped.bary_phi) {
+            assert!((a - b).abs() < 1e-9);
+        }
+        for (a, b) in base.marg_phi_comp.iter().zip(&swapped.marg_phi_comp) {
+            assert!((a - b).abs() < 1e-9);
+        }
+        for (a, b) in base.marg_phi_struct.iter().zip(&swapped.marg_phi_struct) {
+            assert!((a - b).abs() < 1e-9);
+        }
+        assert!((base.resid_phi_comp - swapped.resid_phi_comp).abs() < 1e-9);
+        assert!((base.resid_phi_struct - swapped.resid_phi_struct).abs() < 1e-9);
+        assert!((base.w2_bary - swapped.w2_bary).abs() < 1e-9);
+        assert_pieces_add(&base);
+    }
+
+    #[test]
+    fn model_barycenter_matches_the_average_quantile() {
+        let (x_a, y_a, x_b, y_b, n, p) = toy_periods(6);
+        let mut cfg = fast_decomp();
+        cfg.return_model = true;
+        let got = shift_decompose(&x_a, &y_a, n, &x_b, &y_b, n, &cfg).unwrap();
+        let model = got.model.as_ref().unwrap();
+        assert!(!model.rearranged());
+        let quad = Quad::new(32, got.k_fitted).unwrap();
+        let qa = model.predict_quantile(&x_a, n, &quad.nodes, "A").unwrap();
+        let qb = model.predict_quantile(&x_b, n, &quad.nodes, "B").unwrap();
+        let nq = quad.nodes.len();
+        let mut bar_a = vec![0.0; nq];
+        let mut bar_b = vec![0.0; nq];
+        for i in 0..n {
+            for t in 0..nq {
+                bar_a[t] += qa[i * nq + t];
+                bar_b[t] += qb[i * nq + t];
+            }
+        }
+        for t in 0..nq {
+            bar_a[t] /= n as f64;
+            bar_b[t] /= n as f64;
+        }
+        let recon = w2_quad(&bar_a, &bar_b, &quad.weights);
+        assert!(
+            (recon - got.w2_bary).abs() < 1e-9,
+            "reconstructed {recon} vs bary {}",
+            got.w2_bary
+        );
+        let ca = model.coef(&x_a, n, "A").unwrap();
+        let cb = model.coef(&x_b, n, "B").unwrap();
+        let k = got.k_fitted;
+        for c in 0..got.k_reported {
+            let mut da = 0.0;
+            let mut db = 0.0;
+            for i in 0..n {
+                da += ca[i * k + c];
+                db += cb[i * k + c];
+            }
+            let dc = db / n as f64 - da / n as f64;
+            assert!(
+                (dc - got.bary_dc[c]).abs() < 1e-9,
+                "channel {c} coef dc {dc} vs {}",
+                got.bary_dc[c]
+            );
+        }
+        assert_eq!(ca.len(), n * k);
+        assert_eq!(p, got.p);
     }
 
     #[test]
