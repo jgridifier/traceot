@@ -227,7 +227,8 @@ def main() -> None:
     mode = sys.argv[1]
     if mode not in {"hybrid", "smooth", "ridge"}:
         raise SystemExit("mode must be hybrid, smooth or ridge")
-    out = ROOT / "benchmarks" / "results" / f"trace_v2_tail_{mode}.json"
+    name = sys.argv[2] if len(sys.argv) > 2 else f"trace_v2_tail_{mode}.json"
+    out = ROOT / "benchmarks" / "results" / name
     specs = []
     for seed in T3_SEEDS:
         specs.append({"kind": "t3", "seed": seed, "reporting": "reference", "mode": mode})

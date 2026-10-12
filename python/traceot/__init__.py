@@ -11,8 +11,9 @@ TRACE v0, our own unpublished method, is a binned additive model of the conditio
 quantile function (:class:`traceot.TraceRegressor`). TRACE v1
 (:class:`traceot.TraceV1`) fits orthonormal Legendre channels with Newton steps.
 TRACE v2 (:class:`traceot.TraceHybrid`) fits the mean by squared loss and the
-residual channels by CRPS. That pre-written bar was missed, so it is not the
-default. :class:`traceot.TraceRegressor` stays the v0 path and
+residual channels by CRPS. The pre-written bar was missed, including a second
+attempt that writes one two-leaf split per visit, so it is not the default.
+:class:`traceot.TraceRegressor` stays the v0 path and
 :class:`traceot.TraceV1` stays the Newton path.
 ADOPT remains a reproduction only.
 """

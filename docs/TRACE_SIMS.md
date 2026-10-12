@@ -417,6 +417,25 @@ Attempt 2 of the item-1 hypothesis. Written down before the run. No result is re
 - **Bar:** the same as item 1. MSE ≤ 1.01× the additive booster on all 3 cases, and CRPS ≤ booster+conformal on at least 2 of 3. Use the same seeds. The item-1 scorer also requires CRPS ≤ 1.01× raw TRACE on every case, and a one-sided paired t-test at p < 0.05 on each of those contrasts. A CRPS case counts toward the 2-of-3 only when the mean and the t-test agree.
 - **Disclosure:** this is attempt 2 of the item-1 hypothesis, so a pass is weaker evidence than a first-try pass.
 
+**Fail.** The run used the seeds and the scorer from item 1, after the training-only edge fix, with the two-leaf split as the only further change. JSON: `benchmarks/results/trace_v2_item1b.json`.
+
+| Case | Hybrid MSE | Booster MSE | Ratio | Hybrid CRPS | Booster+conformal CRPS | Raw TRACE CRPS |
+|---|---:|---:|---:|---:|---:|---:|
+| S1 period 2 | 1.243 | 1.213 | 1.025 | 0.590 | 0.578 | 0.576 |
+| Vendor spend | 1.885 | 1.793 | 1.052 | 0.768 | 0.739 | 0.773 |
+| n=2e4, p=10 | 0.01020 | 0.01006 | 1.014 | 0.0573 | 0.0566 | 0.0601 |
+
+MSE is above 1.01× on all three cases. CRPS is above the conformal booster on all three, so the 2-of-3 count is 0. Vendor and n=2e4 are inside 1.01× raw TRACE; S1 is not (ratio 1.025). The default did not change.
+
+Tail tests on this fitter, same frozen bars, written to `benchmarks/results/trace_v2_tail_item1b.json`. The earlier hybrid tail file is unchanged.
+
+| Test | Result |
+|---|---|
+| T3v2 | pass, 18/20 separate. Secondary bands 20/20 |
+| T3v2-null | pass, 0/20 false positives |
+| T4v2 | pass, 20/20 inside the Legendre bands |
+| T6v2 | pass, 19/20 |
+
 ### Item 2 — smoothed pinball curvature
 
 **Fail.** Candidate: `TraceV1`, `k_fit=8`, learning rate 1.0, 40 rounds, logistic pinball density with bandwidth 0.05 annealed to 0.02 then 0.01, Levenberg damping `1e-3`. Baseline: the same constructor with those two knobs off. The bandwidth and the damping were fixed before the run.

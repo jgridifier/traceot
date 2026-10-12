@@ -133,37 +133,49 @@ def _bin_codes(col, edges):
     return codes
 
 
-def _pooled_steps(sum_b, cnt, learning_rate, min_samples_leaf):
+def _two_leaf_steps(sum_b, cnt, learning_rate, min_samples_leaf):
+    """One squared-loss cut of the ordered value bins. Ties keep the leftmost cut."""
     nb = len(sum_b)
     raw = np.zeros(nb)
     need = max(int(min_samples_leaf), 1)
-    pools = []
-    i = 0
-    while i < nb:
-        if cnt[i] == 0:
-            i += 1
+    if nb < 3:
+        return raw
+    pc = np.zeros(nb)
+    ps = np.zeros(nb)
+    for b in range(1, nb):
+        pc[b] = pc[b - 1] + cnt[b]
+        ps[b] = ps[b - 1] + sum_b[b]
+    total_c = pc[nb - 1]
+    total_s = ps[nb - 1]
+    if total_c < need * 2:
+        return raw
+    best_gain = -np.inf
+    best_k = 0
+    for k in range(1, nb - 1):
+        cl = pc[k]
+        cr = total_c - cl
+        if cl < need or cr < need:
             continue
-        start = i
-        c = 0.0
-        s = 0.0
-        while i < nb and c < need:
-            c += cnt[i]
-            s += sum_b[i]
-            i += 1
-        pools.append([start, i, c, s])
-    if len(pools) >= 2 and pools[-1][2] < need:
-        tail = pools.pop()
-        prev = pools[-1]
-        prev[1] = tail[1]
-        prev[2] += tail[2]
-        prev[3] += tail[3]
-    for start, end, c, s in pools:
-        if c == 0:
-            continue
-        delta = learning_rate * s / c
-        for b in range(start, end):
-            if cnt[b] > 0:
-                raw[b] = delta
+        sl = ps[k]
+        sr = total_s - sl
+        gain = (sl * sl) / cl + (sr * sr) / cr - (total_s * total_s) / total_c
+        if gain > best_gain:
+            best_gain = gain
+            best_k = k
+    if best_k == 0:
+        return raw
+    cl = pc[best_k]
+    cr = total_c - cl
+    sl = ps[best_k]
+    sr = total_s - sl
+    left = learning_rate * sl / cl
+    right = learning_rate * sr / cr
+    for b in range(1, best_k + 1):
+        if cnt[b] > 0:
+            raw[b] = left
+    for b in range(best_k + 1, nb):
+        if cnt[b] > 0:
+            raw[b] = right
     return raw
 
 
@@ -211,7 +223,7 @@ def fit_mean(
                 b = int(codes[j][i])
                 sum_b[b] += y[i] - pred[i]
                 cnt[b] += 1.0
-            raw = _pooled_steps(sum_b, cnt, learning_rate, min_samples_leaf)
+            raw = _two_leaf_steps(sum_b, cnt, learning_rate, min_samples_leaf)
             total = float(cnt.sum())
             moment = float((cnt * raw).sum())
             mean = moment / total if total > 0 else 0.0

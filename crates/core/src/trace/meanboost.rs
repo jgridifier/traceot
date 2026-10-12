@@ -1,11 +1,12 @@
 //! Cyclic squared-loss booster for the mean channel.
 //!
-//! One feature per step, histogram bins, a count-weighted centre into the intercept.
-//! Early stopping holds out the last `validation_size` fraction of rows. The bins,
-//! learning rate, round cap and patience match the additive booster used as the
-//! mean baseline (max bins 1024, learning rate 0.04, 50_000 rounds, patience 100,
-//! tolerance 1e-5, validation fraction 0.15, at least 4 rows in a bin). Bagging and
-//! interaction terms are not part of this channel.
+//! One feature per step. Each visit writes one two-leaf split on the histogram,
+//! then a count-weighted centre into the intercept. Early stopping holds out the
+//! last `validation_size` fraction of rows. The cuts, learning rate, round cap and
+//! patience match the additive booster used as the mean baseline (max bins 1024,
+//! learning rate 0.04, 50_000 rounds, patience 100, tolerance 1e-5, validation
+//! fraction 0.15, at least 4 rows in a leaf). Bagging and interaction terms are
+//! not part of this channel.
 
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
@@ -181,10 +182,9 @@ fn step_feature(
         sum[b] += y[i] - pred[i];
         cnt[b] += 1;
     }
-    // Adjacent bins are pooled until each pool has `min_leaf` rows. A hard
-    // per-bin gate would leave every bin idle when max_bins is finer than the
-    // sample, which is the usual case at 1024 bins.
-    let raw = pooled_steps(&sum, &cnt, lr, min_leaf);
+    // One cut of the ordered value bins. Each side must hold `min_leaf` rows.
+    // Bin 0 is the missing bin and is not part of the ordered split.
+    let raw = two_leaf_steps(&sum, &cnt, lr, min_leaf);
     let mut total = 0.0;
     let mut moment = 0.0;
     for b in 0..nb {
@@ -203,45 +203,58 @@ fn step_feature(
     }
 }
 
-fn pooled_steps(sum: &[f64], cnt: &[u64], lr: f64, min_leaf: u64) -> Vec<f64> {
+/// Squared-loss gain of one cut. Equal gains keep the leftmost cut.
+fn two_leaf_steps(sum: &[f64], cnt: &[u64], lr: f64, min_leaf: u64) -> Vec<f64> {
     let nb = sum.len();
     let mut raw = vec![0.0; nb];
-    let mut pools: Vec<(usize, usize, u64, f64)> = Vec::new();
-    let mut i = 0;
-    while i < nb {
-        if cnt[i] == 0 {
-            i += 1;
+    if nb < 3 {
+        return raw;
+    }
+    let need = min_leaf.max(1);
+    let mut pc = vec![0u64; nb];
+    let mut ps = vec![0.0; nb];
+    for b in 1..nb {
+        pc[b] = pc[b - 1] + cnt[b];
+        ps[b] = ps[b - 1] + sum[b];
+    }
+    let total_c = pc[nb - 1];
+    let total_s = ps[nb - 1];
+    if total_c < need.saturating_mul(2) {
+        return raw;
+    }
+    let mut best_gain = f64::NEG_INFINITY;
+    let mut best_k = 0usize;
+    for k in 1..nb - 1 {
+        let cl = pc[k];
+        let cr = total_c - cl;
+        if cl < need || cr < need {
             continue;
         }
-        let start = i;
-        let mut c = 0u64;
-        let mut s = 0.0;
-        while i < nb && c < min_leaf.max(1) {
-            c += cnt[i];
-            s += sum[i];
-            i += 1;
-        }
-        pools.push((start, i, c, s));
-    }
-    if pools.len() >= 2 {
-        let last = pools.len() - 1;
-        if pools[last].2 < min_leaf.max(1) {
-            let tail = pools.pop().unwrap();
-            let prev = pools.last_mut().unwrap();
-            prev.1 = tail.1;
-            prev.2 += tail.2;
-            prev.3 += tail.3;
+        let sl = ps[k];
+        let sr = total_s - sl;
+        let gain = sl * sl / cl as f64 + sr * sr / cr as f64 - total_s * total_s / total_c as f64;
+        if gain > best_gain {
+            best_gain = gain;
+            best_k = k;
         }
     }
-    for (start, end, c, s) in pools {
-        if c == 0 {
-            continue;
+    if best_k == 0 {
+        return raw;
+    }
+    let cl = pc[best_k];
+    let cr = total_c - cl;
+    let sl = ps[best_k];
+    let sr = total_s - sl;
+    let left = lr * sl / cl as f64;
+    let right = lr * sr / cr as f64;
+    for b in 1..=best_k {
+        if cnt[b] > 0 {
+            raw[b] = left;
         }
-        let delta = lr * s / c as f64;
-        for b in start..end {
-            if cnt[b] > 0 {
-                raw[b] = delta;
-            }
+    }
+    for b in (best_k + 1)..nb {
+        if cnt[b] > 0 {
+            raw[b] = right;
         }
     }
     raw
@@ -404,5 +417,58 @@ mod tests {
                 "validation row moved an edge to {edge}"
             );
         }
+    }
+
+    #[test]
+    fn one_visit_writes_two_levels() {
+        // Three separated groups. A full-pool write would put a different
+        // level on the middle group. One split cannot.
+        let mut x = Vec::new();
+        let mut y = Vec::new();
+        for _ in 0..4 {
+            x.push(0.0);
+            y.push(0.0);
+        }
+        for _ in 0..4 {
+            x.push(1.0);
+            y.push(10.0);
+        }
+        for _ in 0..4 {
+            x.push(2.0);
+            y.push(0.0);
+        }
+        let cfg = MeanConfig {
+            max_bins: 6,
+            learning_rate: 1.0,
+            max_rounds: 1,
+            early_stopping_rounds: 2,
+            early_stopping_tolerance: 1e-12,
+            validation_size: 0.0,
+            min_samples_leaf: 2,
+        };
+        let model = fit_mean(&x, 12, 1, &y, &cfg).unwrap();
+        assert_eq!(model.rounds, 1);
+        let pred = predict_mean(&model, &x, 12).unwrap();
+        assert!(
+            (pred[4] - pred[8]).abs() < 1e-12,
+            "right leaf split {} {}",
+            pred[4],
+            pred[8]
+        );
+        assert!(
+            (pred[0] - pred[4]).abs() > 1.0,
+            "no split {} {}",
+            pred[0],
+            pred[4]
+        );
+        let mut levels: Vec<i64> = model.effects[0]
+            .iter()
+            .copied()
+            .filter(|v| v.abs() > 1e-12)
+            .map(|v| (v * 1e8).round() as i64)
+            .collect();
+        levels.sort_unstable();
+        levels.dedup();
+        assert_eq!(levels.len(), 2, "effects {:?}", model.effects[0]);
     }
 }
