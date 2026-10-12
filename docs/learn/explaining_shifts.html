@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explaining a shift · traceot</title>
+<meta name="description" content="How a change between two periods splits into composition and structure, per channel and per feature.">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<style>
+  :root { color-scheme: light dark; --fg:#1d1d1f; --bg:#fdfdfc; --muted:#5b5b60; --rule:#ddd; --accent:#1b6ca8; --note:#f3f6fa; --break:#f8ece6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg:#e9e9ec; --bg:#141416; --muted:#a3a3aa; --rule:#333; --accent:#6fb3e6; --note:#1d2229; --break:#2a211c; }
+    svg { background:#fff; border-radius:6px; }
+  }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+         font-size:1.0625rem; line-height:1.6; }
+  main { max-width:42rem; margin:0 auto; padding:1.25rem 1rem 4rem; }
+  h1 { font-size:1.7rem; line-height:1.2; margin:1.2rem 0 .4rem; }
+  h2 { font-size:1.25rem; margin:1.6rem 0 .5rem; }
+  h3 { font-size:1.05rem; margin:1.3rem 0 .3rem; }
+  a { color:var(--accent); }
+  .lede { color:var(--muted); }
+  .status { display:inline-block; font-size:.8rem; font-weight:600; padding:.15rem .5rem; border-radius:999px; background:#fff3cd; color:#664d03; }
+  .note { background:var(--note); border-left:4px solid var(--accent); padding:.6rem .9rem; border-radius:4px; margin:1rem 0; }
+  .breaks { background:var(--break); border-left:4px solid #b85c38; padding:.6rem .9rem; border-radius:4px; margin:1rem 0; }
+  figure { margin:1rem 0; }
+  figure svg { width:100%; height:auto; display:block; }
+  figcaption { color:var(--muted); font-size:.9rem; margin-top:.35rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+  nav.toc ol { margin:.2rem 0 0 1.1rem; padding:0; }
+  nav.toc li { margin:.15rem 0; }
+  footer { color:var(--muted); font-size:.85rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; }
+  mjx-container { overflow-x:auto; overflow-y:hidden; max-width:100%; }
+</style>
+</head>
+<body>
+<main>
+<p><a href="../index.html">Learn home</a> · <a href="trace.html">TRACE</a> · <a href="trace_theory.html">TRACE theory</a> · <span class="status">research, unvalidated</span></p>
+<h1>Explaining a shift</h1>
+<p class="lede">Two periods, one outcome. Part of the change is who shows up. Part is that the same covariates now map to a different distribution. This page splits those two parts, channel by channel, without letting the order of the split decide the answer.</p>
+<nav class="toc" aria-label="Contents">
+<ol>
+<li><a href="#distance">The distance between two distributions</a></li>
+<li><a href="#channels">Channels</a></li>
+<li><a href="#two-parts">Composition and structure</a></li>
+<li><a href="#averages">Two averages, and the gap</a></li>
+<li><a href="#order">Averaging both orders</a></li>
+<li><a href="#features">A share for each feature</a></li>
+<li><a href="#weights">Reweighting, cross-fit, and trimming</a></li>
+<li><a href="#bands">Bands and a noise floor</a></li>
+<li><a href="#mass">Arrivals, departures, and mass</a></li>
+</ol>
+</nav>
+
+<h2 id="distance">The distance between two distributions</h2>
+<p>A period is a list of rows. Each row has covariates \(x\) and one outcome \(y\). Period A and period B need not have the same rows. The question is how the outcome distribution moved, and why.</p>
+<p>For a one-dimensional outcome the squared Wasserstein-2 distance is ordinary squared distance between quantile functions. If \(Q_A(u)\) is the level-\(u\) quantile of period A, and \(Q_B\) the same for period B, then</p>
+\[
+W_2^2(A,B) = \int_0^1 \bigl(Q_B(u) - Q_A(u)\bigr)^2 \, du.
+\]
+<p>A location shift of size \(d\) contributes \(d^2\). A change in width contributes too, and so does a change in the tails. The integral adds them.</p>
+<figure>
+<svg role="img" aria-label="Two quantile curves, then a split of their squared distance into composition and structure" viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg">
+<rect width="640" height="210" fill="#f7f5f2"/>
+<text x="24" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">quantile functions</text>
+<line x1="24" y1="150" x2="280" y2="150" stroke="#ccc"/>
+<polyline fill="none" stroke="#1b6ca8" stroke-width="2.2" points="24,132 50,128 76,122 102,114 128,104 154,92 180,80 206,70 232,62 258,56 280,52"/>
+<polyline fill="none" stroke="#b85c38" stroke-width="2.2" points="24,118 50,110 76,100 102,88 128,74 154,60 180,48 206,40 232,36 258,34 280,33"/>
+<text x="24" y="176" font-size="12" font-family="system-ui,sans-serif" fill="#1b6ca8">period A</text>
+<text x="110" y="176" font-size="12" font-family="system-ui,sans-serif" fill="#b85c38">period B</text>
+<text x="24" y="196" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">level u, from 0 to 1</text>
+<text x="340" y="22" font-size="13" font-family="system-ui,sans-serif" fill="#1d1d1f">one channel of \(W_2^2\)</text>
+<rect x="360" y="70" width="36" height="80" fill="#1b6ca8"/>
+<rect x="396" y="110" width="36" height="40" fill="#2f7d4a"/>
+<text x="360" y="176" font-size="12" font-family="system-ui,sans-serif" fill="#1d1d1f">comp</text>
+<text x="396" y="176" font-size="12" font-family="system-ui,sans-serif" fill="#1d1d1f">struct</text>
+<rect x="470" y="86" width="36" height="64" fill="#1b6ca8"/>
+<rect x="506" y="96" width="36" height="54" fill="#2f7d4a"/>
+<text x="458" y="196" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">marginal</text>
+<text x="530" y="196" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">barycenter</text>
+<line x1="450" y1="86" x2="450" y2="150" stroke="#ccc"/>
+</svg>
+<figcaption>Left: the two quantile functions. The squared distance is the squared vertical gap, integrated. Right: that distance on one channel, split into composition and structure. The two averages need not agree. The gap between them is reported.</figcaption>
+</figure>
+
+<h2 id="channels">Channels</h2>
+<p>Quantile functions are curves. The shifted Legendre polynomials \(P^*_k\) on \([0,1]\) are a perpendicular set of curves, so a quantile function has coordinates</p>
+\[
+\lambda_{k+1} = \int_0^1 Q(u)\, P^*_k(u)\, du, \qquad c_k = (2k+1)\,\lambda_{k+1}.
+\]
+<p>\(Q = \sum_k c_k P^*_k\) when the curve lives in that span. Channel 0 is the mean. Higher channels carry scale and shape. Because the polynomials are perpendicular,</p>
+\[
+W_2^2 = \sum_k \frac{(\Delta c_k)^2}{2k+1} = \sum_k (2k+1)\,(\Delta\lambda_{k+1})^2
+\]
+<p>inside the span. Anything the span cannot see is an extra remainder, the unresolved channel. It is reported next to the sum, so the total stays exact. TRACE stores the orthonormal coefficients \(a_k = c_k / \sqrt{2k+1}\). The same identity in those units is \(W_2^2 = \sum_k (\Delta a_k)^2\).</p>
+
+<h2 id="two-parts">Composition and structure</h2>
+<p>Hold the conditional law \(Q(u\mid x)\) fixed and change only the mix of covariates. That is composition: different rows walked in, the map from \(x\) to the outcome stayed put. Hold the covariate mix fixed and change the map. That is structure.</p>
+<p>Neither piece is observed alone. Period A gives the pair (structure A, covariates A). Period B gives (structure B, covariates B). The two counterfactuals fill the square:</p>
+<ul>
+<li>\(C\): structure B, covariates A.</li>
+<li>\(C'\): structure A, covariates B.</li>
+</ul>
+<p>On one channel the four numbers are \(\lambda^A\), \(\lambda^{C'}\), \(\lambda^C\), \(\lambda^B\). Moving covariates first and structure second does not have to match the other order. The cross term \(\lambda^B - \lambda^C - \lambda^{C'} + \lambda^A\) is that disagreement. It is real. It is split in half rather than assigned to whichever switch was written down first.</p>
+
+<h2 id="averages">Two averages, and the gap</h2>
+<p>There are two honest answers to “the distribution of a period”.</p>
+<p><strong>The marginal law</strong> mixes the rows and then takes quantiles: \(F_t(y) = \int F_t(y\mid x)\, dF_t(x)\). No model is required. Only the mean is linear in that mixture. Higher L-moments of a mixture are not the mixture of the L-moments, so a per-feature split of those channels is not an identity. The channel split still is.</p>
+<p><strong>The barycenter</strong> averages the quantile functions themselves: \(\bar Q_t(u) = \mathbb{E}_{x\sim F_t}[Q_t(u\mid x)]\). In one dimension that is the Wasserstein barycenter of the conditional laws. Coefficients pass through the expectation, \(\bar c_{t,k} = \mathbb{E}[c_{t,k}(x)]\). TRACE writes each channel as an intercept plus a sum of functions of one feature,</p>
+\[
+c_{t,k}(x) = b_{t,k} + \sum_j f_{t,kj}(x_j),
+\]
+<p>so the average splits by feature with nothing left over.</p>
+<div class="note">The two answers differ by a mixing term. Jensen's inequality is the reason: the quantile of a mixture is not the mixture of the quantiles, except for the mean. Both numbers are reported. Their difference is the gap. It is not folded into either share.</div>
+
+<h2 id="order">Averaging both orders</h2>
+<p>For one channel, label the empty coalition by \(\lambda^A\), the composition-only coalition by \(\lambda^{C'}\), the structure-only coalition by \(\lambda^C\), and both by \(\lambda^B\). The Shapley value averages the two orders:</p>
+\begin{align*}
+\mathrm{comp} &= \tfrac12\bigl[(\lambda^B - \lambda^C) + (\lambda^{C'} - \lambda^A)\bigr], \\
+\mathrm{struct} &= \tfrac12\bigl[(\lambda^C - \lambda^A) + (\lambda^B - \lambda^{C'})\bigr].
+\end{align*}
+<p>Add them and the counterfactuals cancel: \(\mathrm{comp} + \mathrm{struct} = \lambda^B - \lambda^A\). Swap which move is written first and the same two numbers come back. The interaction is reported on its own as well, even though each player has already received half of it.</p>
+
+<h2 id="features">A share for each feature</h2>
+<p>On the barycenter the players are the feature-level moves. Write \(\bar g^{\,s}_{t}(j)\) for the average of feature \(j\)'s function when the structure is period \(t\) and the covariates are drawn from period \(s\). Then</p>
+\begin{align*}
+\mathrm{comp}_{kj} &= \tfrac12\bigl[(\bar g^{B}_{A} - \bar g^{A}_{A}) + (\bar g^{B}_{B} - \bar g^{A}_{B})\bigr], \\
+\mathrm{struct}_{kj} &= \tfrac12\bigl[(\bar g^{A}_{B} - \bar g^{A}_{A}) + (\bar g^{B}_{B} - \bar g^{A}_{B})\bigr],
+\end{align*}
+<p>plus one intercept player \(\Delta b_k\). That is \(2p+1\) numbers, and they add up to \(\Delta \bar c_k\).</p>
+<p>The squared distance is a square of a sum. The fair share of a player with coefficient \(a_i\), when \(\sum_i a_i = \Delta c_k\), is</p>
+\[
+\varphi_i = \frac{a_i \sum_i a_i}{2k+1}.
+\]
+<p>Sum the shares and you get exactly that channel's \(W_2^2\). A share can be negative: the player pulled against the net move. The negative number is kept. Clipping it would break the sum.</p>
+<p>In orthonormal coefficients the same rule is \(\varphi_i = \alpha_i \sum_i \alpha_i\), because the \(\sqrt{2k+1}\) factors cancel. The marginal-law split uses the same formula with two players, composition and structure, after converting \(\Delta\lambda\) to the \(c\) scale.</p>
+
+<h2 id="weights">Reweighting, cross-fit, and trimming</h2>
+<p>The barycenter counterfactual does not need weights. Average structure B's curve on period A's rows. That is \(\bar c_C = \mathbb{E}_A[c_B(x)]\).</p>
+<p>The marginal counterfactual does. Bayes turns a period classifier into a density ratio. With \(T\) the period label,</p>
+\[
+\psi(x) = \frac{P(A\mid x)}{P(B\mid x)}\cdot\frac{P(B)}{P(A)}.
+\]
+<p>Reweight period B's rows by \(\psi\) and the weighted sample has the law of \(C\): structure B, covariates A. Reweight period A by \(1/\psi\) and you get \(C'\). A logistic regression on the raw covariates is the classifier used here. With equal sample sizes the prior ratio is 1, so \(\psi(x) = \exp(x^\top\beta)\) once the intercept is included in \(\beta\).</p>
+<p>Each row's weight comes from a model that did not train on that row. The rows are cut into folds, stratified by period, and the fold of a row is scored by the fit on the other folds. The weights are then scaled to average 1.</p>
+<p>Extreme weights are capped at a quantile chosen before looking at the result. The mass removed by the cap, as a fraction of the weight sum, is reported. Overlap is an assumption, not a conclusion: if period A's covariates sit outside period B's, no finite weight rebuilds \(C\).</p>
+
+<h2 id="bands">Bands and a noise floor</h2>
+<p>Rows are resampled inside each period, and the whole calculation is repeated, including the cross-fit and the TRACE fit. The 2.5 and 97.5 percentiles of those replicates are a pointwise band. A uniform band across a list of components uses the largest studentized residual in each replicate, takes the 95th percentile of that maximum, and inflates every component's standard error by that one critical value. A component is marked resolved when the uniform interval misses zero.</p>
+<p>A squared distance is a poor thing to test against zero with a bootstrap: noise biases it upward. The noise floor is a permutation. Shuffle the period labels, keep the counts, and recompute. Under exchangeability the shuffled statistics describe the null. The 95th percentile of the shuffled total \(W_2^2\) is the floor. The observed total is compared with that floor, not with zero.</p>
+
+<h2 id="mass">Arrivals, departures, and mass</h2>
+<p>Some rows are in A only (exits). Some are in B only (entries). The rest are stayers. Let \(e_A\) be the share of A that leaves and \(e_B\) the share of B that is new. The barycenter is linear in the row weights, so the change in average coefficients splits exactly:</p>
+\begin{align*}
+\mathrm{stay} &= \tfrac12\bigl[(1-e_A)+(1-e_B)\bigr]\,(\bar c_B^{S} - \bar c_A^{S}), \\
+\mathrm{mix} &= \tfrac12(\bar c_A^{S} + \bar c_B^{S})\,(e_A - e_B), \\
+\mathrm{entry} &= e_B\,\bar c^{N}, \\
+\mathrm{exit} &= -e_A\,\bar c^{X}.
+\end{align*}
+<p>These four are players in the same square-of-a-sum game. If the stayers did not change, the stay term is zero and the move is mix plus the arrivals and departures.</p>
+<div class="breaks">Mass is not a share of \(W_2^2\). If the two periods have different total mass \(m_A\) and \(m_B\), the pure-mass Hellinger–Kantorovich term is \(4(\sqrt{m_A}-\sqrt{m_B})^2\), also shown divided by \(m_A+m_B\). Different units. It is printed beside the decomposition and not added in.</div>
+
+<h3>What this does not say</h3>
+<p>The split is a fair division of a squared distance, not a causal claim. “Composition” means the covariate mix under a stated conditional structure, and it needs overlap. The marginal law and the barycenter answer different questions; a small gap means they happened to agree, not that one of them was checked against the other and discarded. Bootstrap coverage is an asymptotic statement. A negative share is a direction, not a defect.</p>
+<p>The algebra and the estimator are in <a href="https://github.com/jgridifier/traceot/blob/main/docs/theory/SHIFT_V2.md">SHIFT_V2.md</a>. The numeric identities are <code>docs/theory/verify/shift_v2_checks.py</code>.</p>
+<footer>
+<p>Personal research project. Simulated examples only. TRACE and this split are unpublished and unvalidated.</p>
+<p>Background for the counterfactual weights: DiNardo, Fortin and Lemieux, <em>Econometrica</em> 64 (1996). Background for the bootstrap of counterfactual distributions: Chernozhukov, Fernández-Val and Melly, <em>Econometrica</em> 81 (2013).</p>
+</footer>
+</main>
+</body>
+</html>

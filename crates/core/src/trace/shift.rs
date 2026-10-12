@@ -245,6 +245,18 @@ impl SplitMix64 {
             }
         }
     }
+
+    /// Uniform on `[0, 1)`. The top 53 bits of the SplitMix64 stream.
+    pub fn next_f64(&mut self) -> f64 {
+        let u = self.next_u64() >> 11;
+        (u as f64) * (1.0 / ((1u64 << 53) as f64))
+    }
+
+    /// Standard exponential, rate 1. Used by the exchangeable-weight bootstrap.
+    pub fn exp1(&mut self) -> f64 {
+        let u = (self.next_u64() >> 11) as f64 + 0.5;
+        -(u / ((1u64 << 53) as f64)).ln()
+    }
 }
 
 /// In-place Fisher–Yates. When `strata` is set, labels are shuffled inside each cell.
