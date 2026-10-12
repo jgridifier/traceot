@@ -1,0 +1,116 @@
+{
+  "question": "Is the item-1 MSE miss a bug in the mean step, the c0 lock, or the mean readout?",
+  "answer": "No bug found. The recorded item-1 table is unchanged. There is no corrected re-run.",
+  "official_item1": "benchmarks/results/trace_v2_item1.json",
+  "checks": {
+    "a_mean_alone": {
+      "note": "One historical seed per case, the same split as item 1. Mean-alone is the squared-loss booster with no residual stage. Hybrid MSE is hybrid.mean(), which is that booster. TraceV1 mean is the Gauss-Legendre average of its quantile curve. These seeds are not the 20-seed pass set.",
+      "scale_seed_0": {
+        "bayes_test_mse": 0.01011,
+        "mean_alone_test_mse": 0.0397,
+        "hybrid_mean_test_mse": 0.03967,
+        "tracev1_mean_test_mse": 0.01053,
+        "ebm_test_mse": 0.01018,
+        "rounds": 199,
+        "best_round": 99,
+        "best_val_mse": 0.0422
+      },
+      "vendor_seed_44": {
+        "bayes_test_mse": 1.763,
+        "mean_alone_test_mse": 8.4515,
+        "hybrid_mean_test_mse": 8.4515,
+        "tracev1_mean_test_mse": 1.984,
+        "ebm_test_mse": 1.798,
+        "rounds": 131,
+        "best_round": 31,
+        "best_val_mse": 10.165
+      },
+      "s1_seed_11": {
+        "bayes_test_mse": 0.960,
+        "mean_alone_1024_bins": "best_round 0, so the restored model is the intercept; test MSE 1.0765",
+        "note": "On the official fresh seeds, 10 of 20 S1 fits stop at exactly 100 rounds, which is patience expiring with the intercept still best."
+      }
+    },
+    "b_residual_cannot_move_c0": {
+      "legendre_integrals_k0_to_k5_on_12_gl_nodes": [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "weight_sum": 1.0,
+      "channel0_energy_vendor_and_scale": 0.0,
+      "max_abs_projection_shift_of_quadrature_mean": 1e-14
+    },
+    "c_mean_readout": {
+      "hybrid_mean_equals_gl_node_average": true,
+      "max_abs_gap_vendor": 7.1e-15,
+      "max_abs_gap_scale": 3.3e-16,
+      "same_with_project_true": true
+    },
+    "d_step": {
+      "learning_rate": 0.04,
+      "scale_round1_feature0": {
+        "pools": 1024,
+        "mean_abs_bin_residual": 0.2494,
+        "mean_abs_delta": 0.009977,
+        "delta_over_residual": 0.04,
+        "center": 0.0
+      },
+      "vendor_round1_feature0": {
+        "pools": 410,
+        "mean_abs_bin_residual": 2.574,
+        "mean_abs_delta": 0.0857,
+        "delta_over_residual": 0.033,
+        "center": 0.0,
+        "note": "0.033 is below 0.04 because pools of unequal size: the reported mean of |delta| is an unweighted mean of pools, and delta = lr * pooled residual."
+      }
+    }
+  },
+  "curves": {
+    "scale_seed_0_train_val_mse": [
+      [1, 0.0789, 0.0892],
+      [21, 0.0115, 0.0505],
+      [41, 0.0053, 0.0449],
+      [61, 0.0034, 0.0431],
+      [81, 0.0025, 0.0424],
+      [101, 0.0020, 0.0422],
+      [121, 0.0016, 0.0424],
+      [181, 0.0011, 0.0435]
+    ],
+    "vendor_seed_44_train_val_mse": [
+      [1, 11.053, 12.648],
+      [21, 0.996, 10.215],
+      [41, 0.322, 10.191],
+      [61, 0.148, 10.298],
+      [121, 0.028, 10.550]
+    ],
+    "reading": "Training MSE falls through the noise floor. Validation MSE bottoms far above it, and early stopping restores that bottom. The step is accepted; the 1024-bin histogram does not generalize."
+  },
+  "same_step_coarser_bins_one_seed": {
+    "note": "Diagnostic only. Not a new item-1 run and not a change to the booster. Same learning rate, patience and validation slice.",
+    "scale_seed_0": {"bins_16_test_mse": 0.0106, "bins_32_test_mse": 0.0104, "signal_error_16": 0.0005},
+    "vendor_seed_44": {"bins_16_test_mse": 2.004, "bins_32_test_mse": 2.049, "signal_error_16": 0.207},
+    "s1_seed_11": {"bins_16_test_mse": 1.026, "bins_32_test_mse": 1.051}
+  },
+  "ebm_without_bags_or_smoothing_scale_seed_0": {
+    "default": 0.01018,
+    "outer_bags_1_smoothing_0_greedy_ratio_0": 0.01031,
+    "outer_bags_1_smoothing_0_greedy_ratio_10": 0.01022,
+    "note": "Those EBM fits still use max_leaves=2, one split per step inside the 1024-bin histogram. The cyclic full-bin gradient does not."
+  },
+  "round_cap": {
+    "official_item1_residual_hit_40": "20/20 S1, 20/20 vendor, 6/20 scale",
+    "official_tail_hybrid_hit_200": "38/80",
+    "baseline_tracev1_typical_rounds": "about 50 to 80 at the same 1e-10 tolerance",
+    "locked_residual_on_these_seeds_tol_1e-10": {
+      "vendor_seed_44_max_200": 168,
+      "scale_n8000_seed_0_max_200": 88
+    },
+    "reading": "A step that raised the pinball loss would stop by round 2, because a negative relative drop is below the tolerance. These fits are still descending at the cap. The channel-0 component of the joint Newton step is set to zero, which keeps c0 fixed and leaves a shorter step than the unlocked fit."
+  },
+  "signal_only_control": {
+    "n": 4000,
+    "y": "x + 0.1 normal",
+    "features": 1,
+    "best_round": 105,
+    "best_val_mse": 0.0135,
+    "noise_variance": 0.01,
+    "same_draw_plus_9_noise_features_best_val_mse": 0.0563
+  }
+}

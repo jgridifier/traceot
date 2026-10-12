@@ -162,4 +162,62 @@ mod tests {
         }
         assert!(sse / (n as f64) < 0.05, "mean mse {}", sse / (n as f64));
     }
+
+    #[test]
+    fn projection_and_node_average_keep_the_booster_mean() {
+        let n = 80;
+        let mut x = Vec::new();
+        let mut y = Vec::new();
+        for i in 0..n {
+            let v = i as f64 / (n - 1) as f64;
+            x.push(v);
+            let z = (i as f64 * 1.7).sin();
+            y.push(0.5 + 1.5 * v + 0.8 * z + 0.3 * z * z * z);
+        }
+        let mean = MeanConfig {
+            max_bins: 8,
+            learning_rate: 0.4,
+            max_rounds: 30,
+            early_stopping_rounds: 8,
+            early_stopping_tolerance: 1e-8,
+            validation_size: 0.0,
+            min_samples_leaf: 1,
+        };
+        let residual = V1Config {
+            k_fit: 5,
+            k_report: 4,
+            n_u: 12,
+            max_bins: 6,
+            max_rounds: 12,
+            tol: 1e-8,
+            mono: crate::trace::MonoMode::None,
+            ..V1Config::default()
+        };
+        let model = fit_hybrid(&x, n, 1, &y, &mean, &residual).unwrap();
+        assert!(model.residual.intercept[0].abs() < 1e-10);
+        let nodes = model.residual.basis.nodes.clone();
+        let weights = model.residual.basis.weights.clone();
+        let open = predict_hybrid(&model, &x, n, &nodes, false).unwrap();
+        let projected = predict_hybrid(&model, &x, n, &nodes, true).unwrap();
+        let booster = predict_mean_channel(&model, &x, n).unwrap();
+        let nu = nodes.len();
+        for i in 0..n {
+            let mut a_open = 0.0;
+            let mut a_proj = 0.0;
+            for t in 0..nu {
+                a_open += weights[t] * open[i * nu + t];
+                a_proj += weights[t] * projected[i * nu + t];
+            }
+            assert!(
+                (a_open - booster[i]).abs() < 1e-8,
+                "node average {a_open} booster {}",
+                booster[i]
+            );
+            assert!(
+                (a_proj - booster[i]).abs() < 1e-8,
+                "projected mean {a_proj} booster {}",
+                booster[i]
+            );
+        }
+    }
 }

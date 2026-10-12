@@ -372,6 +372,31 @@ The bars are the ones in `docs/research/LANDSCAPE.md` §4. They were not edited 
 
 The MSE bar is ≤ 1.01× on all three cases. The CRPS bar is ≤ the conformal booster on at least two cases, and no case worse than raw TRACE by more than 1%. Every case misses both. The landscape's own reading of an MSE miss this large is that the booster or the binning differs, not that squared loss is the wrong objective for the mean channel. This booster does not smooth adjacent bins and does not bag. The bar was not changed to fit that difference.
 
+#### Follow-up: is the 4× gap a bug?
+
+Checked before merge, on the same generators and the same split, without editing the booster or the bar. The recorded table above is unchanged. There is no corrected re-run. The measurements are in `benchmarks/results/trace_v2_item1_diagnosis.json`.
+
+The mean channel alone, with no residual stage, reproduces the hybrid MSE. On vendor seed 44 the booster's test MSE is 8.45 and `hybrid.mean` is 8.45, against a TraceV1 quadrature mean of 1.98 and the additive booster at 1.80. On the n=2e4 seed the four numbers are 0.0397, 0.0397, 0.0105 and 0.0102. The residual stage is not where the MSE goes.
+
+The residual cannot move \(c_0\). On 12 Gauss–Legendre nodes, \(e_0\) integrates to 1 and \(e_k\) for \(k \ge 1\) integrates to 0 (gap below \(10^{-12}\); covered by `higher_channels_integrate_to_zero_on_the_nodes`). Channel-0 energy of the locked residual is 0. The monotone projection changes the node values and leaves the quadrature mean where it was: the largest shift on these two seeds is about \(10^{-14}\). `hybrid.mean` matches that quadrature, with and without the projection, to about \(10^{-14}\). The reported mean is the booster, not a differently weighted node average.
+
+The squared-loss step is the learning rate times the pooled bin residual. On the n=2e4 seed the first step has mean absolute residual 0.249 and mean absolute update 0.00998, ratio 0.040, and the count-weighted centre is 0. `one_step_is_learning_rate_times_residual` locks that arithmetic. A one-feature draw of \(x + 0.1\,\varepsilon\) reaches validation MSE 0.0135 against a noise floor of 0.01. The same draw with nine noise features stops at validation MSE 0.056.
+
+Training and validation MSE on the two bad seeds:
+
+| Round | n=2e4 train | n=2e4 val | Vendor train | Vendor val |
+|---:|---:|---:|---:|---:|
+| 1 | 0.079 | 0.089 | 11.05 | 12.65 |
+| 21 | 0.011 | 0.051 | 0.996 | 10.22 |
+| 41 | 0.005 | 0.045 | 0.322 | 10.19 |
+| 101 | 0.002 | 0.042 | 0.046 | 10.49 |
+
+The noise floors are about 0.010 and 1.76. Training falls through them. Validation never does, and early stopping restores that valley (best round 99 and 31). On the official fresh seeds, 10 of 20 S1 fits stop at exactly 100 rounds, which is the patience expiring while the intercept is still the best validation model.
+
+The same step on 16 bins, one seed only, is not 4× off: n=2e4 test MSE 0.0106, vendor 2.00. That is a check, not a new item-1 result, and the 1024-bin booster was not retuned. An additive booster with one bag, no smoothing, and a pure cyclic schedule still lands at 0.0103 on the n=2e4 seed, because each of its steps is a two-leaf split inside the histogram. This channel writes a level into every pool on every visit.
+
+The 200-round cap is a slow residual, not a step that increases the loss. A negative relative drop is already below the tolerance, so a step that raised pinball would stop by round 2. On vendor seed 44 the locked residual meets \(10^{-10}\) at round 168; on an 8,000-row scale draw it meets it at round 88. The unlocked TraceV1 fits in the baseline meet it in about 50 to 80 rounds. The lock sets the channel-0 component of the joint Newton step to zero after the solve, which keeps \(c_0\) fixed and leaves a shorter step. Thirty-eight of the eighty hybrid tail fits are still above the tolerance at round 200. Items 2 and 3 were not refit.
+
 ### Item 2 — smoothed pinball curvature
 
 **Fail.** Candidate: `TraceV1`, `k_fit=8`, learning rate 1.0, 40 rounds, logistic pinball density with bandwidth 0.05 annealed to 0.02 then 0.01, Levenberg damping `1e-3`. Baseline: the same constructor with those two knobs off. The bandwidth and the damping were fixed before the run.

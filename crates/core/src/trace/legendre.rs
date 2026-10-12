@@ -643,6 +643,23 @@ mod tests {
     }
 
     #[test]
+    fn higher_channels_integrate_to_zero_on_the_nodes() {
+        let k = 8;
+        let b = QuadBasis::new(12, k).unwrap();
+        for c in 0..k {
+            let mut s = 0.0;
+            for t in 0..b.nodes.len() {
+                s += b.weights[t] * b.e[t * k + c];
+            }
+            if c == 0 {
+                assert!((s - 1.0).abs() < 1e-12, "e0 integral {s}");
+            } else {
+                assert!(s.abs() < 1e-12, "e{c} integral {s}");
+            }
+        }
+    }
+
+    #[test]
     fn parseval_pair() {
         let b = QuadBasis::new(8, 4).unwrap();
         let a = [0.3, -0.2, 0.05, 0.01];

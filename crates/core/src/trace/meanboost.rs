@@ -326,4 +326,42 @@ mod tests {
             pred[n - 1] - pred[0]
         );
     }
+
+    #[test]
+    fn one_step_is_learning_rate_times_residual() {
+        // Two occupied bins. The squared-loss Newton step in a bin is the mean
+        // residual, multiplied by the learning rate. Centering puts the
+        // count-weighted average of that step into the intercept and must not
+        // change the prediction.
+        let x = vec![0.0, 0.0, 1.0, 1.0];
+        let y = vec![0.0, 0.0, 4.0, 4.0];
+        let lr = 0.5;
+        let cfg = MeanConfig {
+            max_bins: 2,
+            learning_rate: lr,
+            max_rounds: 1,
+            early_stopping_rounds: 5,
+            early_stopping_tolerance: 1e-12,
+            validation_size: 0.0,
+            min_samples_leaf: 1,
+        };
+        let model = fit_mean(&x, 4, 1, &y, &cfg).unwrap();
+        assert_eq!(model.rounds, 1);
+        let pred = predict_mean(&model, &x, 4).unwrap();
+        // Training mean is 2. Bin residuals are -2 and +2. One step moves them by lr.
+        assert!((pred[0] - (2.0 - 2.0 * lr)).abs() < 1e-12, "{}", pred[0]);
+        assert!((pred[1] - (2.0 - 2.0 * lr)).abs() < 1e-12, "{}", pred[1]);
+        assert!((pred[2] - (2.0 + 2.0 * lr)).abs() < 1e-12, "{}", pred[2]);
+        assert!((pred[3] - (2.0 + 2.0 * lr)).abs() < 1e-12, "{}", pred[3]);
+        let nonzero: Vec<f64> = model.effects[0]
+            .iter()
+            .copied()
+            .filter(|v| v.abs() > 1e-15)
+            .collect();
+        assert_eq!(nonzero.len(), 2, "effects {:?}", model.effects[0]);
+        assert!((nonzero[0] + 2.0 * lr).abs() < 1e-12, "{nonzero:?}");
+        assert!((nonzero[1] - 2.0 * lr).abs() < 1e-12, "{nonzero:?}");
+        // The two steps cancel, so the intercept stays at the training mean.
+        assert!((model.intercept - 2.0).abs() < 1e-12, "{}", model.intercept);
+    }
 }
