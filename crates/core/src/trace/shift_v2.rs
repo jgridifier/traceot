@@ -1125,9 +1125,12 @@ pub fn bootstrap_marginal(
         ));
     }
     let job = |b: usize| -> Result<MarginalDraw> {
+        // Not the SplitMix64 step constant. Multiplying by that constant makes
+        // replicate b+1 a one-step shift of replicate b, so every resample is
+        // almost the same sample and the band has no width.
         let mut rng = SplitMix64::new(
             seed.wrapping_add(b as u64)
-                .wrapping_mul(0x9E37_79B9_7F4A_7C15),
+                .wrapping_mul(0xBF58_476D_1CE4_E5B9),
         );
         let ia = resample_indices(n_a, n_a, &mut rng);
         let ib = resample_indices(n_b, n_b, &mut rng);
@@ -1708,5 +1711,38 @@ mod tests {
         let floor = permutation_w2_floor(&ya, &yb, 80, 9, 16, 2, 0.95).unwrap();
         assert!(floor.floor >= 0.0);
         assert!(floor.null_mean >= 0.0);
+    }
+
+    #[test]
+    fn bootstrap_replicates_are_distinct_resamples() {
+        let n = 400;
+        let mut x_a = vec![0.0; n];
+        let mut x_b = vec![0.0; n];
+        let mut y_a = vec![0.0; n];
+        let mut y_b = vec![0.0; n];
+        for i in 0..n {
+            let z = (i as f64) / (n as f64) - 0.5;
+            x_a[i] = z;
+            x_b[i] = z + 0.25;
+            y_a[i] = z;
+            y_b[i] = 0.8 * z + 0.4;
+        }
+        let cfg = ShiftV2Config {
+            k: 3,
+            n_quad: 16,
+            n_folds: 2,
+            ..ShiftV2Config::default()
+        };
+        let draws = bootstrap_marginal(&x_a, &y_a, n, &x_b, &y_b, n, &cfg, 12, 3).unwrap();
+        let mut lo = f64::MAX;
+        let mut hi = f64::MIN;
+        for d in &draws {
+            lo = lo.min(d.w2_total);
+            hi = hi.max(d.w2_total);
+        }
+        assert!(
+            hi - lo > 1e-3,
+            "bootstrap W2 range {lo}..{hi} is too small to be a resample"
+        );
     }
 }
