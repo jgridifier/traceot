@@ -162,3 +162,12 @@ maturin (release). Pre-run checks of TRACE_ADAPTER_SPEC.md §6 were run on rando
   tracks are the existing ShiftBench records (same seeds); rivals are not re-run there. The frozen
   `scale` track for rivals never completed in the ShiftBench run (the run script stopped before it);
   TRACE's scale cells are run here; rival scale cells are reported as missing.
+* **D11 (analysis detail, logged before results).** A Spearman correlation that is undefined (a constant
+  vector) is set to 0 and the count of such cases is reported per method. H6 attribution vector is
+  `|comp_j| + |struct_j|` (H6 text), for every method including rivals' existing real-panel records.
+* **D12 (analysis detail, logged before results).** H7 sign checks apply to the pieces the A2 table
+  designates as planted on the graded channel (structure for `*_struct`, composition for `*_comp`,
+  both for `shape_mixed`), irrespective of their magnitude. TRACE is scored on `lsplit` (order-free)
+  against the Shapley truth; DFL/CFM on their L-moment read-outs against the A-reference truth.
+  Frozen-track primary endpoints are also tabulated with the frozen union-band rule for comparability
+  with the ShiftBench rival numbers.
