@@ -409,6 +409,14 @@ Quantile cuts were taken from every row passed to `fit_mean`, including the inte
 
 **Fail.** The MSE ratios are still above 1.01 on every case, and CRPS is still worse than both comparators on every case.
 
+### Item 1b — pre-registered before the run
+
+Attempt 2 of the item-1 hypothesis. Written down before the run. No result is recorded in this section yet.
+
+- **Change:** replace the full-pool write in `step_feature` with one two-leaf split per feature visit. Keep 1,024 cuts, learning rate 0.04, min leaf 4, the count-weighted centre, and the restore logic. Nothing else changes, and there is no tuning on the three report cases.
+- **Bar:** the same as item 1. MSE ≤ 1.01× the additive booster on all 3 cases, and CRPS ≤ booster+conformal on at least 2 of 3. Use the same seeds. The item-1 scorer also requires CRPS ≤ 1.01× raw TRACE on every case, and a one-sided paired t-test at p < 0.05 on each of those contrasts. A CRPS case counts toward the 2-of-3 only when the mean and the t-test agree.
+- **Disclosure:** this is attempt 2 of the item-1 hypothesis, so a pass is weaker evidence than a first-try pass.
+
 ### Item 2 — smoothed pinball curvature
 
 **Fail.** Candidate: `TraceV1`, `k_fit=8`, learning rate 1.0, 40 rounds, logistic pinball density with bandwidth 0.05 annealed to 0.02 then 0.01, Levenberg damping `1e-3`. Baseline: the same constructor with those two knobs off. The bandwidth and the damping were fixed before the run.
