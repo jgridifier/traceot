@@ -355,3 +355,83 @@ The corrected tests are frozen in `docs/theory/PREREG_TAIL_v2.md`. The v1 T3, T4
 | T6v2 | pass | ≥ 19 of 20 seeds inside the channel-3 band and with ratio ≤ 0.0402 | 19 of 20. Seed 6115 had ratio 0.063 |
 
 Raw rows are in `benchmarks/results/trace_v2_baseline.json`.
+
+## v2 landscape items
+
+The bars are the ones in `docs/research/LANDSCAPE.md` §4. They were not edited after these runs. None of the three items passed, so none of them replaced the default. `TraceRegressor` is still the v0 path. `TraceV1` is still the Newton path. `TraceHybrid`, the smoothed curvature, and the channel ridge are options.
+
+### Item 1 — squared-loss mean, CRPS residual
+
+**Fail.** The mean booster uses 1024 bins, learning rate 0.04, a cap of 50,000 rounds, patience 100, tolerance 1e-5, and a 15% validation slice. Bins thinner than 4 rows are pooled with their neighbours, because a hard leaf gate at 1024 bins takes no steps. There are no bags and no smoothing pass. Residual channels are `k_fit=6`, `k_report=4`, 12 Gauss–Legendre nodes, 16 bins, 40 rounds. Fresh seeds 81001–81020. Historical seeds are in the JSON and are not in the pass set.
+
+| Case | Hybrid MSE | Booster MSE | Ratio | Hybrid CRPS | Booster+conformal CRPS | Raw TRACE CRPS |
+|---|---:|---:|---:|---:|---:|---:|
+| S1 period 2 | 1.386 | 1.213 | 1.14 | 0.649 | 0.578 | 0.576 |
+| Vendor spend | 8.540 | 1.793 | 4.76 | 1.984 | 0.739 | 0.773 |
+| n=2e4, p=10 | 0.0384 | 0.0101 | 3.81 | 0.128 | 0.0566 | 0.0601 |
+
+The MSE bar is ≤ 1.01× on all three cases. The CRPS bar is ≤ the conformal booster on at least two cases, and no case worse than raw TRACE by more than 1%. Every case misses both. The landscape's own reading of an MSE miss this large is that the booster or the binning differs, not that squared loss is the wrong objective for the mean channel. This booster does not smooth adjacent bins and does not bag. The bar was not changed to fit that difference.
+
+### Item 2 — smoothed pinball curvature
+
+**Fail.** Candidate: `TraceV1`, `k_fit=8`, learning rate 1.0, 40 rounds, logistic pinball density with bandwidth 0.05 annealed to 0.02 then 0.01, Levenberg damping `1e-3`. Baseline: the same constructor with those two knobs off. The bandwidth and the damping were fixed before the run.
+
+Leakage is He3 energy of `y = (0.5+x)z` divided by the recorded v0 He3 energy 0.0018508010614343975. Seed 6, the historical T6 seed, gives 0.623. The mean over seeds 83001–83020 is 0.816. The bar is 0.10. The v1 Newton ratio on seed 6 was 0.496.
+
+| Case | Candidate CRPS | Baseline CRPS | Ratio | Better |
+|---|---:|---:|---:|---|
+| S1 period 2 | 0.5993 | 0.5964 | 1.0049 | no |
+| Vendor spend | 0.7642 | 0.7637 | 1.0006 | no |
+| n=2e4, p=10 | 0.057810 | 0.057811 | 1.0000 | yes, paired p = 0.11 |
+
+No case is worse by more than 0.5%. The improvement bar, better on at least two cases with a one-sided paired p < 0.05, is 0 of 3.
+
+### Item 3 — channel-index ridge and tail weight
+
+**Fail.** The span is `k_fit=8`, `k_report=4`, Hermite reporting. The grid, chosen only by validation CRPS, is `s ∈ {1, 2}`, `λ ∈ {1e-4, 1e-3, 1e-2, 1e-1}`, `γ ∈ {0, 1, 4}`. The baseline is `k_fit=3` with no penalty.
+
+The screen keeps `x_shape` on 14 of 50 seeds (84001–84050). The bar is 40 of 50. The He3 energy ratio of `x_shape` to the next feature has mean 0.174 and median 0.155. The bar is a mean of at least 2. Validation CRPS usually selects `s=2` and `λ=0.1`, which is the heavy end of the grid, and that is where the tail energy goes.
+
+| Case | Ridge CRPS | Baseline CRPS | Ratio |
+|---|---:|---:|---:|
+| S1 period 2 | 0.5923 | 0.5996 | 0.988 |
+| Vendor spend | 0.7598 | 0.7664 | 0.991 |
+| n=2e4, p=10 | 0.05777 | 0.05812 | 0.994 |
+
+CRPS is better on all three cases and inside the 0.5% allowance. That part passes. Retention and the energy ratio do not, so the item fails.
+
+### Tail tests after each change
+
+Same frozen bars as the step-1 baseline. Reported separately.
+
+| Fitter | T3v2 | T3v2-null | T4v2 | T6v2 |
+|---|---|---|---|---|
+| Unchanged `TraceV1` (step 1) | pass, 17/20 | pass, 0/20 | pass, 20/20 | pass, 19/20 |
+| Hybrid | pass, 13/20 | pass, 0/20 | pass, 18/20 | pass, 19/20 |
+| Smoothed curvature | pass, 17/20 | pass, 0/20 | pass, 20/20 | pass, 19/20 |
+| Ridge, middle of the grid (`s=1`, `λ=1e-3`, `γ=1`) | pass, 17/20 | pass, 0/20 | pass, 20/20 | pass, 19/20 |
+
+The hybrid residual fit hits the 200-round cap on 38 of 80 runs. The other two fitters do not. JSON: `trace_v2_tail_hybrid.json`, `trace_v2_tail_smooth.json`, `trace_v2_tail_ridge.json`.
+
+## S1–S4 and the booster comparison, re-run
+
+The v0 fitter is the one these four designs call, and that path was not edited. S1 still fails because the screen still drops `x_shape` (shape energy 0; location ratio 14.6; scale ratio 16.4). S2 passes. S3 passes. S4 passes. Wall time for the eight S4 cells is 52.9 s.
+
+**No S4 cell is more than 25% slower than the previous re-run on this machine.** The largest increase is 1e6 × 10, 0.469 s to 0.494 s (+5%). The 1e7 × 100 cell is 38.5 s to 39.0 s (+1%). Peak RSS at 1e7 × 100 is 1696 MB, the same 1.7 GB.
+
+| rows | features | bin (s) | fit (s) | wall (s) | peak RSS (MB) | previous wall (s) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1e4 | 10 | 0.0057 | 0.0077 | 0.0135 | 39 | 0.016 |
+| 1e4 | 100 | 0.0088 | 0.041 | 0.050 | 40 | 0.052 |
+| 1e5 | 10 | 0.011 | 0.065 | 0.077 | 47 | 0.080 |
+| 1e5 | 100 | 0.112 | 0.214 | 0.326 | 56 | 0.327 |
+| 1e6 | 10 | 0.102 | 0.392 | 0.494 | 125 | 0.469 |
+| 1e6 | 100 | 0.825 | 2.12 | 2.94 | 211 | 2.95 |
+| 1e7 | 10 | 0.958 | 5.00 | 5.96 | 838 | 6.07 |
+| 1e7 | 100 | 9.78 | 29.2 | 39.0 | 1696 | 38.5 |
+
+The booster comparison on the same three draws matches the table already in this file to the printed digits. EBM plus conformal residuals still has the lower CRPS on vendor spend (0.743 against 0.770) and on n=2e4 (0.0571 against 0.0605), and the lower MSE of the mean on all three. TRACE raw still has the lower CRPS on S1 period 2 (0.518 against 0.522).
+
+### Disputes
+
+No new dispute. The v1 T3 dispute stays accepted, and the v2 tail bars were not touched. Item 1's miss is the outcome the landscape already described for a booster that is not the same booster. Items 2 and 3 miss their magnitude bars; those bars were not relaxed.

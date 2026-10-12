@@ -1,0 +1,922 @@
+{
+  "completed": 81,
+  "of": 81,
+  "seconds": 59.11672897000062,
+  "rows": [
+    {
+      "kind": "leak",
+      "seed": 83002,
+      "historical": false,
+      "he3": 0.0016476402034572017,
+      "ratio": 0.8902308507324157,
+      "rounds": 25,
+      "seconds": 0.13273699300043518
+    },
+    {
+      "kind": "leak",
+      "seed": 6,
+      "historical": true,
+      "he3": 0.0011532253677026241,
+      "ratio": 0.6230952595244665,
+      "rounds": 27,
+      "seconds": 0.14351720299964654
+    },
+    {
+      "kind": "leak",
+      "seed": 83001,
+      "historical": false,
+      "he3": 0.001406746054000257,
+      "ratio": 0.7600741556253531,
+      "rounds": 35,
+      "seconds": 0.1910848879997502
+    },
+    {
+      "kind": "leak",
+      "seed": 83003,
+      "historical": false,
+      "he3": 0.0009983304164483705,
+      "ratio": 0.5394044974637361,
+      "rounds": 38,
+      "seconds": 0.21577825900021708
+    },
+    {
+      "kind": "leak",
+      "seed": 83004,
+      "historical": false,
+      "he3": 0.0023706725447987112,
+      "ratio": 1.2808899855295122,
+      "rounds": 39,
+      "seconds": 0.21252989300046465
+    },
+    {
+      "kind": "leak",
+      "seed": 83005,
+      "historical": false,
+      "he3": 0.0008237996609222571,
+      "ratio": 0.44510438106394884,
+      "rounds": 40,
+      "seconds": 0.21644531099991582
+    },
+    {
+      "kind": "leak",
+      "seed": 83006,
+      "historical": false,
+      "he3": 0.0013686680124388052,
+      "ratio": 0.7395003390467411,
+      "rounds": 33,
+      "seconds": 0.17389661399829492
+    },
+    {
+      "kind": "leak",
+      "seed": 83007,
+      "historical": false,
+      "he3": 0.0023691425151228344,
+      "ratio": 1.280063300421232,
+      "rounds": 40,
+      "seconds": 0.21631562100083102
+    },
+    {
+      "kind": "leak",
+      "seed": 83010,
+      "historical": false,
+      "he3": 0.0018370110207947782,
+      "ratio": 0.992549150242581,
+      "rounds": 28,
+      "seconds": 0.14575489399976505
+    },
+    {
+      "kind": "leak",
+      "seed": 83009,
+      "historical": false,
+      "he3": 0.00048435655609728456,
+      "ratio": 0.2617010364808745,
+      "rounds": 33,
+      "seconds": 0.17488588400010485
+    },
+    {
+      "kind": "leak",
+      "seed": 83008,
+      "historical": false,
+      "he3": 0.0010985401158138816,
+      "ratio": 0.5935484578566738,
+      "rounds": 40,
+      "seconds": 0.21411273199919378
+    },
+    {
+      "kind": "leak",
+      "seed": 83011,
+      "historical": false,
+      "he3": 0.001224182544775404,
+      "ratio": 0.661433889510872,
+      "rounds": 27,
+      "seconds": 0.1446549030006281
+    },
+    {
+      "kind": "leak",
+      "seed": 83014,
+      "historical": false,
+      "he3": 0.0012616045580519744,
+      "ratio": 0.6816532496875772,
+      "rounds": 25,
+      "seconds": 0.1354207390013471
+    },
+    {
+      "kind": "leak",
+      "seed": 83012,
+      "historical": false,
+      "he3": 0.0014053210232719427,
+      "ratio": 0.7593042021398013,
+      "rounds": 35,
+      "seconds": 0.19200765500136185
+    },
+    {
+      "kind": "leak",
+      "seed": 83015,
+      "historical": false,
+      "he3": 0.002106420914871485,
+      "ratio": 1.1381130899281948,
+      "rounds": 26,
+      "seconds": 0.13730923300136055
+    },
+    {
+      "kind": "leak",
+      "seed": 83013,
+      "historical": false,
+      "he3": 0.000874278144810461,
+      "ratio": 0.4723782382817972,
+      "rounds": 37,
+      "seconds": 0.19577441699948395
+    },
+    {
+      "kind": "leak",
+      "seed": 83018,
+      "historical": false,
+      "he3": 0.0013964859965226002,
+      "ratio": 0.75453057901334,
+      "rounds": 29,
+      "seconds": 0.1503811049988144
+    },
+    {
+      "kind": "leak",
+      "seed": 83019,
+      "historical": false,
+      "he3": 0.0025447701419703994,
+      "ratio": 1.374956063618294,
+      "rounds": 26,
+      "seconds": 0.13740168299955258
+    },
+    {
+      "kind": "leak",
+      "seed": 83016,
+      "historical": false,
+      "he3": 0.0020089772805809043,
+      "ratio": 1.0854636527082593,
+      "rounds": 35,
+      "seconds": 0.18733049599904916
+    },
+    {
+      "kind": "leak",
+      "seed": 83017,
+      "historical": false,
+      "he3": 0.0019575034085874514,
+      "ratio": 1.0576519807430615,
+      "rounds": 40,
+      "seconds": 0.20966611599942553
+    },
+    {
+      "kind": "leak",
+      "seed": 83020,
+      "historical": false,
+      "he3": 0.0010075393058362949,
+      "ratio": 0.544380121035503,
+      "rounds": 32,
+      "seconds": 0.16894997999952466
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81001,
+      "crps_candidate": 0.6232114182628748,
+      "crps_baseline": 0.6200196034367066,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6437648090013681,
+      "seconds_baseline": 0.6706138890003785
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81002,
+      "crps_candidate": 0.6002707208773961,
+      "crps_baseline": 0.5963589927388556,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6636595780000789,
+      "seconds_baseline": 0.6880680049998773
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81003,
+      "crps_candidate": 0.5639587246535043,
+      "crps_baseline": 0.5602115425470167,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6535882240004867,
+      "seconds_baseline": 0.6845118359997286
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81004,
+      "crps_candidate": 0.6127457694071435,
+      "crps_baseline": 0.6080331773700423,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6612864939997962,
+      "seconds_baseline": 0.7081887799995457
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81005,
+      "crps_candidate": 0.583801431775346,
+      "crps_baseline": 0.5810903757764503,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6837181859991688,
+      "seconds_baseline": 0.5942169660011132
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81006,
+      "crps_candidate": 0.6492498756338023,
+      "crps_baseline": 0.6471009610706026,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6850442580016534,
+      "seconds_baseline": 0.5964553240009991
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81007,
+      "crps_candidate": 0.6605346345041523,
+      "crps_baseline": 0.6585574501479916,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6733937919998425,
+      "seconds_baseline": 0.6084517799990863
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81008,
+      "crps_candidate": 0.6084779889481269,
+      "crps_baseline": 0.6059369510818498,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6662919049995253,
+      "seconds_baseline": 0.6126644400010264
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81009,
+      "crps_candidate": 0.5740637873373083,
+      "crps_baseline": 0.571320570153861,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6617499539988785,
+      "seconds_baseline": 0.6153721579994453
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81010,
+      "crps_candidate": 0.6122291090701875,
+      "crps_baseline": 0.609411243849505,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.645561559998896,
+      "seconds_baseline": 0.6085197570009768
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81011,
+      "crps_candidate": 0.5813128424404445,
+      "crps_baseline": 0.57901092074474,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6523644500011869,
+      "seconds_baseline": 0.6117830389994197
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81012,
+      "crps_candidate": 0.5689274327184227,
+      "crps_baseline": 0.5660310185937221,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6722566349999397,
+      "seconds_baseline": 0.6067107670005498
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81013,
+      "crps_candidate": 0.5848020368107342,
+      "crps_baseline": 0.583670947877296,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6652671079991705,
+      "seconds_baseline": 0.604678812000202
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81014,
+      "crps_candidate": 0.5783672974432398,
+      "crps_baseline": 0.5773723523615027,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6682590410000557,
+      "seconds_baseline": 0.5969507549998525
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81015,
+      "crps_candidate": 0.6152618785013662,
+      "crps_baseline": 0.6122416541874103,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6560224799995922,
+      "seconds_baseline": 0.5993308239994803
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81016,
+      "crps_candidate": 0.6146447023051789,
+      "crps_baseline": 0.610011895174499,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6535701230004634,
+      "seconds_baseline": 0.6206218629995419
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81017,
+      "crps_candidate": 0.5934779842892227,
+      "crps_baseline": 0.590222083197146,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6617984559998149,
+      "seconds_baseline": 0.597746722998636
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81018,
+      "crps_candidate": 0.6169412477121461,
+      "crps_baseline": 0.6134923241133261,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6466007179988082,
+      "seconds_baseline": 0.5878081169994402
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81019,
+      "crps_candidate": 0.552025113336366,
+      "crps_baseline": 0.5495912652622789,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.6533320889993774,
+      "seconds_baseline": 0.6078554689993325
+    },
+    {
+      "kind": "crps",
+      "case": "s1_period2",
+      "seed": 81020,
+      "crps_candidate": 0.5913738256007844,
+      "crps_baseline": 0.5874644845792744,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 0.675963118999789,
+      "seconds_baseline": 0.6072994869991817
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81002,
+      "crps_candidate": 0.777343918496458,
+      "crps_baseline": 0.7777354843689885,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4051193839986809,
+      "seconds_baseline": 1.1432709569999133
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81001,
+      "crps_candidate": 0.7508207455673341,
+      "crps_baseline": 0.7495998063350825,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.3953881150009693,
+      "seconds_baseline": 1.1795949309998832
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81003,
+      "crps_candidate": 0.7627592399098951,
+      "crps_baseline": 0.761823188748487,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4483597239996016,
+      "seconds_baseline": 1.1665388720011833
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81004,
+      "crps_candidate": 0.756907270877059,
+      "crps_baseline": 0.7568792115206034,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4010203880006884,
+      "seconds_baseline": 1.1584878399989975
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81006,
+      "crps_candidate": 0.7386490484144662,
+      "crps_baseline": 0.7381957120044522,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.3991573229995993,
+      "seconds_baseline": 1.2065144309999596
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81005,
+      "crps_candidate": 0.742170537498231,
+      "crps_baseline": 0.7414982968101439,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.3899463510006171,
+      "seconds_baseline": 1.27298942500056
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81007,
+      "crps_candidate": 0.7768297866664995,
+      "crps_baseline": 0.7762187029564803,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.417668694000895,
+      "seconds_baseline": 1.1967006690010749
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81008,
+      "crps_candidate": 0.7643796251725522,
+      "crps_baseline": 0.7645320121414068,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.3700511749993893,
+      "seconds_baseline": 1.16791575300158
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81009,
+      "crps_candidate": 0.7796486804538808,
+      "crps_baseline": 0.7795146070070984,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4080411300001288,
+      "seconds_baseline": 1.2010504999998375
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81010,
+      "crps_candidate": 0.7618333532245409,
+      "crps_baseline": 0.762167681004329,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4364907830004086,
+      "seconds_baseline": 1.1662266889998136
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81011,
+      "crps_candidate": 0.7750777059436116,
+      "crps_baseline": 0.7743645444713937,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4123015139994095,
+      "seconds_baseline": 1.1905466520001937
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81012,
+      "crps_candidate": 0.7331897354431378,
+      "crps_baseline": 0.7319980284469537,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.505150337001396,
+      "seconds_baseline": 1.2036964079998143
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81013,
+      "crps_candidate": 0.7836446182492607,
+      "crps_baseline": 0.7832111223677755,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4155107730002783,
+      "seconds_baseline": 1.172176688000036
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81014,
+      "crps_candidate": 0.7616034818856566,
+      "crps_baseline": 0.761536010604648,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.407133773998794,
+      "seconds_baseline": 1.1761864509990119
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81015,
+      "crps_candidate": 0.8148062596651149,
+      "crps_baseline": 0.815078041527979,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.4052457739999227,
+      "seconds_baseline": 1.173040873998616
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81016,
+      "crps_candidate": 0.7667704222431129,
+      "crps_baseline": 0.7657031607969925,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.410097747000691,
+      "seconds_baseline": 1.1758691899995029
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81018,
+      "crps_candidate": 0.7881960763396744,
+      "crps_baseline": 0.7869357485720069,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.3707618989992625,
+      "seconds_baseline": 1.193246372999056
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81017,
+      "crps_candidate": 0.7857772616600182,
+      "crps_baseline": 0.7861122447193108,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.41416724499868,
+      "seconds_baseline": 1.1760330960005376
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81019,
+      "crps_candidate": 0.7458016679871794,
+      "crps_baseline": 0.7454210996124008,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.420547213001555,
+      "seconds_baseline": 1.2306397430002107
+    },
+    {
+      "kind": "crps",
+      "case": "vendor_spend",
+      "seed": 81020,
+      "crps_candidate": 0.7169003203142547,
+      "crps_baseline": 0.7150704518296922,
+      "rounds_candidate": 40,
+      "rounds_baseline": 40,
+      "seconds_candidate": 1.3785966569994343,
+      "seconds_baseline": 1.1999901109993516
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81002,
+      "crps_candidate": 0.0578102529388245,
+      "crps_baseline": 0.057815454776159445,
+      "rounds_candidate": 22,
+      "rounds_baseline": 23,
+      "seconds_candidate": 3.9730254919995787,
+      "seconds_baseline": 3.4891687529998308
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81003,
+      "crps_candidate": 0.05796108861319221,
+      "crps_baseline": 0.057962610155093,
+      "rounds_candidate": 22,
+      "rounds_baseline": 23,
+      "seconds_candidate": 3.9100891280013457,
+      "seconds_baseline": 3.4476581549988623
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81001,
+      "crps_candidate": 0.05781712235776673,
+      "crps_baseline": 0.05781710336454187,
+      "rounds_candidate": 23,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.096816729999773,
+      "seconds_baseline": 3.6098695269993186
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81004,
+      "crps_candidate": 0.05809227041182558,
+      "crps_baseline": 0.058096286557395786,
+      "rounds_candidate": 24,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.357228496000971,
+      "seconds_baseline": 3.6856857189995935
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81005,
+      "crps_candidate": 0.05798379615840787,
+      "crps_baseline": 0.057980181177805915,
+      "rounds_candidate": 23,
+      "rounds_baseline": 23,
+      "seconds_candidate": 4.176962838000691,
+      "seconds_baseline": 3.537155169000471
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81006,
+      "crps_candidate": 0.05816460077221672,
+      "crps_baseline": 0.058161647439051604,
+      "rounds_candidate": 22,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.003937814999517,
+      "seconds_baseline": 3.710905883999658
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81007,
+      "crps_candidate": 0.0574509403618056,
+      "crps_baseline": 0.05745512325399337,
+      "rounds_candidate": 24,
+      "rounds_baseline": 25,
+      "seconds_candidate": 4.1909682390014495,
+      "seconds_baseline": 3.7982135510010266
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81008,
+      "crps_candidate": 0.056818366166647705,
+      "crps_baseline": 0.05681664408432489,
+      "rounds_candidate": 23,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.23710442599986,
+      "seconds_baseline": 3.6926937839998573
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81009,
+      "crps_candidate": 0.05767191820727895,
+      "crps_baseline": 0.05766997966621464,
+      "rounds_candidate": 22,
+      "rounds_baseline": 23,
+      "seconds_candidate": 3.972952025998893,
+      "seconds_baseline": 3.5324410449993593
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81010,
+      "crps_candidate": 0.05851000360136534,
+      "crps_baseline": 0.0585082385191107,
+      "rounds_candidate": 23,
+      "rounds_baseline": 23,
+      "seconds_candidate": 4.058213160999003,
+      "seconds_baseline": 3.4686675609991653
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81011,
+      "crps_candidate": 0.05737064653445409,
+      "crps_baseline": 0.0573744528050716,
+      "rounds_candidate": 23,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.06107230499947,
+      "seconds_baseline": 3.5940912810001464
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81012,
+      "crps_candidate": 0.057604788708294,
+      "crps_baseline": 0.05760672816709686,
+      "rounds_candidate": 22,
+      "rounds_baseline": 24,
+      "seconds_candidate": 3.968539330000567,
+      "seconds_baseline": 3.6118858860008913
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81013,
+      "crps_candidate": 0.05860233863121528,
+      "crps_baseline": 0.058602242690285834,
+      "rounds_candidate": 22,
+      "rounds_baseline": 23,
+      "seconds_candidate": 3.8560833709998406,
+      "seconds_baseline": 3.5381390849997842
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81014,
+      "crps_candidate": 0.05801574638503796,
+      "crps_baseline": 0.05801976189285459,
+      "rounds_candidate": 23,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.113718405998952,
+      "seconds_baseline": 3.6256003029993735
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81015,
+      "crps_candidate": 0.058142893721605374,
+      "crps_baseline": 0.05814461511207637,
+      "rounds_candidate": 21,
+      "rounds_baseline": 25,
+      "seconds_candidate": 3.64424912100003,
+      "seconds_baseline": 3.7470473640005366
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81016,
+      "crps_candidate": 0.05753303358416814,
+      "crps_baseline": 0.05753857254810872,
+      "rounds_candidate": 21,
+      "rounds_baseline": 22,
+      "seconds_candidate": 3.666075908999119,
+      "seconds_baseline": 3.29213535999952
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81017,
+      "crps_candidate": 0.05813228396396907,
+      "crps_baseline": 0.058132852645665166,
+      "rounds_candidate": 22,
+      "rounds_baseline": 24,
+      "seconds_candidate": 3.885291667000274,
+      "seconds_baseline": 3.626329438000539
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81018,
+      "crps_candidate": 0.056765943859834155,
+      "crps_baseline": 0.056765959093712307,
+      "rounds_candidate": 22,
+      "rounds_baseline": 24,
+      "seconds_candidate": 3.8911155890000373,
+      "seconds_baseline": 3.6430977119998715
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81019,
+      "crps_candidate": 0.05804020499424308,
+      "crps_baseline": 0.05803597022122289,
+      "rounds_candidate": 23,
+      "rounds_baseline": 24,
+      "seconds_candidate": 4.136560360000658,
+      "seconds_baseline": 3.7740140440000687
+    },
+    {
+      "kind": "crps",
+      "case": "scale_small",
+      "seed": 81020,
+      "crps_candidate": 0.05771886148556348,
+      "crps_baseline": 0.0577191742574774,
+      "rounds_candidate": 23,
+      "rounds_baseline": 25,
+      "seconds_candidate": 4.202268619999813,
+      "seconds_baseline": 3.757984468998984
+    }
+  ],
+  "summary": {
+    "leakage": {
+      "v0_he3": 0.0018508010614343975,
+      "seed6_ratio": 0.6230952595244665,
+      "fresh_mean_ratio": 0.8156465610564885,
+      "ttest": {
+        "p": 0.9999999983582,
+        "mean": 0.7156465610564885,
+        "n": 20
+      },
+      "pass": false
+    },
+    "cases": {
+      "s1_period2": {
+        "n": 20,
+        "crps_candidate": 0.5992838910813874,
+        "crps_baseline": 0.5963574907132039,
+        "ratio": 1.0049071243570424,
+        "magnitude": true,
+        "better_mean": false,
+        "better_ttest": false,
+        "ttest": {
+          "p": 0.9999999999764453,
+          "mean": 0.002926400368183535,
+          "n": 20
+        },
+        "rounds_candidate": 40.0,
+        "rounds_baseline": 40.0
+      },
+      "vendor_spend": {
+        "n": 20,
+        "crps_candidate": 0.7641554878005968,
+        "crps_baseline": 0.7636797577923112,
+        "ratio": 1.000622944373517,
+        "magnitude": true,
+        "better_mean": false,
+        "better_ttest": false,
+        "ttest": {
+          "p": 0.9982820141597151,
+          "mean": 0.00047573000828564084,
+          "n": 20
+        },
+        "rounds_candidate": 40.0,
+        "rounds_baseline": 40.0
+      },
+      "scale_small": {
+        "n": 20,
+        "crps_candidate": 0.05781035507288579,
+        "crps_baseline": 0.05781117992136316,
+        "ratio": 0.9999857320248697,
+        "magnitude": true,
+        "better_mean": true,
+        "better_ttest": false,
+        "ttest": {
+          "p": 0.11453932087870389,
+          "mean": -8.248484773570874e-07,
+          "n": 20
+        },
+        "rounds_candidate": 22.5,
+        "rounds_baseline": 23.75
+      }
+    },
+    "crps_wins": 0,
+    "crps_pass": false,
+    "pass": false
+  }
+}
