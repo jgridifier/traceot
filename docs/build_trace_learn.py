@@ -301,7 +301,7 @@ def main():
 <main>
 <p><a href="../index.html">traceot</a> · <span class="status">research, unvalidated</span></p>
 <h1>TRACE, beside explainable boosting</h1>
-<p class="lede">A glass-box model of a whole conditional distribution, and the checks that sit next to it. TRACE is our own unpublished method. The boosting ideas it borrows are older, and they are cited below.</p>
+<p class="lede">A glass-box model of a whole conditional distribution, and the checks that sit next to it. TRACE is our own unpublished method. The boosting ideas it borrows are older, and they are cited below. The mathematics of the later modifications is on the <a href="trace_theory.html">theory page</a>.</p>
 
 <input class="tab" type="radio" name="tab" id="t1" checked>
 <input class="tab" type="radio" name="tab" id="t2">
