@@ -3192,6 +3192,12 @@ mod tests {
         assert_eq!(got.boot_reps, 6);
         assert!(got.total_w2_hi + 1e-12 >= got.total_w2_lo);
         assert!(got.composition_hi[0] + 1e-12 >= got.composition_lo[0]);
+        assert!(got.composition_ulo[0] <= got.composition[0] + 1e-12);
+        assert!(got.composition[0] <= got.composition_uhi[0] + 1e-12);
+        assert!(got.structure_ulo[0] <= got.structure[0] + 1e-12);
+        assert!(got.structure[0] <= got.structure_uhi[0] + 1e-12);
+        assert!(got.feat_comp_ulo[0] <= got.feat_comp[0] + 1e-12);
+        assert!(got.feat_comp[0] <= got.feat_comp_uhi[0] + 1e-12);
         assert_eq!(got.feat_comp_lo.len(), 3);
     }
 }

@@ -400,13 +400,20 @@ def _split_pairs(split: dict) -> dict:
 
 
 def _band_pairs(split: dict) -> dict:
-    return {
-        name: (
-            (float(ends[0][0]), float(ends[0][1])),
-            (float(ends[1][0]), float(ends[1][1])),
+    """Map each stat to ``((comp_lo, struct_lo), (comp_hi, struct_hi))``.
+
+    The core reports each role as ``(lo, hi)``. Callers compare a band with
+    ``split[stat] = (composition, structure)`` on the same index.
+    """
+    out = {}
+    for name, ends in split.items():
+        comp_lo, comp_hi = ends[0]
+        struct_lo, struct_hi = ends[1]
+        out[name] = (
+            (float(comp_lo), float(struct_lo)),
+            (float(comp_hi), float(struct_hi)),
         )
-        for name, ends in split.items()
-    }
+    return out
 
 
 def shift_decompose(
@@ -454,8 +461,9 @@ def shift_decompose(
     ``return_model=True`` adds ``model``, a ``ShiftModel`` with
     ``predict_quantile(X, u, period)``, ``coef(X, period)`` and ``rearranged``.
     Folds are ``hash(seed, row) mod folds``. ``n_boot`` draws a stratified
-    bootstrap; ``bands["split"]`` is the pointwise percentile band and
-    ``bands["split_uniform"]`` is the joint max-|t| band across those pieces.
+    bootstrap. For each stat, ``bands["split"]`` and ``bands["split_uniform"]``
+    are ``((composition_lo, structure_lo), (composition_hi, structure_hi))``.
+    The uniform band is the joint max-|t| interval across those pieces.
     ``n_boot=0`` sets every end equal to the point.
     """
     if seed < 0:

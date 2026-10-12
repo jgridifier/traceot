@@ -172,7 +172,16 @@ def test_shift_decompose_matches_the_adapter_and_ignores_row_order():
     assert banded["bands"]["reps"] == 4
     assert banded["bands"]["critical"] >= 0.0
     lo, hi = banded["bands"]["split_uniform"]["mean"]
-    assert lo[0] <= banded["split"]["mean"][0] <= hi[0]
+    comp, struct = banded["split"]["mean"]
+    assert lo[0] <= comp <= hi[0]
+    assert lo[1] <= struct <= hi[1]
+    plo, phi = banded["bands"]["split"]["mean"]
+    assert plo[0] <= phi[0]
+    assert plo[1] <= phi[1]
+    assert np.all(banded["bands"]["feat_comp"]["uniform_lo"] <= banded["feat_comp"])
+    assert np.all(banded["feat_comp"] <= banded["bands"]["feat_comp"]["uniform_hi"])
+    assert np.all(banded["bands"]["feat_struct"]["uniform_lo"] <= banded["feat_struct"])
+    assert np.all(banded["feat_struct"] <= banded["bands"]["feat_struct"]["uniform_hi"])
     assert banded["bands"]["total_w2"][1] >= banded["bands"]["total_w2"][0]
 
     modeled = shift_decompose(x_a, y_a, x_b, y_b, seed=5, return_model=True, **kw)
