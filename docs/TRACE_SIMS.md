@@ -270,3 +270,75 @@ On S1 period 2, this comparison uses the tuned defaults, not the locked S1 hyper
 | n=2e4, p=10 | EBM point | 0.0807 | 0 | 0 | 0.01018 | 1.57 |
 
 S4 at 1e7 rows was not refit with EBM. Bold marks the distributional row with the lower CRPS or the lower MSE of the mean, which is the EBM row in every case except S1 period 2 CRPS, where TRACE raw is lower (0.518 against 0.522) and the EBM still has the lower MSE.
+
+## v1 round
+
+The v0 fitter is unchanged. S1–S4 below are a re-run of that fitter. The new checks are T1–T14 in `docs/theory/DESIGN_DELTA.md` §7, scored by `benchmarks/trace_sims/run_v1.py` into `benchmarks/results/trace_v1.json`. Those pass criteria were not edited after the results.
+
+### S1–S4, v0 fitter, re-run
+
+**S1 still fails the unchanged shape test.** Location energy 0.114 against the next location energy 0.00782 (ratio 14.6). Scale energy 0.0250 against 0.00152 (ratio 16.4). Shape energy of `x_shape` is 0, because the screen still drops it (shape-channel gain −0.000044). Correlations: location 0.968, scale 0.959, shape undefined. This is the same failure as the round above.
+
+**S2 pass. S3 pass.** S2 false-alarm and power checks are unchanged in kind. S3 false-alarm rate, power and segment fraction stay inside their bars.
+
+**S4 pass. No wall-time regression above 25%.** The locked cell is still three rounds, `patience=0`, `val_frac=0`, learning rate 0.3. Growth ratios stay under 25. Against the round-2 walls on this machine, the largest increase is 1e7 × 10, 5.34 s to 6.07 s (+14%). Against the original v0 walls, 1e4 × 10 goes from 0.015 s to 0.016 s (+6%) and every larger cell is faster than that v0 table.
+
+| rows | features | bin (s) | fit (s) | wall (s) | peak RSS (MB) | round-2 wall (s) | v0 wall (s) |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1e4 | 10 | 0.0012 | 0.015 | 0.016 | 39 | 0.017 | 0.015 |
+| 1e4 | 100 | 0.0086 | 0.044 | 0.052 | 40 | 0.059 | 0.079 |
+| 1e5 | 10 | 0.011 | 0.068 | 0.080 | 47 | 0.079 | 0.103 |
+| 1e5 | 100 | 0.112 | 0.215 | 0.327 | 56 | 0.309 | 0.498 |
+| 1e6 | 10 | 0.094 | 0.375 | 0.469 | 125 | 0.494 | 0.728 |
+| 1e6 | 100 | 0.824 | 2.12 | 2.95 | 211 | 2.82 | 3.83 |
+| 1e7 | 10 | 0.991 | 5.08 | 6.07 | 838 | 5.34 | 6.69 |
+| 1e7 | 100 | 9.71 | 28.8 | 38.5 | 1696 | 38.4 | 45.2 |
+
+### T1–T14
+
+| Test | Result | What the bar asked | What happened |
+|---|---|---|---|
+| T1 | pass | attribution sums to W2² within 1e-10 | max absolute gap 5.6e-16 on 1000 rows |
+| T2 | pass | discrete Gram within 1e-12 of I | max gap 1.4e-15 |
+| T3 | fail | He3 energy of `x_shape` ≥ 3× the next feature, and the He3 slope within 30% of 0.12√6 | ratio 0.50; slope 0.083 against 0.294 (relative error 0.72) |
+| T4 | fail | each channel-3 energy within 2 Monte Carlo SEs of 200 reps, or within 25% of its L2 oracle | oracle shape/scale ratio 0.753; no feature met either bar. Seed-11 shape energy 0.00103 against oracle 0.00303 |
+| T5 | fail | Legendre-native shape energy ≥ 3× others, scale leak ≤ 10% of that energy, planted energies within 25% | ratio 1.31; leak 0.76. The three planted energies are within 25% (relative errors 0.22, 0.19, 0.11). The separation bars fail |
+| T6 | fail | Newton He3 energy ≤ 0.05× the 19-point v0 energy, and ≤ the permutation cutoff | ratio 0.50. The permutation half holds: 0.00092 ≤ cutoff 0.00290 |
+| T7 | pass | K=3 exponential flagged; K=4 monotone with PAV move ≤ 1e-8; Bernstein grid clean | flagged; PAV distance 0; worst derivative on the 10⁴ grid is +1.10 |
+| T8 | pass | PAV distances and the adjustment bound on 500 rows | worst slack 1.1e-16 |
+| T9 | pass | structure inside a stratified permutation floor (rejection ≤ 0.08 at α=0.05, 200 reps); identity to 1e-8 | rejection 0.055; identity gap 1.4e-17 |
+| T10 | pass | null rejection at α=0.1 in [0.048, 0.152], 300 reps, R=199 | rejection 0.100 |
+| T11 | fail | RMSE ratio in [0.15, 0.40]; GLS slope variance ≤ 1.05× the better of equal and ∝m | ratio 0.206. GLS variance 1.15e-3 against 1.05× the m-proportional variance 9.21e-4 (ratio 1.31) |
+| T12 | pass | exact dual equals a brute-force LP to 1e-8; max-jump bound ≥ exact | max gap 1.3e-15; the bound held |
+| T13 | fail | robust period-B pinball ≤ plain in ≥ 60% of 100 reps; certificate in ≥ 95% | wins 0/100. Certificate held in 100/100. Matched-row W1 was inside the ball in 54/100 |
+| T14 | pass | outcome-only W1 gap equals ε ρ̄/κ_y to 1e-9 | max gap 0 on 20 draws |
+
+T3 is the S1 replacement test in a Hermite-in-z reporting basis. T4 is the same data in plain Legendre, where the population channel-3 ratio is 0.753 and a 3× rule is not the bar. Both fail against the pre-written oracles. The reason is written under Theory disputes; the bars were not relaxed.
+
+### EBM comparison, this round
+
+`interpret` 0.7.8. `objective="quantile"` still raises `Unrecognized objective type`. The table is a re-run of the same v0 comparison. EBM plus conformal residuals still wins CRPS and MSE of the mean on the vendor draw and on n=2e4. On S1 period 2, TRACE raw still has the lower CRPS (0.518 against 0.522) and EBM still has the lower MSE (0.972 against 0.983).
+
+| Case | Model | CRPS | 80% cover | 90% cover | MSE mean | Fit (s) |
+|---|---|---:|---:|---:|---:|---:|
+| S1 period 2 | TRACE raw | 0.518 | 0.822 | 0.912 | 0.983 | 0.009 |
+| S1 period 2 | TRACE calibrated | 0.524 | 0.827 | 0.940 | 0.998 | — |
+| S1 period 2 | EBM + conformal | 0.522 | 0.822 | 0.922 | **0.972** | 0.70 |
+| Vendor spend | TRACE raw | 0.770 | 0.919 | 0.995 | 1.842 | 0.023 |
+| Vendor spend | TRACE calibrated | 0.773 | 0.808 | 0.908 | 1.958 | — |
+| Vendor spend | EBM + conformal | **0.743** | 0.814 | 0.917 | **1.799** | 1.70 |
+| n=2e4, p=10 | TRACE raw | 0.0605 | 0.952 | 0.999 | 0.01024 | 0.063 |
+| n=2e4, p=10 | TRACE calibrated | 0.0588 | 0.790 | 0.905 | 0.01050 | — |
+| n=2e4, p=10 | EBM + conformal | **0.0571** | 0.795 | 0.904 | **0.01018** | 1.59 |
+
+### A comparison an EBM cannot make
+
+These are capability differences. They are not accuracy wins.
+
+A two-period shift with the same conditional law and a different covariate law, scored by the mixture decomposition: total W2² 0.0672 = composition 0.0850 + structure 0.00136 + cross −0.0191. The structure term is the small one. An EBM returns a mean; it has no composition/structure split of a change in the distribution.
+
+Distribution-valued rows: each row is an exponential sample with scale linear in a discrete covariate. The Hosking fit's λ₂ RMSE on that draw is 0.00865. Collapsing each row to a mean and fitting an EBM would answer a different question.
+
+### Theory disputes
+
+**The T3 oracle is an L2 coefficient. The fitter minimises pinball.** T3 asks for the slope of `x_shape` in the orthonormal He3 channel to be within 30% of 0.12√6 = 0.294. On an unconditional draw from `0.8 z + 0.12 He3(z)`, a Newton fit in the degree-7 Legendre span converges (the loss stops moving, and an independent Newton in NumPy reaches the same point) to a reported He3 coefficient of about 0.118. That point has a lower pinball loss than the L2 projection of the true curve, whose reported coefficient is about 0.18. The report matrix matches a direct Gauss–Legendre inner product to 1e-10, so the gap is not a mis-scaled basis. THEORY.md §1.5 already records that a truncated pinball projection is not the L2 projection (`v1:1.17`). T3's pass bar treats them as the same number. T4 and T6 use the same identification: T4's channel-3 energies are the pinball fit's, compared with L2 oracles, and T6 asks the pinball fit of a pure scale `z` to put at most 5% of the v0 He3 energy into He3. The measured ratio is 0.50. The criteria were not changed.

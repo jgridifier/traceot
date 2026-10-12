@@ -236,6 +236,30 @@ def _results_html():
             if notes
             else "EBM plus conformal residuals does not win CRPS or mean squared error on these three cases."
         )
+        cap = ""
+        v1_path = ROOT / "benchmarks" / "results" / "trace_v1.json"
+        if v1_path.exists():
+            v1 = json.loads(v1_path.read_text())
+            block = v1.get("capability") or {}
+            if block:
+                cap = (
+                    "<h3>What a mean model cannot return</h3>"
+                    "<p>An explainable boosting machine fits one number per row. "
+                    "The two jobs below are not an accuracy contest with that machine. "
+                    "It has no composition/structure split, and it has no row that is itself a sample from a distribution.</p>"
+                    "<ul>"
+                    "<li>Shift between two periods, same conditional law, different covariate law. "
+                    f"Total W2² {_fmt(block.get('shift_total'), 4)}, "
+                    f"composition {_fmt(block.get('composition'), 4)}, "
+                    f"structure {_fmt(block.get('structure'), 4)}, "
+                    f"cross {_fmt(block.get('cross'), 4)}. "
+                    "Structure is the small term, which is what a covariate-only shift should look like. "
+                    "The split is order-dependent. T9 checks that the three terms add back to the total.</li>"
+                    "<li>Distribution-valued rows. Each row is an exponential sample whose scale is linear in a discrete covariate, "
+                    f"and the Hosking fit's λ₂ RMSE on that draw is {_fmt(block.get('frechet_lambda2_rmse'), 4)}. "
+                    "Collapsing each row to its mean and fitting an EBM would answer a different question.</li>"
+                    "</ul>"
+                )
         extra = (
             '<div class="scroll"><table><caption>TRACE and EBM plus residual quantiles</caption>'
             "<thead><tr><th></th><th>CRPS</th><th>80% cover</th><th>MSE of mean</th><th>Fit s</th></tr></thead><tbody>"
@@ -244,6 +268,7 @@ def _results_html():
             "<p>Raw TRACE coverage and calibrated TRACE coverage are different rows. "
             f"{won} "
             "Full tables, including the v0 numbers, are in <code>docs/TRACE_SIMS.md</code>.</p>"
+            + cap
         )
     return table + extra
 
