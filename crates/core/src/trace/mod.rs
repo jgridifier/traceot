@@ -6,7 +6,12 @@
 
 mod basis;
 mod checks;
+mod dro;
 mod fit;
+mod frechet;
+mod legendre;
+mod shift;
+mod v1fit;
 
 pub use basis::{
     column_order, conformal_quantile, empirical_quantile, inv_norm, pinball_quantile_index,
@@ -17,4 +22,25 @@ pub use checks::{
     placebo_screen, projection_blur, score_quantiles, target_proxy_screen, DistScore, DupFlag,
     PlaceboScreen, ProxyFlag, ProxyScreen,
 };
+pub use dro::{
+    codes_for_robust, coupling_w1, fit_robust, integrated_pinball_on, max_jump_bound,
+    outcome_only_w1_gap, pinball, predict_robust, robust_risk_breakpoints, robust_risk_level,
+    winf_risk, Ball, RobustConfig, RobustModel,
+};
 pub use fit::{fit_codes_u16, fit_codes_u8, fit_trace, PairTerm, TraceConfig, TraceModel};
+pub use frechet::{fit_frechet, predict_frechet, weighted_slope, FrechetConfig, FrechetModel};
+pub use legendre::{
+    a_to_c, a_to_lambda, bernstein_nonnegative, derivative_bernstein, eval_a, eval_a_deriv,
+    gauss_legendre_01, hermite_he, hosking_lmoments, k3_monotone, k3_non_representable,
+    lambda_to_a, min_derivative_grid, pstar_all, pstar_coef, report_matrix, tau3_from_a,
+    weighted_pav, wnorm, GaussLegendre, QuadBasis,
+};
+pub use shift::{
+    bootstrap_indices, cross_fit_energy, lmoment_channel_energy, permutation_pvalue,
+    shift_conditional, shift_marginal, ConditionalShift, MarginalShift, SplitMix64,
+};
+pub use v1fit::{
+    attribute, channel_energy, channel_slope, codes_of, feature_report_table, fit_v1,
+    monotonicity_report, player_coefficients, predict_quantiles, projection_pair, Attribution,
+    MonoMode, MonoReport, ProjectionPair, ReportKind, V1Config, V1Model,
+};

@@ -12,6 +12,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 mod trace_api;
+mod v1_api;
 
 use traceot_core::adopt::{BackfitConfig, BackfitResult};
 use traceot_core::scalable::{binning, histogram as hist, pinball, sketch};
@@ -1143,5 +1144,6 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(histograms_u16, m)?)?;
     m.add_function(wrap_pyfunction!(pinball_grad_location_scale, m)?)?;
     trace_api::register(m)?;
+    v1_api::register(m)?;
     Ok(())
 }

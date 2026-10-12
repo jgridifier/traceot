@@ -99,9 +99,8 @@
       "noise3",
       "noise4"
     ],
-    "seconds": 0.04740828400008468
+    "seconds": 0.05186978400161024
   },
-  "criteria": "docs/TRACE_SIMS.md",
   "s2": {
     "names": [
       "x_signal",
@@ -179,7 +178,7 @@
       "time_split_importance": true
     },
     "pass": true,
-    "seconds": 0.055242471000383375
+    "seconds": 0.023295495000638766
   },
   "s3": {
     "far": 0.07234042553191489,
@@ -191,94 +190,95 @@
       "segment": true
     },
     "pass": true,
-    "seconds": 0.03596137699969404
+    "seconds": 0.005089653999675647
   },
   "s4": {
     "cells": [
       {
         "rows": 10000,
         "features": 10,
-        "bin_seconds": 0.001453945000321255,
-        "fit_seconds": 0.015913117999843962,
-        "wall_seconds": 0.017367063000165217,
-        "peak_rss_mb": 38.64453125,
+        "bin_seconds": 0.001225210000484367,
+        "fit_seconds": 0.014631427000495023,
+        "wall_seconds": 0.01585663700097939,
+        "peak_rss_mb": 39.40234375,
         "pass_cell": true
       },
       {
         "rows": 10000,
         "features": 100,
-        "bin_seconds": 0.008598680998147756,
-        "fit_seconds": 0.05068035600015719,
-        "wall_seconds": 0.059279036998304946,
-        "peak_rss_mb": 39.7265625,
+        "bin_seconds": 0.008572271002776688,
+        "fit_seconds": 0.04385174200069741,
+        "wall_seconds": 0.0524240130034741,
+        "peak_rss_mb": 39.8828125,
         "pass_cell": true
       },
       {
         "rows": 100000,
         "features": 10,
-        "bin_seconds": 0.011056555000322987,
-        "fit_seconds": 0.0684178930005146,
-        "wall_seconds": 0.07947444800083758,
-        "peak_rss_mb": 46.8203125,
+        "bin_seconds": 0.011323451000862406,
+        "fit_seconds": 0.06817750399932265,
+        "wall_seconds": 0.07950095500018506,
+        "peak_rss_mb": 47.1328125,
         "pass_cell": true
       },
       {
         "rows": 100000,
         "features": 100,
-        "bin_seconds": 0.1086856079973586,
-        "fit_seconds": 0.20049236700015172,
-        "wall_seconds": 0.3091779749975103,
-        "peak_rss_mb": 55.55859375,
+        "bin_seconds": 0.11233144199832168,
+        "fit_seconds": 0.21455774499918334,
+        "wall_seconds": 0.326889186997505,
+        "peak_rss_mb": 55.84375,
         "pass_cell": true
       },
       {
         "rows": 1000000,
         "features": 10,
-        "bin_seconds": 0.09495437399800721,
-        "fit_seconds": 0.39889620800022385,
-        "wall_seconds": 0.49385058199823106,
-        "peak_rss_mb": 125.08984375,
+        "bin_seconds": 0.09373976299866627,
+        "fit_seconds": 0.3752981230009027,
+        "wall_seconds": 0.46903788599956897,
+        "peak_rss_mb": 125.359375,
         "pass_cell": true
       },
       {
         "rows": 1000000,
         "features": 100,
-        "bin_seconds": 0.8533098669904575,
-        "fit_seconds": 1.9679776430002676,
-        "wall_seconds": 2.821287509990725,
-        "peak_rss_mb": 210.91796875,
+        "bin_seconds": 0.8241647340000782,
+        "fit_seconds": 2.1248775589992874,
+        "wall_seconds": 2.9490422929993656,
+        "peak_rss_mb": 211.22265625,
         "pass_cell": true
       },
       {
         "rows": 10000000,
         "features": 10,
-        "bin_seconds": 0.8452849629984485,
-        "fit_seconds": 4.498388636000527,
-        "wall_seconds": 5.343673598998976,
-        "peak_rss_mb": 837.96484375,
+        "bin_seconds": 0.9914485089975642,
+        "fit_seconds": 5.078195001000495,
+        "wall_seconds": 6.069643509998059,
+        "peak_rss_mb": 837.796875,
         "pass_cell": true
       },
       {
         "rows": 10000000,
         "features": 100,
-        "bin_seconds": 8.161531365002702,
-        "fit_seconds": 30.24174022599982,
-        "wall_seconds": 38.40327159100252,
-        "peak_rss_mb": 1696.0546875,
+        "bin_seconds": 9.711661777997506,
+        "fit_seconds": 28.773252435999893,
+        "wall_seconds": 38.4849142139974,
+        "peak_rss_mb": 1696.32421875,
         "pass_cell": true
       }
     ],
     "ratios": {
-      "p10_1e6_over_1e5": 6.213954225803825,
-      "p100_1e6_over_1e5": 9.125124485382388,
-      "p10_1e5_over_1e4": 4.576159365580785,
-      "p100_1e5_over_1e4": 5.215637612438797
+      "p10_1e6_over_1e5": 5.899776751090313,
+      "p100_1e6_over_1e5": 9.021535157178123,
+      "p10_1e5_over_1e4": 5.013733681062047,
+      "p100_1e5_over_1e4": 6.235485768245981
     },
     "checks": {
       "all_finished": true,
       "linear_growth": true
     },
     "pass": true,
-    "seconds": 51.26582616699943
-  }
+    "seconds": 52.616602578998936
+  },
+  "criteria": "docs/TRACE_SIMS.md"
 }
