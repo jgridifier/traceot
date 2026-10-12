@@ -342,3 +342,16 @@ Distribution-valued rows: each row is an exponential sample with scale linear in
 ### Theory disputes
 
 **The T3 oracle is an L2 coefficient. The fitter minimises pinball.** T3 asks for the slope of `x_shape` in the orthonormal He3 channel to be within 30% of 0.12√6 = 0.294. On an unconditional draw from `0.8 z + 0.12 He3(z)`, a Newton fit in the degree-7 Legendre span converges (the loss stops moving, and an independent Newton in NumPy reaches the same point) to a reported He3 coefficient of about 0.118. That point has a lower pinball loss than the L2 projection of the true curve, whose reported coefficient is about 0.18. The report matrix matches a direct Gauss–Legendre inner product to 1e-10, so the gap is not a mis-scaled basis. THEORY.md §1.5 already records that a truncated pinball projection is not the L2 projection (`v1:1.17`). T3's pass bar treats them as the same number. T4 and T6 use the same identification: T4's channel-3 energies are the pinball fit's, compared with L2 oracles, and T6 asks the pinball fit of a pure scale `z` to put at most 5% of the v0 He3 energy into He3. The measured ratio is 0.50. The criteria were not changed.
+
+## v2 baseline, before any fitter change
+
+The corrected tests are frozen in `docs/theory/PREREG_TAIL_v2.md`. The v1 T3, T4 and T6 failures above stay failed. This section scores the fitter that was already on main (`TraceV1`, Newton pinball). The constructor is the one in the pre-registration: `k_fit=8`, `k_report=4`, `n_u=0`, `max_bins=16`, `mono="none"`, `max_rounds=200`, `tol=1e-10`. Checked against the code before the run: `n_u=0` is 12 Gauss–Legendre nodes, the bins are the order statistics at `floor(k n / 16)`, an empty reference basis is `z`, and `channel_energy` is the mean square of the value-bin coefficients. Those settings match, so nothing was adapted. Every fit used 12 nodes. No seed hit the round cap.
+
+| Test | Result | Bar | What happened |
+|---|---|---|---|
+| T3v2 | pass | ≥ 9 of 20 seeds separate in the reference basis | 17 of 20. The other three ratios were 2.98, 2.42 and 2.65. Secondary bands, not a pass condition: 20 of 20 |
+| T3v2-null | pass | false positives ≤ 1 of 20 | 0 of 20. The largest ratio was 0.69 |
+| T4v2 | pass | ≥ 18 of 20 seeds inside the Legendre bands | 20 of 20. 3× separation is impossible in Legendre: the oracle ratio is 0.497 |
+| T6v2 | pass | ≥ 19 of 20 seeds inside the channel-3 band and with ratio ≤ 0.0402 | 19 of 20. Seed 6115 had ratio 0.063 |
+
+Raw rows are in `benchmarks/results/trace_v2_baseline.json`.
