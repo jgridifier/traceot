@@ -1,0 +1,117 @@
+TRACE theory verification
+run: 2026-10-11 23:10 EDT, python 3.13.5, numpy 2.5.4, scipy 1.18.1
+fixed seeds inside each script; wall time 266s
+
+SUMMARY: 46 PASS, 0 FAIL
+
+status | check
+PASS | v1:1.1    | orthogonality int P*_j P*_k = delta_jk/(2k+1) (GL, n=K)
+PASS | v1:1.2    | lambda_r = int Q P*_{r-1} matches Hosking order-statistic definition and closed forms
+PASS | v1:1.3    | c_k = (2k+1) lambda_{k+1}
+PASS | v1:1.4    | W2^2 = sum dc_k^2/(2k+1) = sum (2k+1) dlambda_{k+1}^2
+PASS | v1:1.5    | 'W2^2 = sum (2k+1) db_k^2' with b_k = expansion coefficients is FALSE (refutation reproduced)
+PASS | v1:1.6    | W2^2 = sum_{k<K}(2k+1)dlambda^2 + ||residual||^2, residual >=0 and nonincreasing in K
+PASS | v1:1.7    | Shapley of (sum a_i)^2/(2k+1) is a_j*(sum_i a_i)/(2k+1); efficiency exact
+PASS | v1:1.8    | independence + centering: E phi_jk = Var f_jk/(2k+1) (= functional-ANOVA share), sums to E dc_k^2/(2k+1)
+PASS | v1:1.8b   | dependent features: E phi_j = Var f_j + Cov(f_j, f_other); still sums exactly
+PASS | v1:1.9    | K=3: Q nondecreasing iff |c2| <= c1/3 (iff |tau3| <= 1/5)
+PASS | v1:1.10   | K=4: endpoint + interior-vertex closed form is exact
+PASS | v1:1.11   | Bernstein coefficients of Q' >= 0
+PASS | v1:1.11b  | exponential law truncated at K=3 is not monotone (tau3=1/3>1/5); at K=4 it is
+PASS | v1:1.12   | PAV = L2 projection on monotone cone: post<=pre, post>=pre-d1-d2, d<=||cum. neg. part||<=TV_-, Moreau orthogonality
+PASS | v1:1.13   | Gauss-Legendre (n>=K) makes the discrete Gram exactly diagonal; v0 Hermite basis is orthogonal in continuous L2[0,1]
+PASS | v1:1.14   | pinball (CRPS) curvature metric weights u by f(Q(u)); it couples channels
+PASS | v1:1.15   | early-stopped GD leaks a pure scale effect into He3; converged GD and a Newton step do not
+PASS | v1:1.16   | in plain Legendre channels the S1 scale feature out-weighs the He3 feature in the L-kurtosis channel (k=3)
+PASS | v1:1.16b  | reference-adapted basis (e1 = Q_ref = z): orthonormal; the scale feature has zero energy in shape channels
+PASS | v1:1.17   | truncated pinball/CRPS fit is biased away from the W2 (L-moment) channels; fitting K_fit=8 and reporting 3 shrinks the bias
+PASS | v1:1.16d  | even a mean-standardised-conditional reference does not isolate S1's He3 feature (x_scale changes the standardised shape)
+PASS | v1:1.16e  | v0's Hermite channels already satisfy W2^2 = sum_m m! dtheta_m^2 in continuous L2 (Parseval, weights m!)
+PASS | v2:2.1    | E_{x~P_B} W2^2(Q_A(.|x),Q_B(.|x)) = sum_{players,channels} E phi (exact, pre-projection)
+PASS | v2:2.2    | same covariates: W2^2(F_A,F_B) <= E_x W2^2(conditionals) (mixture/joint convexity)
+PASS | v2:2.2b   | marginal shift is not an average of conditional shifts: swap example
+PASS | v2:2.3    | Q_B-Q_A = (Q_B-Q_C)+(Q_C-Q_A) exactly; W2^2 = structure + composition + 2*cross; 2-player Shapley sums exactly
+PASS | v2:2.4    | cross-fit <D1,D2> is unbiased for ||D||^2 and for phi_j; the plug-in is biased upward by tr(Cov)
+PASS | v2:2.5    | permutation test of 'no shift' (labels exchangeable) has level alpha
+PASS | v2:2.6    | within-period row bootstrap SD of the statistic is within 35% of its Monte-Carlo SD (median over 25 datasets)
+PASS | v3:3.1    | additive Frechet-W2 fit == K separate weighted LS fits on c_k targets; objective = sum_k SSR_k/(2k+1) + const
+PASS | v3:3.2    | sample L-moments (Hosking 1990 PWM form) unbiased for m>=r; plug-in quantile-function coefficients biased O(1/m)
+PASS | v3:3.3    | m_i = 5 fixed: error of LS on unbiased L-moment targets falls like n^-1/2; plug-in targets plateau at their bias
+PASS | v3:3.4    | empirical quantile error E W2^2(F_m,F) <= 2 J2/(m+1) for the uniform law (constant from secondary source; checked here)
+PASS | v3:3.5    | unequal m_i: inverse-variance weights 1/(tau_k^2 + v_k/m_i) beat equal and m-proportional weights; all unbiased
+PASS | v3:3.6    | if the target is monotone, ||Pi(Qhat) - Q|| <= ||Qhat - Q|| (fit-then-project is safe)
+PASS | v4:4.1    | grid cost: worst-case pinball risk (primal LP) = 1-D dual = separable per-feature inner max
+PASS | v4:4.2    | R(eps) <= emp + eps*rbar*max_j G_j/kappa_j (G_j = max adjacent jump); an upper bound, not exact
+PASS | v4:4.3    | raw-x transport cost: exact LP == dual with point-to-bin distances; initial slope ~ jump/delta grows without bound
+PASS | v4:4.4    | outcome-only W1 ball: worst case = emp + eps*max(u,1-u)/kappa_y exactly (independent of the model)
+PASS | v4:4.4b   | joint (x,y) W1 with cost kappa.|db| + kappa_y|dy|: R = min_{lam>=rbar/kappa_y} covariate dual
+PASS | v4:4.5    | W-inf box: exact worst case uses per-feature window min/max (O(npB)); window total variation gives an upper bound
+PASS | v4:4.6    | exact W1-robust pinball risk is convex in theta (midpoint test, 60 random pairs)
+PASS | v4:4.7    | sum_j kappa_j W1(marginal_j) <= joint W1 (additive cost)
+PASS | v4:4.8    | integrated loss: common-adversary worst case <= average of per-level worst cases
+PASS | v4:4.9    | covariate W2 ball on the grid: exact LP == dual with cost d^2, budget eps^2; value <= W1-ball value
+PASS | v4:4.10   | outcome-only W2 ball: exact LP == dual; gain <= rbar*eps/kappa_y and depends on the model's residuals (not a constant)
+
+FULL LOG
+===== v1_legendre.py (exit 0, 9.4s) =====
+[PASS] v1:1.1 orthogonality int P*_j P*_k = delta_jk/(2k+1) (GL, n=K)  max abs err 6.09e-16 (tol 1e-13)
+[INFO] v1:1.2 L-moments uniform  lambda1..4 = 0.500000, 0.166667, 0.000000, 0.000000
+[INFO] v1:1.2 L-moments exponential  lambda1..4 = 1.000000, 0.500000, 0.166667, 0.083333
+[INFO] v1:1.2 L-moments normal  lambda1..4 = -0.000000, 0.564190, -0.000000, 0.069171
+[INFO] v1:1.2 L-moments gumbel  lambda1..4 = 0.577216, 0.693147, 0.117783, 0.104232
+[PASS] v1:1.2 lambda_r = int Q P*_{r-1} matches Hosking order-statistic definition and closed forms  max abs diff 1.06e-13 (tol 1e-7; uniform, exponential, normal, gumbel)
+[PASS] v1:1.3 c_k = (2k+1) lambda_{k+1}  max abs err 8.50e-17 (tol 1e-11)
+[PASS] v1:1.4 W2^2 = sum dc_k^2/(2k+1) = sum (2k+1) dlambda_{k+1}^2  W2^2=1.238758, rel err 1.8e-16 (tol 1e-12)
+[PASS] v1:1.5 'W2^2 = sum (2k+1) db_k^2' with b_k = expansion coefficients is FALSE (refutation reproduced)  that formula gives 1.5103 vs true 1.2388; correct iff b_k = lambda_{k+1}
+[PASS] v1:1.6 W2^2 = sum_{k<K}(2k+1)dlambda^2 + ||residual||^2, residual >=0 and nonincreasing in K  W2^2=1.193605; K=1: channels 1.000000 resid 1.94e-01; K=3: channels 1.151250 resid 4.24e-02; K=5: channels 1.175154 resid 1.85e-02; K=10: channels 1.187369 resid 6.24e-03 (tol 1e-8)
+[PASS] v1:1.7 Shapley of (sum a_i)^2/(2k+1) is a_j*(sum_i a_i)/(2k+1); efficiency exact  50 random games, p in 2..7, brute force over all coalitions (tol 1e-12); negative values occur: True
+[PASS] v1:1.8 independence + centering: E phi_jk = Var f_jk/(2k+1) (= functional-ANOVA share), sums to E dc_k^2/(2k+1)  exact enumeration, max err 5.6e-17 (tol 1e-12)
+[PASS] v1:1.8b dependent features: E phi_j = Var f_j + Cov(f_j, f_other); still sums exactly  Cov = -0.0168 (nonzero); |E0+E1-total| = 2.2e-16
+[PASS] v1:1.9 K=3: Q nondecreasing iff |c2| <= c1/3 (iff |tau3| <= 1/5)  20000/20000 random coefficient vectors agree with dense-grid check
+[PASS] v1:1.10 K=4: endpoint + interior-vertex closed form is exact  20000/20000 agree (<=2 boundary ties allowed)
+[PASS] v1:1.11 Bernstein coefficients of Q' >= 0  =>  Q nondecreasing (sufficient, linear constraints)  0 violations expected, got 0; monotone cases 817/5000, certified by Bernstein at elevation 0/4/16: 255/618/759
+[PASS] v1:1.11b exponential law truncated at K=3 is not monotone (tau3=1/3>1/5); at K=4 it is  min Q' at K=3: -2.000; at K=4: 0.536
+[PASS] v1:1.12 PAV = L2 projection on monotone cone: post<=pre, post>=pre-d1-d2, d<=||cum. neg. part||<=TV_-, Moreau orthogonality  300 random degree-6 pairs on 2000-pt grid; largest relative shrink of distance 0.927
+[PASS] v1:1.13 Gauss-Legendre (n>=K) makes the discrete Gram exactly diagonal; v0 Hermite basis is orthogonal in continuous L2[0,1]  GL n=4 max|corr| 7.8e-16; continuous <z,He3> = -6.4e-15
+[INFO] v1:1.13 grids  midpoint N=19: Legendre K=4 max|corr| 1.51e-02; v0 Hermite {1,z,He3} corr(z,He3) -0.4546; midpoint N=31: Legendre K=4 max|corr| 5.60e-03; v0 Hermite {1,z,He3} corr(z,He3) -0.2942; midpoint N=101: Legendre K=4 max|corr| 5.24e-04; v0 Hermite {1,z,He3} corr(z,He3) -0.1008
+[PASS] v1:1.14 pinball (CRPS) curvature metric weights u by f(Q(u)); it couples channels  Gaussian, Legendre corr(P0,P2)=-0.460, corr(P1,P3)=-0.528; Exponential corr(P0,P1)=-0.577; Gaussian v0 Hermite corr(z,He3)=-0.7746 (=-sqrt(0.6)=-0.7746)
+[PASS] v1:1.15 early-stopped GD leaks a pure scale effect into He3; converged GD and a Newton step do not  peak |shape coef| 0.408 (scale truth 1.2) at step 1; after 2000 steps 4.4e-16; Newton 9.9e-17
+[PASS] v1:1.16 in plain Legendre channels the S1 scale feature out-weighs the He3 feature in the L-kurtosis channel (k=3)  channel-3 energy over x in [0,1]: x_shape 0.03633, x_scale 0.04823, ratio 0.753 (<3: the S1 3x criterion is unattainable in this basis even with no noise); channel-1: x_scale 1.3751, x_shape 0.00344
+[PASS] v1:1.16b reference-adapted basis (e1 = Q_ref = z): orthonormal; the scale feature has zero energy in shape channels  max|Gram-I| 8.9e-16; x_scale shape-channel loads 3.8e-16; x_shape loads on e2..e5 [0.     0.1939 0.     0.1344]
+[INFO] v1:1.16c Q_ref = S1 period-2 marginal  shape-channel energies e2..e5: x_scale [0.      0.02078 0.      0.00997], x_shape [0.      0.03359 0.      0.01791]; total shape energy ratio x_shape/x_scale = 1.67
+[PASS] v1:1.17 truncated pinball/CRPS fit is biased away from the W2 (L-moment) channels; fitting K_fit=8 and reporting 3 shrinks the bias  lognormal(0,0.6): max|c_CRPS,K=3 - c_L2| = 0.2841; with K_fit=8 = 0.05666
+[PASS] v1:1.16d even a mean-standardised-conditional reference does not isolate S1's He3 feature (x_scale changes the standardised shape)  total shape-channel energy ratio x_shape/x_scale = 2.00 (plain Legendre 0.75, marginal reference 1.67). An earlier hypothesis that this reference would reach >=3x was tested here and is false.
+[PASS] v1:1.16e v0's Hermite channels already satisfy W2^2 = sum_m m! dtheta_m^2 in continuous L2 (Parseval, weights m!)  quadrature 161.41465186 vs sum 161.41465186
+
+===== v2_shift.py (exit 0, 31.1s) =====
+[PASS] v2:2.1 E_{x~P_B} W2^2(Q_A(.|x),Q_B(.|x)) = sum_{players,channels} E phi (exact, pre-projection)  |diff| 4.4e-16 (tol 1e-12); total 3.583363; per-channel [3.53398e+00 3.37800e-02 1.28200e-02 2.78000e-03]; per-player [1.09175 1.21003 0.59499 0.6866 ]; all curves monotone=True
+[PASS] v2:2.2 same covariates: W2^2(F_A,F_B) <= E_x W2^2(conditionals) (mixture/joint convexity)  marginal 1.09915 <= conditional 3.58336 (tol 1e-4 for the numerical mixture inversion)
+[PASS] v2:2.2b marginal shift is not an average of conditional shifts: swap example  marginal W2^2 = 0.0e+00, mean conditional W2^2 = 4.0
+[PASS] v2:2.3 Q_B-Q_A = (Q_B-Q_C)+(Q_C-Q_A) exactly; W2^2 = structure + composition + 2*cross; 2-player Shapley sums exactly  total 1.59942 = struct 1.09915 + comp 0.04893 + cross +0.45134; Shapley cov -0.01494, struct 1.61437
+[INFO] v2:2.3 path dependence  composition first: comp=0.04893; structure first: comp'=-0.07881 (differ: DFL-style decompositions are path dependent)
+[PASS] v2:2.4 cross-fit <D1,D2> is unbiased for ||D||^2 and for phi_j; the plug-in is biased upward by tr(Cov)  truth 0.2843: plug-in 0.4082 (bias 0.1238, theory 0.1250), cross-fit 0.2839+-0.0022; phi_1 truth -0.0798, cross-fit -0.0795+-0.0006
+[PASS] v2:2.5 permutation test of 'no shift' (labels exchangeable) has level alpha  rejection rate 0.103 at alpha=0.10, 300 null replicates, 199 permutations; band [0.048,0.152]
+[INFO] v2:2.5 power  planted tail shift 0.12*(x/4)*He3, n=300 per period: power 0.28 (descriptive)
+[PASS] v2:2.6 within-period row bootstrap SD of the statistic is within 35% of its Monte-Carlo SD (median over 25 datasets)  median ratio bootstrap SD / MC SD = 0.71 (iid rows; time-dependent rows need a block bootstrap)
+
+===== v3_frechet.py (exit 0, 12.7s) =====
+[PASS] v3:3.1 additive Frechet-W2 fit == K separate weighted LS fits on c_k targets; objective = sum_k SSR_k/(2k+1) + const  max|theta diff| 8.5e-14; objectives 13.69944898 vs 13.69944898; constant (truncation residual) 13.39327
+[PASS] v3:3.2 sample L-moments (Hosking 1990 PWM form) unbiased for m>=r; plug-in quantile-function coefficients biased O(1/m)  m=5: unbiased max|z|=0.70; plug-in bias [ 0.0007 -0.1001 -0.0868 -0.0833] (z=[   1. -204. -377. -850.]); m=20: unbiased max|z|=2.19; plug-in bias [ 0.0011 -0.0247 -0.0242 -0.0239] (z=[   2.  -89. -146. -215.])
+[PASS] v3:3.3 m_i = 5 fixed: error of LS on unbiased L-moment targets falls like n^-1/2; plug-in targets plateau at their bias  RMSE n=200: 0.1027, n=3200: 0.0267 (ratio 0.260, sqrt-n predicts 0.25); plug-in at n=3200: 0.1519
+[PASS] v3:3.4 empirical quantile error E W2^2(F_m,F) <= 2 J2/(m+1) for the uniform law (constant from secondary source; checked here)  m=5: E W2^2=0.03338 <= 0.05556; m=20: E W2^2=0.00830 <= 0.01587; m=100: E W2^2=0.00168 <= 0.00330
+[INFO] v3:3.4b normal law (J2 = infinity)  m * E W2^2 = 2.606 (m=10), 3.028 (m=100), 3.331 (m=1000); grows with m, so the 1/m rate fails for Gaussian rows
+[PASS] v3:3.5 unequal m_i: inverse-variance weights 1/(tau_k^2 + v_k/m_i) beat equal and m-proportional weights; all unbiased  slope variance: equal 8.26e-03, prop_m 5.35e-03, gls 3.97e-03; bias: equal +0.0029, prop_m +0.0017, gls +0.0021
+[PASS] v3:3.6 if the target is monotone, ||Pi(Qhat) - Q|| <= ||Qhat - Q|| (fit-then-project is safe)  500 random cases
+
+===== v4_dro.py (exit 0, 212.9s) =====
+[PASS] v4:4.1 grid cost: worst-case pinball risk (primal LP) = 1-D dual = separable per-feature inner max  seed 0 values eps=0.005: 0.509284; eps=0.02: 0.566553; eps=0.1: 0.779007; eps=0.5: 1.267916 (tol 1e-8)
+[PASS] v4:4.2 R(eps) <= emp + eps*rbar*max_j G_j/kappa_j (G_j = max adjacent jump); an upper bound, not exact  (exact-emp)/(bound-emp) ranges 0.22..1.00 over 24 cases
+[PASS] v4:4.3 raw-x transport cost: exact LP == dual with point-to-bin distances; initial slope ~ jump/delta grows without bound  slope dR/deps at eps->0 for delta=0.05,0.01,0.002,0.0004: 77.7, 77.7, 297.4, 1486.9
+[PASS] v4:4.4 outcome-only W1 ball: worst case = emp + eps*max(u,1-u)/kappa_y exactly (independent of the model)  emp 0.32840; any point with a residual of the right sign attains rate rbar=0.8
+[PASS] v4:4.4b joint (x,y) W1 with cost kappa.|db| + kappa_y|dy|: R = min_{lam>=rbar/kappa_y} covariate dual  kappa_y=1.0, eps=0.01: LP 0.530230 formula 0.530230 covariate-only 0.530230; kappa_y=1.0, eps=0.4: LP 2.135618 formula 2.135618 covariate-only 2.135618; kappa_y=0.05, eps=0.01: LP 0.530230 formula 0.530230 covariate-only 0.530230; kappa_y=0.05, eps=0.4: LP 6.792739 formula 6.792739 covariate-only 2.135618
+[PASS] v4:4.5 W-inf box: exact worst case uses per-feature window min/max (O(npB)); window total variation gives an upper bound  exact mean 0.89097 <= TV bound 1.91105
+[PASS] v4:4.6 exact W1-robust pinball risk is convex in theta (midpoint test, 60 random pairs)  max(mid - avg) = -6.60e-03
+[PASS] v4:4.7 sum_j kappa_j W1(marginal_j) <= joint W1 (additive cost)  joint/marginal-sum ratio range 1.00..1.64
+[PASS] v4:4.8 integrated loss: common-adversary worst case <= average of per-level worst cases  eps=0.1: common 0.57049 <= separate 0.64246
+[PASS] v4:4.9 covariate W2 ball on the grid: exact LP == dual with cost d^2, budget eps^2; value <= W1-ball value  eps=0.02: W2 0.49127 <= W1 0.60211; eps=0.1: W2 0.75574 <= W1 0.95279; eps=0.3: W2 1.15744 <= W1 1.21454 (tol 1e-8)
+[PASS] v4:4.10 outcome-only W2 ball: exact LP == dual; gain <= rbar*eps/kappa_y and depends on the model's residuals (not a constant)  fit eps=0.05: gain 0.02687 (W1 gain 0.04000); fit eps=0.3: gain 0.17314 (W1 gain 0.24000); fit+0.8 eps=0.05: gain 0.01495 (W1 gain 0.04000); fit+0.8 eps=0.3: gain 0.10658 (W1 gain 0.24000)
