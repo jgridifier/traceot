@@ -56,9 +56,11 @@ each to `1e-9·max(1, |total|)`.
 ## 3. ShiftModel (for H5.1b, `return_model=True`)
 
 ```python
-m.predict_quantile(X, u, period)  # X (n,p) float64, u (m,) in (0,1), period "A"|"B" -> (n, m): fitted Q_t(u|x), after any monotone rearrangement used in prediction
-m.coef(X, period)                 # (n, K_fit) coefficients c_{t,k}(x) before rearrangement
-m.rearranged                      # bool: whether predict_quantile rearranges
+m.predict_quantile(
+    X, u, period
+)  # X (n,p) float64, u (m,) in (0,1), period "A"|"B" -> (n, m): fitted Q_t(u|x), after any monotone rearrangement used in prediction
+m.coef(X, period)  # (n, K_fit) coefficients c_{t,k}(x) before rearrangement
+m.rearranged  # bool: whether predict_quantile rearranges
 ```
 
 H5.1b averages `predict_quantile` over each period's own rows on a 256-node Gauss–Legendre grid and

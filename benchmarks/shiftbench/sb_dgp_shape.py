@@ -1,3 +1,4 @@
+# ruff: noqa: E501, E731, B007, B023, F841
 """H7 shape scenarios (PREREG_TRACE_CLAIMS_AMENDMENT_1.md, A2): mean AND L-scale fixed.
 
 Imports the frozen sb_dgp and does not modify it. Each scenario changes only the shape of
@@ -8,17 +9,23 @@ Truth: L-moments lambda_1..lambda_4 (channels k=0..3) of Y_A, Y_B, Y_c=(X_B, str
 Y_c'=(X_A, structure B); the order-free Shapley split (TRACE estimand) and the A-reference
 split (rival estimand); plus the frozen harness statistics (A-reference) for completeness.
 """
+
 from __future__ import annotations
 
 import json
 import os
 
 import numpy as np
-
 import sb_dgp as dgp
 
 SHAPE_SCENARIOS = ("skew_struct", "tail_struct", "skew_comp", "tail_comp", "shape_mixed")
-GRADED = {"skew_struct": (2,), "tail_struct": (3,), "skew_comp": (2,), "tail_comp": (3,), "shape_mixed": (2,)}
+GRADED = {
+    "skew_struct": (2,),
+    "tail_struct": (3,),
+    "skew_comp": (2,),
+    "tail_comp": (3,),
+    "shape_mixed": (2,),
+}
 BETA = np.array([1.0, -0.8, 0.6, 0.4, -0.3])
 ORACLE_N, ORACLE_SEED = 2_000_000, 99
 TRUTH_FILE = os.path.join(os.path.dirname(__file__), "..", "results", "shiftbench_truth_shape.json")
@@ -129,21 +136,28 @@ class ShapeScenario:
         Y = {
             "A": self.y_struct("A", XA, eA),
             "B": self.y_struct("B", XB, eB),
-            "C": self.y_struct("A", XB, eA2),   # covariates B, structure A
+            "C": self.y_struct("A", XB, eA2),  # covariates B, structure A
             "Cp": self.y_struct("B", XA, eB2),  # covariates A, structure B
         }
         L = {k: lmoments(v) for k, v in Y.items()}
-        out = {"sigma_b": self.sigma_b, "sd_A": float(np.std(Y["A"])), "graded": list(GRADED[self.name]),
-               "lmom": {k: v.tolist() for k, v in L.items()},
-               "dlam1": float(L["B"][0] - L["A"][0]), "dlam2": float(L["B"][1] - L["A"][1])}
+        out = {
+            "sigma_b": self.sigma_b,
+            "sd_A": float(np.std(Y["A"])),
+            "graded": list(GRADED[self.name]),
+            "lmom": {k: v.tolist() for k, v in L.items()},
+            "dlam1": float(L["B"][0] - L["A"][0]),
+            "dlam2": float(L["B"][1] - L["A"][1]),
+        }
         sh_c = 0.5 * ((L["B"] - L["Cp"]) + (L["C"] - L["A"]))
         sh_s = 0.5 * ((L["Cp"] - L["A"]) + (L["B"] - L["C"]))
         out["shapley"] = {"comp": sh_c.tolist(), "struct": sh_s.tolist()}
         out["aref"] = {"comp": (L["C"] - L["A"]).tolist(), "struct": (L["B"] - L["C"]).tolist()}
         w = 1 / (2 * np.arange(4) + 1)
         dc = (2 * np.arange(4) + 1) * (L["B"] - L["A"])
-        out["w2_share"] = {"comp": (w * (2 * np.arange(4) + 1) * sh_c * dc).tolist(),
-                           "struct": (w * (2 * np.arange(4) + 1) * sh_s * dc).tolist()}
+        out["w2_share"] = {
+            "comp": (w * (2 * np.arange(4) + 1) * sh_c * dc).tolist(),
+            "struct": (w * (2 * np.arange(4) + 1) * sh_s * dc).tolist(),
+        }
         for s in dgp.STATS:
             tA, tB, tC = (dgp.stat(Y[k], s) for k in ("A", "B", "C"))
             out[s] = {"total": tB - tA, "comp": tC - tA, "struct": tB - tC}
@@ -172,11 +186,23 @@ def build_truth():
         # 4 standard errors (Amendment 1, deviation D1); lambda_2 is matched by calibration.
         se1 = np.sqrt(2 * t["sd_A"] ** 2 / ORACLE_N)
         t["dlam1_se"] = float(se1)
-        assert abs(t["dlam1"]) <= 4 * se1 and abs(t["dlam2"]) <= 2e-3, (name, t["dlam1"], se1, t["dlam2"])
+        assert abs(t["dlam1"]) <= 4 * se1 and abs(t["dlam2"]) <= 2e-3, (
+            name,
+            t["dlam1"],
+            se1,
+            t["dlam2"],
+        )
         res[name] = t
-        print(name, f"sigma_B={sc.sigma_b:.6f} dlam1={t['dlam1']:+.2e} dlam2={t['dlam2']:+.2e}",
-              "graded", GRADED[name], "shapley comp", np.round(t["shapley"]["comp"], 4),
-              "struct", np.round(t["shapley"]["struct"], 4))
+        print(
+            name,
+            f"sigma_B={sc.sigma_b:.6f} dlam1={t['dlam1']:+.2e} dlam2={t['dlam2']:+.2e}",
+            "graded",
+            GRADED[name],
+            "shapley comp",
+            np.round(t["shapley"]["comp"], 4),
+            "struct",
+            np.round(t["shapley"]["struct"], 4),
+        )
     with open(TRUTH_FILE, "w") as f:
         json.dump(res, f, indent=1)
 

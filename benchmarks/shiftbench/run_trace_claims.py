@@ -1,9 +1,11 @@
+# ruff: noqa: E501, E731, B007, B023, F841
 """TRACE-claims runs: frozen ShiftBench tracks for TRACE + H5-H8 (PREREG_TRACE_CLAIMS.md + AMENDMENT_1).
 
     python run_trace_claims.py TRACK [--workers 7] [--limit k]
 TRACKs: truth_of, acc, shape, inv, cover, null200, real, placebo, h6syn, scale, scale-child
 Raw records: benchmarks/results/trace_claims_<track>.jsonl
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,12 +22,27 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 import numpy as np
-from numpy.polynomial import legendre as L
-
 import sb_dgp as dgp
 import sb_dgp_shape as shp
-from run_synthetic import (ACC_GRID, COVER_B, COVER_N, COVER_P, COVER_REPS, COVER_SCEN, INV_GRID, INV_REPS,
-                           RES, SCALE_GRID, SCALE_MEM_BYTES, SCALE_TIMEOUT, centred, draw, record, seed_of)
+from numpy.polynomial import legendre as L
+from run_synthetic import (
+    ACC_GRID,
+    COVER_B,
+    COVER_N,
+    COVER_P,
+    COVER_REPS,
+    COVER_SCEN,
+    INV_GRID,
+    INV_REPS,
+    RES,
+    SCALE_GRID,
+    SCALE_MEM_BYTES,
+    SCALE_TIMEOUT,
+    centred,
+    draw,
+    record,
+    seed_of,
+)
 from sb_adapter_trace_claims import TraceFull, _tolist
 from sb_methods import RIVALS
 from sb_shape_readout import CFM_L, DFL_L
@@ -60,7 +77,7 @@ def h5_checks(XA, yA, XB, yB, seed, res, raw):
     phi = np.asarray(x["bary_phi"])
     dc = np.asarray(x["bary_dc"])
     out = {"sdA2": sdA2}
-    out["g51a"] = abs(phi.sum() - np.sum(w * dc ** 2))
+    out["g51a"] = abs(phi.sum() - np.sum(w * dc**2))
     m = raw["model"]
     qa = m.predict_quantile(XA, GL_U, "A").mean(0)
     qb = m.predict_quantile(XB, GL_U, "B").mean(0)
@@ -77,19 +94,26 @@ def h5_checks(XA, yA, XB, yB, seed, res, raw):
     dl = np.asarray(lm["B"]) - np.asarray(lm["A"])
     dck = (2 * np.arange(K) + 1) * dl
     chan = np.asarray(mp["comp"]) + np.asarray(mp["struct"])
-    out["g53_chan"] = float(np.max(np.abs(chan - w * dck ** 2)))
+    out["g53_chan"] = float(np.max(np.abs(chan - w * dck**2)))
     ls = x["lsplit"]
     out["g53_coef"] = float(np.max(np.abs(np.asarray(ls["comp"]) + np.asarray(ls["struct"]) - dl)))
     out["lmom_harness_dl"] = (shp.lmoments(yB) - shp.lmoments(yA)).tolist()
     # H5.4: period swap
     rs = TR.raw(XB, yB, XA, yA, seed)
-    g = [np.max(np.abs(np.asarray(rs["bary_phi"]) - phi)),
-         abs(np.sum(rs["marg_phi"]["comp"]) + np.sum(rs["marg_phi"]["struct"]) - np.sum(mp["comp"]) - np.sum(mp["struct"])),
-         np.max(np.abs(np.asarray(rs["marg_phi"]["comp"]) - np.asarray(mp["comp"]))),
-         np.max(np.abs(np.asarray(rs["marg_phi"]["struct"]) - np.asarray(mp["struct"]))),
-         np.max(np.abs(np.asarray(rs["lsplit"]["comp"]) + np.asarray(ls["comp"]))),
-         np.max(np.abs(np.asarray(rs["lsplit"]["struct"]) + np.asarray(ls["struct"]))),
-         max(abs(rs["split"][s][i] + x["split_of"][s][i]) for s in rs["split"] for i in (0, 1))]
+    g = [
+        np.max(np.abs(np.asarray(rs["bary_phi"]) - phi)),
+        abs(
+            np.sum(rs["marg_phi"]["comp"])
+            + np.sum(rs["marg_phi"]["struct"])
+            - np.sum(mp["comp"])
+            - np.sum(mp["struct"])
+        ),
+        np.max(np.abs(np.asarray(rs["marg_phi"]["comp"]) - np.asarray(mp["comp"]))),
+        np.max(np.abs(np.asarray(rs["marg_phi"]["struct"]) - np.asarray(mp["struct"]))),
+        np.max(np.abs(np.asarray(rs["lsplit"]["comp"]) + np.asarray(ls["comp"]))),
+        np.max(np.abs(np.asarray(rs["lsplit"]["struct"]) + np.asarray(ls["struct"]))),
+        max(abs(rs["split"][s][i] + x["split_of"][s][i]) for s in rs["split"] for i in (0, 1)),
+    ]
     out["g54_parts"] = [float(v) for v in g]
     out["g54"] = float(max(g))
     W = max(1.0, out["W2_emp"] / sdA2)
@@ -105,8 +129,11 @@ def rival_contrast(XA, yA, XB, yB, seed, base):
         for s, (c, st) in base[m.name]["split"].items():
             tot = dgp.stat(yB, s) - dgp.stat(yA, s)
             cb, sb = r.split[s]
-            o[s] = {"add_gap": abs(c + st - tot), "order_gap": max(abs(c + cb), abs(st + sb)),
-                    "swap": [cb, sb]}
+            o[s] = {
+                "add_gap": abs(c + st - tot),
+                "order_gap": max(abs(c + cb), abs(st + sb)),
+                "swap": [cb, sb],
+            }
         out[m.name] = o
     return out
 
@@ -124,10 +151,15 @@ def t_truth_of(_):
         o = {}
         for st in dgp.STATS:
             tA, tB, tC, tCp = (dgp.stat(v, st) for v in (yA, yB, yC, yCp))
-            o[st] = {"comp": 0.5 * ((tB - tCp) + (tC - tA)), "struct": 0.5 * ((tCp - tA) + (tB - tC))}
+            o[st] = {
+                "comp": 0.5 * ((tB - tCp) + (tC - tA)),
+                "struct": 0.5 * ((tCp - tA) + (tB - tC)),
+            }
         L4 = {k: shp.lmoments(v) for k, v in (("A", yA), ("B", yB), ("C", yC), ("Cp", yCp))}
-        o["lsplit"] = {"comp": (0.5 * ((L4["B"] - L4["Cp"]) + (L4["C"] - L4["A"]))).tolist(),
-                       "struct": (0.5 * ((L4["Cp"] - L4["A"]) + (L4["B"] - L4["C"]))).tolist()}
+        o["lsplit"] = {
+            "comp": (0.5 * ((L4["B"] - L4["Cp"]) + (L4["C"] - L4["A"]))).tolist(),
+            "struct": (0.5 * ((L4["Cp"] - L4["A"]) + (L4["B"] - L4["C"]))).tolist(),
+        }
         out[s] = o
     return out
 
@@ -137,8 +169,14 @@ def t_acc(a):
     XA, yA, XB, yB = draw(scen, n, p, rep)
     seed = seed_of("m", rep)
     res, raw, sec = run_trace(XA, yA, XB, yB, seed, model=True)
-    rec = {"scen": scen, "n": n, "p": p, "rep": rep, "TRACE": trace_rec(res, sec),
-           "h5": h5_checks(XA, yA, XB, yB, seed, res, raw)}
+    rec = {
+        "scen": scen,
+        "n": n,
+        "p": p,
+        "rep": rep,
+        "TRACE": trace_rec(res, sec),
+        "h5": h5_checks(XA, yA, XB, yB, seed, res, raw),
+    }
     base = {m.name: record(m.decompose(XA, yA, XB, yB, seed=seed)) for m in RIVALS}
     rec["contrast"] = rival_contrast(XA, yA, XB, yB, seed, base)
     return rec
@@ -157,8 +195,15 @@ def t_shape(a):
     _, yA, _, yB, XA, XB = shape_draw(scen, n, p, rep)
     seed = seed_of("m", rep)
     res, raw, sec = run_trace(XA, yA, XB, yB, seed, model=True)
-    rec = {"scen": scen, "n": n, "p": p, "rep": rep, "TRACE": trace_rec(res, sec),
-           "h5": h5_checks(XA, yA, XB, yB, seed, res, raw), "sdA": float(np.std(yA))}
+    rec = {
+        "scen": scen,
+        "n": n,
+        "p": p,
+        "rep": rep,
+        "TRACE": trace_rec(res, sec),
+        "h5": h5_checks(XA, yA, XB, yB, seed, res, raw),
+        "sdA": float(np.std(yA)),
+    }
     for m in (DFL_L(), CFM_L()):
         r = m.decompose(XA, yA, XB, yB, seed=seed)
         rec[m.name] = record(r) | {"lsplit": r.extra["lsplit"]}
@@ -177,19 +222,37 @@ def t_inv(a):
     d = {}
     for s in b.split:
         d["split_" + s] = max(abs(b.split[s][i] - q.split[s][i]) for i in (0, 1))
-        d["split_of_" + s] = max(abs(b.extra["split_of"][s][i] - q.extra["split_of"][s][i]) for i in (0, 1))
-    d["feat"] = float(max(np.max(np.abs(b.feat_comp - q.feat_comp[inv])), np.max(np.abs(b.feat_struct - q.feat_struct[inv]))))
+        d["split_of_" + s] = max(
+            abs(b.extra["split_of"][s][i] - q.extra["split_of"][s][i]) for i in (0, 1)
+        )
+    d["feat"] = float(
+        max(
+            np.max(np.abs(b.feat_comp - q.feat_comp[inv])),
+            np.max(np.abs(b.feat_struct - q.feat_struct[inv])),
+        )
+    )
     pb, pq = np.asarray(b.extra["bary_phi"]), np.asarray(q.extra["bary_phi"])
     pq = np.concatenate([pq[:, :1], pq[:, 1:][:, inv]], axis=1)
     d["bary_phi"] = float(np.max(np.abs(pb - pq)))
-    d["lsplit"] = float(max(np.max(np.abs(np.asarray(b.extra["lsplit"][r]) - np.asarray(q.extra["lsplit"][r]))) for r in ("comp", "struct")))
+    d["lsplit"] = float(
+        max(
+            np.max(np.abs(np.asarray(b.extra["lsplit"][r]) - np.asarray(q.extra["lsplit"][r])))
+            for r in ("comp", "struct")
+        )
+    )
     return {"scen": scen, "n": n, "p": p, "rep": rep, "max_change": max(d.values()), "parts": d}
 
 
 def _boot_vecs(res):
     x = res.extra
-    return {"split": res.split, "split_of": x["split_of"], "lsplit": x["lsplit"],
-            "feat_comp": res.feat_comp.tolist(), "feat_struct": res.feat_struct.tolist(), "intercept": res.intercept}
+    return {
+        "split": res.split,
+        "split_of": x["split_of"],
+        "lsplit": x["lsplit"],
+        "feat_comp": res.feat_comp.tolist(),
+        "feat_struct": res.feat_struct.tolist(),
+        "intercept": res.intercept,
+    }
 
 
 def t_cover(a):
@@ -219,8 +282,10 @@ def _all_methods_vec(XA, yA, XB, yB, seed):
     out["TRACE"] = _boot_vecs(r)
     for m in RIVALS:
         q = m.decompose(XA, yA, XB, yB, seed=seed)
-        out[m.name] = {"mean": q.split["mean"],
-                       "feat": None if q.feat_comp is None else np.r_[q.feat_comp, q.feat_struct].tolist()}
+        out[m.name] = {
+            "mean": q.split["mean"],
+            "feat": None if q.feat_comp is None else np.r_[q.feat_comp, q.feat_struct].tolist(),
+        }
     return out
 
 
@@ -246,6 +311,7 @@ def t_null200(rep):
 # ---------------- real panel
 def _real():
     import run_real as rr
+
     return rr
 
 
@@ -266,9 +332,13 @@ def t_real(a):
         u = rng.choice(units, len(units), replace=True)
         return {"kind": kind, "k": k, "TRACE": tr(rr.arrays(d, xs, u), seed_of("m", k))}
     perm = rng.permutation(units)
-    h1, h2 = perm[: len(units) // 2], perm[len(units) // 2:]
-    return {"kind": kind, "k": k, "h1": tr(rr.arrays(d[d.unit.isin(h1)], xs), seed_of("m", k)),
-            "h2": tr(rr.arrays(d[d.unit.isin(h2)], xs), seed_of("m", k))}
+    h1, h2 = perm[: len(units) // 2], perm[len(units) // 2 :]
+    return {
+        "kind": kind,
+        "k": k,
+        "h1": tr(rr.arrays(d[d.unit.isin(h1)], xs), seed_of("m", k)),
+        "h2": tr(rr.arrays(d[d.unit.isin(h2)], xs), seed_of("m", k)),
+    }
 
 
 def t_placebo(k):
@@ -278,10 +348,11 @@ def t_placebo(k):
     units = np.sort(d.unit.unique())
     rng = np.random.default_rng(seed_of("placebo", k))
     perm = rng.permutation(units)
-    g1, g2 = np.sort(perm[: len(units) // 2]), np.sort(perm[len(units) // 2:])
+    g1, g2 = np.sort(perm[: len(units) // 2]), np.sort(perm[len(units) // 2 :])
 
     def arr(u1, u2):
         import pandas as pd
+
         A = pd.concat([d[d.unit == u] for u in u1], ignore_index=True)
         B = pd.concat([d[d.unit == u] for u in u2], ignore_index=True)
         XA, XB = centred(A[xs].to_numpy(float), B[xs].to_numpy(float))
@@ -347,8 +418,19 @@ def scale_child(n, p):
     TR.raw(XA, yA, XB, yB, 0)
     sec = time.perf_counter() - t0
     rss1 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    print(json.dumps({"method": "TRACE", "n": n, "p": p, "sec": sec, "peak_rss_mb": rss1 / 1024,
-                      "data_mb": 2 * (XA.nbytes + yA.nbytes) / 2 ** 20, "extra_mb": max(rss1 - rss0, 0) / 1024}))
+    print(
+        json.dumps(
+            {
+                "method": "TRACE",
+                "n": n,
+                "p": p,
+                "sec": sec,
+                "peak_rss_mb": rss1 / 1024,
+                "data_mb": 2 * (XA.nbytes + yA.nbytes) / 2**20,
+                "extra_mb": max(rss1 - rss0, 0) / 1024,
+            }
+        )
+    )
 
 
 def run_scale():
@@ -356,11 +438,28 @@ def run_scale():
     for n, p in SCALE_GRID:
         env = dict(os.environ, RAYON_NUM_THREADS="4", OMP_NUM_THREADS="4", OPENBLAS_NUM_THREADS="4")
         try:
-            r = subprocess.run([sys.executable, __file__, "scale-child", str(n), str(p)], capture_output=True, text=True,
-                               timeout=SCALE_TIMEOUT, env=env, cwd=os.path.dirname(os.path.abspath(__file__)),
-                               preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_AS, (SCALE_MEM_BYTES, SCALE_MEM_BYTES)))
-            out.append(json.loads(r.stdout.strip().splitlines()[-1]) if r.returncode == 0 else
-                       {"method": "TRACE", "n": n, "p": p, "status": "error", "stderr": r.stderr[-400:]})
+            r = subprocess.run(
+                [sys.executable, __file__, "scale-child", str(n), str(p)],
+                capture_output=True,
+                text=True,
+                timeout=SCALE_TIMEOUT,
+                env=env,
+                cwd=os.path.dirname(os.path.abspath(__file__)),
+                preexec_fn=lambda: resource.setrlimit(
+                    resource.RLIMIT_AS, (SCALE_MEM_BYTES, SCALE_MEM_BYTES)
+                ),
+            )
+            out.append(
+                json.loads(r.stdout.strip().splitlines()[-1])
+                if r.returncode == 0
+                else {
+                    "method": "TRACE",
+                    "n": n,
+                    "p": p,
+                    "status": "error",
+                    "stderr": r.stderr[-400:],
+                }
+            )
         except subprocess.TimeoutExpired:
             out.append({"method": "TRACE", "n": n, "p": p, "status": "timeout"})
         print(out[-1], flush=True)
@@ -369,17 +468,30 @@ def run_scale():
 
 def tasks_for(track):
     if track == "acc":
-        return t_acc, [(s, n, p, r) for n, p, reps in ACC_GRID for s in dgp.SCENARIOS for r in range(reps)]
+        return t_acc, [
+            (s, n, p, r) for n, p, reps in ACC_GRID for s in dgp.SCENARIOS for r in range(reps)
+        ]
     if track == "shape":
-        return t_shape, [(s, n, p, r) for n, p, reps in SHAPE_GRID for s in shp.SHAPE_SCENARIOS for r in range(reps)]
+        return t_shape, [
+            (s, n, p, r)
+            for n, p, reps in SHAPE_GRID
+            for s in shp.SHAPE_SCENARIOS
+            for r in range(reps)
+        ]
     if track == "inv":
-        return t_inv, [(s, n, p, r) for n, p in INV_GRID for s in dgp.SCENARIOS for r in range(INV_REPS)]
+        return t_inv, [
+            (s, n, p, r) for n, p in INV_GRID for s in dgp.SCENARIOS for r in range(INV_REPS)
+        ]
     if track == "cover":
-        return t_cover, [(s, r) for s in COVER_SCEN + shp.SHAPE_SCENARIOS for r in range(COVER_REPS)]
+        return t_cover, [
+            (s, r) for s in COVER_SCEN + shp.SHAPE_SCENARIOS for r in range(COVER_REPS)
+        ]
     if track == "null200":
         return t_null200, list(range(200))
     if track == "real":
-        return t_real, [("full", 0)] + [("boot", k) for k in range(100)] + [("split", k) for k in range(50)]
+        return t_real, [("full", 0)] + [("boot", k) for k in range(100)] + [
+            ("split", k) for k in range(50)
+        ]
     if track == "placebo":
         return t_placebo, list(range(100))
     if track == "h6syn":
@@ -400,7 +512,9 @@ def main():
     if a.track == "scale":
         return run_scale()
     if a.track == "truth_of":
-        (RES / "trace_claims_truth_orderfree.json").write_text(json.dumps(t_truth_of(None), indent=1))
+        (RES / "trace_claims_truth_orderfree.json").write_text(
+            json.dumps(t_truth_of(None), indent=1)
+        )
         return
     fn, tasks = tasks_for(a.track)
     if a.limit:

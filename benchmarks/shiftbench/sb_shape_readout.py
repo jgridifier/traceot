@@ -1,3 +1,4 @@
+# ruff: noqa: E501, E731, B007, B023, F841
 """L-moment read-outs of the frozen DFL and CFM counterfactual laws (Amendment 1, A2).
 
 The fitting code is copied from sb_methods.DFL / sb_methods.CFM unchanged (same features,
@@ -5,12 +6,12 @@ logits, thresholds, rearrangement); only the read-out differs: L-moments lambda_
 of the period-A, period-B and counterfactual laws, computed exactly for discrete laws by
 integrating the step quantile function against shifted Legendre polynomials.
 """
+
 from __future__ import annotations
 
 import numpy as np
 from numpy.polynomial import legendre as L
-
-from sb_adapter import Decomposition, ShiftMethod
+from sb_adapter import Decomposition
 from sb_dgp import STATS, stat
 from sb_methods import CFM, DFL, _flex, _logit
 
@@ -60,8 +61,14 @@ class DFL_L(DFL):
             tA, tB, tC = stat(yA, s), stat(yB, s), stat(yA, s, w)
             split[s] = (tC - tA, tB - tC)
         one = np.ones(len(yA))
-        lA, lB, lC = lmom_discrete(yA, one), lmom_discrete(yB, np.ones(len(yB))), lmom_discrete(yA, w)
-        return Decomposition(split, extra={"max_w_share": float(w.max() / w.sum()), "lsplit": _lsplit(lA, lB, lC)})
+        lA, lB, lC = (
+            lmom_discrete(yA, one),
+            lmom_discrete(yB, np.ones(len(yB))),
+            lmom_discrete(yA, w),
+        )
+        return Decomposition(
+            split, extra={"max_w_share": float(w.max() / w.sum()), "lsplit": _lsplit(lA, lB, lC)}
+        )
 
 
 class CFM_L(CFM):
@@ -107,7 +114,10 @@ class CFM_L(CFM):
 
         sA, sB, sC = stats_of(FA), stats_of(FB), stats_of(FC)
         lA, lB, lC = (lmom_discrete(vals, law(F)) for F in (FA, FB, FC))
-        return Decomposition({s: (sC[s] - sA[s], sB[s] - sC[s]) for s in STATS}, extra={"lsplit": _lsplit(lA, lB, lC)})
+        return Decomposition(
+            {s: (sC[s] - sA[s], sB[s] - sC[s]) for s in STATS},
+            extra={"lsplit": _lsplit(lA, lB, lC)},
+        )
 
 
 SHAPE_RIVALS = [DFL_L(), CFM_L()]

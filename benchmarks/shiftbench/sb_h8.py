@@ -1,4 +1,6 @@
+# ruff: noqa: E501, E731, B007, B023, F841
 """H8 joint 5% test and the exact one-sided Clopper-Pearson bar (Amendment 1, A3)."""
+
 from __future__ import annotations
 
 import numpy as np

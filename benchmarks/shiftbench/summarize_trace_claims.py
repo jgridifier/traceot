@@ -1,7 +1,9 @@
+# ruff: noqa: E501, E731, B007, B023, F841
 """Summarise the TRACE-claims runs into benchmarks/results/trace_claims_summary.json.
 
 Implements the scoring of PREREG_TRACE_CLAIMS.md as amended (AMENDMENT_1, D4-D12).
 """
+
 from __future__ import annotations
 
 import json
@@ -9,12 +11,12 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import binomtest, spearmanr, t as tdist
-
 import sb_dgp as dgp
 import sb_dgp_shape as shp
 from run_synthetic import ACC_GRID, RES
 from sb_h8 import cp_upper_one_sided, h8a_pass, joint_reject
+from scipy.stats import binomtest, spearmanr
+from scipy.stats import t as tdist
 
 RIV = ["OB", "DFL", "CFM", "RIF", "SHAP"]
 TRUTH = json.loads((RES / "shiftbench_truth.json").read_text())
@@ -37,7 +39,13 @@ def paired(d, seed=2026):
     p = float(2 * tdist.sf(abs(m / se), n - 1)) if se > 0 else (0.0 if m != 0 else 1.0)
     rng = np.random.default_rng(seed)
     bm = d[rng.integers(0, n, (10000, n))].mean(1)
-    return {"n": n, "mean": m, "t_ci": [m - q * se, m + q * se], "pct_ci": np.quantile(bm, [0.025, 0.975]).tolist(), "p": p}
+    return {
+        "n": n,
+        "mean": m,
+        "t_ci": [m - q * se, m + q * se],
+        "pct_ci": np.quantile(bm, [0.025, 0.975]).tolist(),
+        "p": p,
+    }
 
 
 def sp(a, b, cnt):
@@ -50,7 +58,10 @@ def sp(a, b, cnt):
 
 # ------------------------------------------------------------ frozen tracks
 def frozen_accuracy():
-    riv = {(r["scen"], r["n"], r["p"], r["rep"]): r["methods"] for r in jl(RES / "shiftbench_accuracy.jsonl")}
+    riv = {
+        (r["scen"], r["n"], r["p"], r["rep"]): r["methods"]
+        for r in jl(RES / "shiftbench_accuracy.jsonl")
+    }
     tr = {(r["scen"], r["n"], r["p"], r["rep"]): r for r in jl(RES / "trace_claims_acc.jsonl")}
     out = {}
     for n, p, reps in ACC_GRID:
@@ -71,14 +82,31 @@ def frozen_accuracy():
                 ms["TRACE"] = tr[k]["TRACE"]
                 for m, o in ms.items():
                     for s, (c, st) in o["split"].items():
-                        acc[s][m].append(0.5 * (abs(c - t[s]["comp"]) + abs(st - t[s]["struct"])) / sd)
+                        acc[s][m].append(
+                            0.5 * (abs(c - t[s]["comp"]) + abs(st - t[s]["struct"])) / sd
+                        )
                     if o.get("feat_comp") is not None:
                         tc, ts = np.zeros(p), np.zeros(p)
                         tc[:5], ts[:5] = t["feat_comp"][:5], t["feat_struct"][:5]
-                        facc[m].append(float((np.abs(np.asarray(o["feat_comp"]) - tc) + np.abs(np.asarray(o["feat_struct"]) - ts)).sum() / sd))
+                        facc[m].append(
+                            float(
+                                (
+                                    np.abs(np.asarray(o["feat_comp"]) - tc)
+                                    + np.abs(np.asarray(o["feat_struct"]) - ts)
+                                ).sum()
+                                / sd
+                            )
+                        )
                 so = tr[k]["TRACE"]["x"]["split_of"]
                 for s in dgp.STATS:
-                    of[s].append(0.5 * (abs(so[s][0] - TRUTH_OF[sc][s]["comp"]) + abs(so[s][1] - TRUTH_OF[sc][s]["struct"])) / sd)
+                    of[s].append(
+                        0.5
+                        * (
+                            abs(so[s][0] - TRUTH_OF[sc][s]["comp"])
+                            + abs(so[s][1] - TRUTH_OF[sc][s]["struct"])
+                        )
+                        / sd
+                    )
             for s in acc:
                 for m, v in acc[s].items():
                     if len(v) == len(dgp.SCENARIOS):
@@ -90,16 +118,26 @@ def frozen_accuracy():
                 if len(v) == len(dgp.SCENARIOS):
                     ch_of[s].append(np.mean(v))
         size = f"n={n},p={p}"
-        o = {"channel": {}, "feature": {}, "trace_orderfree_channel": {s: float(np.mean(v)) for s, v in ch_of.items() if v}}
+        o = {
+            "channel": {},
+            "feature": {},
+            "trace_orderfree_channel": {s: float(np.mean(v)) for s, v in ch_of.items() if v},
+        }
         for s in ch:
             o["channel"][s] = {m: float(np.mean(v)) for m, v in ch[s].items()}
             if ch[s].get("TRACE"):
-                o["channel"][s]["paired_vs"] = {m: paired(np.subtract(ch[s]["TRACE"], ch[s][m])) for m in RIV
-                                                if m in ch[s] and len(ch[s][m]) == len(ch[s]["TRACE"]) and len(ch[s][m]) > 1}
+                o["channel"][s]["paired_vs"] = {
+                    m: paired(np.subtract(ch[s]["TRACE"], ch[s][m]))
+                    for m in RIV
+                    if m in ch[s] and len(ch[s][m]) == len(ch[s]["TRACE"]) and len(ch[s][m]) > 1
+                }
         o["feature"] = {m: float(np.mean(v)) for m, v in fe.items()}
         if fe.get("TRACE"):
-            o["feature_paired_vs"] = {m: paired(np.subtract(fe["TRACE"], fe[m])) for m in ("OB", "RIF", "SHAP")
-                                      if len(fe.get(m, [])) == len(fe["TRACE"]) and len(fe[m]) > 1}
+            o["feature_paired_vs"] = {
+                m: paired(np.subtract(fe["TRACE"], fe[m]))
+                for m in ("OB", "RIF", "SHAP")
+                if len(fe.get(m, [])) == len(fe["TRACE"]) and len(fe[m]) > 1
+            }
         out[size] = o
     return out
 
@@ -108,8 +146,11 @@ def frozen_invariance():
     recs = jl(RES / "trace_claims_inv.jsonl")
     if not recs:
         return None
-    return {"max_change_over_sdA": max(r["max_change"] / TRUTH[r["scen"]]["sd_A"] for r in recs),
-            "max_change_abs": max(r["max_change"] for r in recs), "n": len(recs)}
+    return {
+        "max_change_over_sdA": max(r["max_change"] / TRUTH[r["scen"]]["sd_A"] for r in recs),
+        "max_change_abs": max(r["max_change"] for r in recs),
+        "n": len(recs),
+    }
 
 
 def band(vals):
@@ -146,10 +187,14 @@ def frozen_and_h8b_coverage():
             cov[(sc, s)].append(float(ls <= t[s]["struct"] <= hs))
     cells = {f"{a}|{b}": float(np.mean(v)) for (a, b), v in cov.items()}
     pooled = float(np.mean([x for v in cov.values() for x in v])) if cov else None
-    return {"cells": cells, "pooled": pooled, "min_cell": min(cells.values()) if cells else None,
-            "pass": bool(pooled is not None and pooled >= 0.90 and min(cells.values()) >= 0.85),
-            "frozen_null_union_fpr": float(np.mean(union_null)) if union_null else None,
-            "frozen_null_joint_fpr": float(np.mean(joint_null)) if joint_null else None}
+    return {
+        "cells": cells,
+        "pooled": pooled,
+        "min_cell": min(cells.values()) if cells else None,
+        "pass": bool(pooled is not None and pooled >= 0.90 and min(cells.values()) >= 0.85),
+        "frozen_null_union_fpr": float(np.mean(union_null)) if union_null else None,
+        "frozen_null_joint_fpr": float(np.mean(joint_null)) if joint_null else None,
+    }
 
 
 def rival_frozen_coverage():
@@ -164,9 +209,14 @@ def rival_frozen_coverage():
             if r["scen"] == "null":
                 fpr[m].append(float(not (lc <= 0 <= hc) or not (ls <= 0 <= hs)))
             else:
-                cov[m] += [float(lc <= t["mean"]["comp"] <= hc), float(ls <= t["mean"]["struct"] <= hs)]
-    return {"mean_coverage": {m: float(np.mean(v)) for m, v in cov.items()},
-            "null_union_fpr_mean": {m: float(np.mean(v)) for m, v in fpr.items()}}
+                cov[m] += [
+                    float(lc <= t["mean"]["comp"] <= hc),
+                    float(ls <= t["mean"]["struct"] <= hs),
+                ]
+    return {
+        "mean_coverage": {m: float(np.mean(v)) for m, v in cov.items()},
+        "null_union_fpr_mean": {m: float(np.mean(v)) for m, v in fpr.items()},
+    }
 
 
 # ------------------------------------------------------------ H5
@@ -190,14 +240,33 @@ def h5():
             for s, v in o.items():
                 contrast[m][s + "|add"].append(v["add_gap"] / sd)
                 contrast[m][s + "|order"].append(v["order_gap"] / sd)
-    con = {m: {k: {"median": float(np.median(v)), "max": float(np.max(v)), "share_gt_1e-9": float(np.mean(np.asarray(v) > 1e-9))}
-               for k, v in d.items()} for m, d in contrast.items()}
+    con = {
+        m: {
+            k: {
+                "median": float(np.median(v)),
+                "max": float(np.max(v)),
+                "share_gt_1e-9": float(np.mean(np.asarray(v) > 1e-9)),
+            }
+            for k, v in d.items()
+        }
+        for m, d in contrast.items()
+    }
     n_tot = len(recs)
     primary = ("g51b", "g52", "g53_chan", "g53_coef", "g54")
-    ok = all(len(fails[g]) == 0 for g in primary) and inv is not None and inv["max_change_abs"] <= 1e-6
-    return {"n_replications": n_tot, "fail_counts": {g: len(fails[g]) for g in worst}, "worst_relative": dict(worst),
-            "fail_examples": {g: v[:10] for g, v in fails.items()}, "invariance": inv,
-            "pass": ok, "rival_contrast": con}
+    ok = (
+        all(len(fails[g]) == 0 for g in primary)
+        and inv is not None
+        and inv["max_change_abs"] <= 1e-6
+    )
+    return {
+        "n_replications": n_tot,
+        "fail_counts": {g: len(fails[g]) for g in worst},
+        "worst_relative": dict(worst),
+        "fail_examples": {g: v[:10] for g, v in fails.items()},
+        "invariance": inv,
+        "pass": ok,
+        "rival_contrast": con,
+    }
 
 
 # ------------------------------------------------------------ H6
@@ -207,8 +276,10 @@ def h6():
     riv = jl(RES / "shiftbench_real.jsonl")
     tr = jl(RES / "trace_claims_real.jsonl")
     if riv and tr:
+
         def vec(o):
             return np.abs(np.asarray(o["feat_comp"])) + np.abs(np.asarray(o["feat_struct"]))
+
         full = next(r for r in riv if r["kind"] == "full")["res"]
         tfull = next(r for r in tr if r["kind"] == "full")["TRACE"]
         rb = {r["k"]: r["res"] for r in riv if r["kind"] == "boot"}
@@ -223,14 +294,20 @@ def h6():
             for m in ("OB", "RIF", "SHAP"):
                 boot[m].append(sp(vec(full[m]), vec(rb[k][m]), nan[m]))
         for k in sorted(set(rs) & set(ts)):
-            half["TRACE"].append(sp(vec(ts[k]["h1"]["TRACE"]), vec(ts[k]["h2"]["TRACE"]), nan["TRACE"]))
+            half["TRACE"].append(
+                sp(vec(ts[k]["h1"]["TRACE"]), vec(ts[k]["h2"]["TRACE"]), nan["TRACE"])
+            )
             for m in ("OB", "RIF", "SHAP"):
                 half[m].append(sp(vec(rs[k]["h1"][m]), vec(rs[k]["h2"][m]), nan[m]))
         out["real"] = {}
         for name, d in (("bootstrap", boot), ("split_half", half)):
             best = max(("OB", "RIF", "SHAP"), key=lambda m: np.mean(d[m]))
             pt = paired(np.subtract(d["TRACE"], d[best]))
-            out["real"][name] = {"means": {m: float(np.mean(v)) for m, v in d.items()}, "best_rival": best, "paired": pt}
+            out["real"][name] = {
+                "means": {m: float(np.mean(v)) for m, v in d.items()},
+                "best_rival": best,
+                "paired": pt,
+            }
         out["real"]["nan_counts"] = {m: v[0] for m, v in nan.items()}
     syn = jl(RES / "trace_claims_h6syn.jsonl")
     if syn:
@@ -243,8 +320,11 @@ def h6():
         out["synthetic"] = {}
         for name, d in (("bootstrap", boot), ("split_half", half)):
             best = max(("OB", "RIF", "SHAP"), key=lambda m: np.mean(d[m]))
-            out["synthetic"][name] = {"means": {m: float(np.mean(v)) for m, v in d.items()}, "best_rival": best,
-                                      "paired": paired(np.subtract(d["TRACE"], d[best]))}
+            out["synthetic"][name] = {
+                "means": {m: float(np.mean(v)) for m, v in d.items()},
+                "best_rival": best,
+                "paired": paired(np.subtract(d["TRACE"], d[best])),
+            }
         out["synthetic"]["nan_counts"] = {m: v[0] for m, v in nan.items()}
     tests = []
     for dom in ("real", "synthetic"):
@@ -253,15 +333,28 @@ def h6():
                 pt = out[dom][name]["paired"]
                 ok = pt["mean"] >= 0.05 and pt["t_ci"][0] > 0 and pt["pct_ci"][0] > 0
                 bad = pt["t_ci"][1] < 0
-                out[dom][name]["verdict"] = "pass" if ok else ("FAIL (TRACE less stable)" if bad else ("partial" if pt["t_ci"][0] > 0 else "not supported"))
+                out[dom][name]["verdict"] = (
+                    "pass"
+                    if ok
+                    else (
+                        "FAIL (TRACE less stable)"
+                        if bad
+                        else ("partial" if pt["t_ci"][0] > 0 else "not supported")
+                    )
+                )
                 tests.append((f"H6 {dom} {name}", pt["p"], ok and True))
     out["pass"] = bool(len(tests) == 4 and all(t[2] for t in tests))
     return out, tests
 
 
 # ------------------------------------------------------------ H7
-PLANTED = {"skew_struct": ("struct",), "tail_struct": ("struct",), "skew_comp": ("comp",), "tail_comp": ("comp",),
-           "shape_mixed": ("comp", "struct")}
+PLANTED = {
+    "skew_struct": ("struct",),
+    "tail_struct": ("struct",),
+    "skew_comp": ("comp",),
+    "tail_comp": ("comp",),
+    "shape_mixed": ("comp", "struct"),
+}
 
 
 def h7():
@@ -296,14 +389,26 @@ def h7():
                     eR[m].append(abs(c - tar["comp"][k]) + abs(s - tar["struct"][k]))
             bar = 0.80 if n == 20000 else 0.60
             rate = float(np.mean(rec))
-            out["recovery"][f"{sc}|n={n}"] = {"rate": rate, "bar": bar, "pass": rate >= bar, "reps": len(rec)}
+            out["recovery"][f"{sc}|n={n}"] = {
+                "rate": rate,
+                "bar": bar,
+                "pass": rate >= bar,
+                "reps": len(rec),
+            }
             all_ok &= rate >= bar
-            out["errors"][f"{sc}|n={n}"] = {"TRACE": float(np.mean(eT)), **{m: float(np.mean(v)) for m, v in eR.items()},
-                                            "planted_magnitude": mag}
+            out["errors"][f"{sc}|n={n}"] = {
+                "TRACE": float(np.mean(eT)),
+                **{m: float(np.mean(v)) for m, v in eR.items()},
+                "planted_magnitude": mag,
+            }
             if n == 20000:
                 best = min(("DFL", "CFM"), key=lambda m: np.mean(eR[m]))
                 pt = paired(np.subtract(eT, eR[best]))
-                out["rival_test"][sc] = {"best_rival": best, "paired": pt, "below_zero": pt["t_ci"][1] < 0 and pt["pct_ci"][1] < 0}
+                out["rival_test"][sc] = {
+                    "best_rival": best,
+                    "paired": pt,
+                    "below_zero": pt["t_ci"][1] < 0 and pt["pct_ci"][1] < 0,
+                }
                 tests.append((f"H7 {sc}", pt["p"], out["rival_test"][sc]["below_zero"]))
     wins = sum(v["below_zero"] for v in out["rival_test"].values())
     out["rival_wins"] = wins
@@ -321,8 +426,16 @@ def h8():
         rej = defaultdict(list)
         for r in recs:
             P, B = r["point"], r["boots"]
-            rej["TRACE_mean_aref"].append(joint_reject(P["TRACE"]["split"]["mean"], [b["TRACE"]["split"]["mean"] for b in B])[0])
-            rej["TRACE_mean_orderfree"].append(joint_reject(P["TRACE"]["split_of"]["mean"], [b["TRACE"]["split_of"]["mean"] for b in B])[0])
+            rej["TRACE_mean_aref"].append(
+                joint_reject(P["TRACE"]["split"]["mean"], [b["TRACE"]["split"]["mean"] for b in B])[
+                    0
+                ]
+            )
+            rej["TRACE_mean_orderfree"].append(
+                joint_reject(
+                    P["TRACE"]["split_of"]["mean"], [b["TRACE"]["split_of"]["mean"] for b in B]
+                )[0]
+            )
             v = lambda o: np.r_[o["lsplit"]["comp"], o["lsplit"]["struct"]]
             rej["TRACE_channels"].append(joint_reject(v(P["TRACE"]), [v(b["TRACE"]) for b in B])[0])
             f = lambda o: np.r_[o["feat_comp"], o["feat_struct"]]
@@ -330,10 +443,20 @@ def h8():
             for m in RIV:
                 rej[f"{m}_mean"].append(joint_reject(P[m]["mean"], [b[m]["mean"] for b in B])[0])
                 if P[m]["feat"] is not None:
-                    rej[f"{m}_features"].append(joint_reject(P[m]["feat"], [b[m]["feat"] for b in B])[0])
+                    rej[f"{m}_features"].append(
+                        joint_reject(P[m]["feat"], [b[m]["feat"] for b in B])[0]
+                    )
         n = len(recs)
-        out["null200"] = {k: {"x": int(sum(v)), "n": len(v), "fpr": float(np.mean(v)), "cp_upper_1s": cp_upper_one_sided(int(sum(v)), len(v)),
-                              "pass_bar": h8a_pass(int(sum(v)), len(v))} for k, v in rej.items()}
+        out["null200"] = {
+            k: {
+                "x": int(sum(v)),
+                "n": len(v),
+                "fpr": float(np.mean(v)),
+                "cp_upper_1s": cp_upper_one_sided(int(sum(v)), len(v)),
+                "pass_bar": h8a_pass(int(sum(v)), len(v)),
+            }
+            for k, v in rej.items()
+        }
         x = int(sum(rej["TRACE_mean_aref"]))
         p = binomtest(x, n, 0.09, alternative="less").pvalue
         out["h8a_primary"] = {"x": x, "n": n, "pass": h8a_pass(x, n), "p_H0_fpr_ge_0.09": float(p)}
@@ -343,15 +466,22 @@ def h8():
         for m in RIV:
             b = np.asarray(rej[f"{m}_mean"], bool)
             n01, n10 = int((~a & b).sum()), int((a & ~b).sum())
-            mc[m] = {"trace_only": n10, "rival_only": n01,
-                     "p_exact": float(binomtest(n10, n10 + n01, 0.5).pvalue) if n10 + n01 else 1.0}
+            mc[m] = {
+                "trace_only": n10,
+                "rival_only": n01,
+                "p_exact": float(binomtest(n10, n10 + n01, 0.5).pvalue) if n10 + n01 else 1.0,
+            }
         out["mcnemar_vs_rivals"] = mc
     pl = jl(RES / "trace_claims_placebo.jsonl")
     if pl:
         rej = defaultdict(list)
         for r in pl:
             P, B = r["point"], r["boots"]
-            rej["TRACE"].append(joint_reject(P["TRACE"]["split"]["mean"], [b["TRACE"]["split"]["mean"] for b in B])[0])
+            rej["TRACE"].append(
+                joint_reject(P["TRACE"]["split"]["mean"], [b["TRACE"]["split"]["mean"] for b in B])[
+                    0
+                ]
+            )
             for m in RIV:
                 rej[m].append(joint_reject(P[m]["mean"], [b[m]["mean"] for b in B])[0])
         out["placebo"] = {m: float(np.mean(v)) for m, v in rej.items()}
@@ -368,12 +498,24 @@ def holm(tests):
         adj = min(1.0, p * (m - i))
         reject = (not stop) and adj <= 0.05
         stop |= not reject
-        out.append({"test": name, "p": p, "holm_threshold": 0.05 / (m - i), "holm_reject": bool(reject), "bar_ok": bool(ok)})
+        out.append(
+            {
+                "test": name,
+                "p": p,
+                "holm_threshold": 0.05 / (m - i),
+                "holm_reject": bool(reject),
+                "bar_ok": bool(ok),
+            }
+        )
     return out
 
 
 def main():
-    S = {"frozen_accuracy": frozen_accuracy(), "frozen_rival_coverage": rival_frozen_coverage(), "h5": h5()}
+    S = {
+        "frozen_accuracy": frozen_accuracy(),
+        "frozen_rival_coverage": rival_frozen_coverage(),
+        "h5": h5(),
+    }
     S["h6"], t6 = h6()
     S["h7"], t7 = h7()
     S["h8"], t8 = h8()
