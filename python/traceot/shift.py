@@ -54,6 +54,7 @@ def _v1_fit_kwargs(model: TraceV1) -> dict:
         mono=kw["mono"],
         bernstein_elevation=kw["bernstein_elevation"],
         reporting=kw["reporting"],
+        pit_rounds=kw.get("pit_rounds", 0),
     )
 
 

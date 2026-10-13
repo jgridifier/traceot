@@ -100,6 +100,7 @@ fn config_from(
         sobolev_lambda: 0.0,
         sobolev_s: 0.0,
         tail_gamma: 0.0,
+        pit_rounds: 0,
     })
 }
 
@@ -114,7 +115,8 @@ impl PyV1Model {
     #[pyo3(signature = (
         x, y, k_fit=6, k_report=4, n_u=0, max_bins=16, max_rounds=30, tol=1e-9, min_count=1,
         ridge=1e-6, learning_rate=1.0, mono="pav", bernstein_elevation=4, reporting="legendre",
-        smooth=0.0, levenberg=0.0, sobolev_lambda=0.0, sobolev_s=1.0, tail_gamma=0.0
+        smooth=0.0, levenberg=0.0, sobolev_lambda=0.0, sobolev_s=1.0, tail_gamma=0.0,
+        pit_rounds=0
     ))]
     fn fit(
         py: Python<'_>,
@@ -137,6 +139,7 @@ impl PyV1Model {
         sobolev_lambda: f64,
         sobolev_s: f64,
         tail_gamma: f64,
+        pit_rounds: usize,
     ) -> PyResult<Self> {
         let (n, p) = x.as_array().dim();
         let mut cfg = config_from(
@@ -158,6 +161,7 @@ impl PyV1Model {
         cfg.sobolev_lambda = sobolev_lambda;
         cfg.sobolev_s = sobolev_s;
         cfg.tail_gamma = tail_gamma;
+        cfg.pit_rounds = pit_rounds;
         let (xs, ys) = (slice2(&x)?, slice1(&y)?);
         let inner = py.detach(|| fit_v1(xs, n, p, ys, &cfg)).map_err(err)?;
         Ok(Self { inner })

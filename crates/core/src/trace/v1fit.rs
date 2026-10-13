@@ -64,6 +64,17 @@ pub struct V1Config {
     pub sobolev_s: f64,
     /// Tail multiplier 1 + γ(u−½)² on channels k ≥ 2. `0` leaves every channel unweighted.
     pub tail_gamma: f64,
+    /// Backfit rounds of the PIT pseudo-outcome refit. `0` keeps the pinball fit.
+    ///
+    /// The pinball fit's shape channels (k ≥ 1) estimate the density-weighted
+    /// projection of the conditional quantile, not its L²[0,1] Legendre
+    /// coefficients. With `U = F(Y | x)` uniform and independent of `x`,
+    /// `c_k(x) = ∫ Q(u|x) P*_k(u) du · (2k+1) = (2k+1) E[Y P*_k(U) | x]`, so the
+    /// pseudo-outcome `(2k+1) Y P*_k(Û)` has conditional mean `c_k(x)`. `Û` is the
+    /// within-sample mid-rank of `(Y − ĉ_0(x)) / ĉ_1(x)` from the pinball fit
+    /// (exact under a location-scale conditional law). Each channel is then an
+    /// ordinary least-squares additive backfit on the same bins.
+    pub pit_rounds: usize,
 }
 
 impl Default for V1Config {
@@ -88,6 +99,7 @@ impl Default for V1Config {
             sobolev_lambda: 0.0,
             sobolev_s: 0.0,
             tail_gamma: 0.0,
+            pit_rounds: 0,
         }
     }
 }
@@ -121,6 +133,8 @@ pub struct V1Model {
     pub sobolev_lambda: f64,
     pub sobolev_s: f64,
     pub tail_gamma: f64,
+    /// Backfit rounds of the PIT refit that produced the stored effects (`0` = none).
+    pub pit_rounds: usize,
 }
 
 /// Per-row Shapley shares in orthonormal units, plus the truncation and PAV lines.
@@ -191,6 +205,7 @@ pub fn fit_v1(x: &[f64], n: usize, p: usize, y: &[f64], cfg: &V1Config) -> Resul
         sobolev_lambda: cfg.sobolev_lambda,
         sobolev_s: cfg.sobolev_s,
         tail_gamma: cfg.tail_gamma,
+        pit_rounds: cfg.pit_rounds,
     };
     for j in 0..p {
         model.effects.push(vec![0.0; model.n_bins[j] * cfg.k_fit]);
@@ -228,6 +243,11 @@ pub fn fit_v1(x: &[f64], n: usize, p: usize, y: &[f64], cfg: &V1Config) -> Resul
         }
     }
     model.train_loss = prev;
+    if cfg.pit_rounds > 0 {
+        pit_refit(&mut model, &codes, y, &a_rows, cfg.pit_rounds);
+        scatter_all(&model, &codes, &mut a_rows);
+        model.train_loss = pinball_loss(&model.basis, &a_rows, y);
+    }
     if cfg.k_fit == 3 {
         model.non_representable = k3_non_representable(&model.intercept);
     }
@@ -237,6 +257,124 @@ pub fn fit_v1(x: &[f64], n: usize, p: usize, y: &[f64], cfg: &V1Config) -> Resul
         model.train_loss = pinball_loss(&model.basis, &a_rows, y);
     }
     Ok(model)
+}
+
+/// Shifted Legendre `P*_0..P*_{k-1}` at `u ∈ [0, 1]`.
+pub fn shifted_legendre(u: f64, k: usize) -> Vec<f64> {
+    let x = 2.0 * u - 1.0;
+    let mut out = vec![0.0; k];
+    if k == 0 {
+        return out;
+    }
+    out[0] = 1.0;
+    if k > 1 {
+        out[1] = x;
+    }
+    for d in 1..k.saturating_sub(1) {
+        let df = d as f64;
+        out[d + 1] = ((2.0 * df + 1.0) * x * out[d] - df * out[d - 1]) / (df + 1.0);
+    }
+    out
+}
+
+/// PIT pseudo-outcomes, in orthonormal units, from the current row curves.
+///
+/// Row `i`, channel `c`: `√(2c+1) · y_i · P*_c(Û_i)` (channel 0 is `y_i`).
+pub fn pit_pseudo_outcomes(a_rows: &[f64], y: &[f64], k: usize) -> Vec<f64> {
+    let n = y.len();
+    let s3 = 3.0_f64.sqrt();
+    let mut scales: Vec<f64> = (0..n)
+        .map(|i| if k > 1 { a_rows[i * k + 1] * s3 } else { 1.0 })
+        .collect();
+    // A non-positive fitted scale has no PIT; floor it at a small fraction of the median.
+    let mut sorted: Vec<f64> = scales.iter().copied().filter(|v| *v > 0.0).collect();
+    sorted.sort_by(f64::total_cmp);
+    let floor = if sorted.is_empty() {
+        1.0
+    } else {
+        (sorted[sorted.len() / 2] * 1e-3).max(1e-12)
+    };
+    for s in scales.iter_mut() {
+        if !(*s > floor) {
+            *s = floor;
+        }
+    }
+    let z: Vec<f64> = (0..n).map(|i| (y[i] - a_rows[i * k]) / scales[i]).collect();
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|&i, &j| z[i].total_cmp(&z[j]).then(i.cmp(&j)));
+    let mut out = vec![0.0; n * k];
+    for (rank, &i) in order.iter().enumerate() {
+        let u = (rank as f64 + 0.5) / n as f64;
+        let p = shifted_legendre(u, k);
+        for c in 0..k {
+            out[i * k + c] = ((2 * c + 1) as f64).sqrt() * y[i] * p[c];
+        }
+    }
+    for i in 0..n {
+        out[i * k] = y[i];
+    }
+    out
+}
+
+/// Replace intercept and effects with least-squares additive backfits of the PIT
+/// pseudo-outcomes on the model's bins. Effects stay centred under the training law.
+fn pit_refit(model: &mut V1Model, codes: &[Vec<u16>], y: &[f64], a_rows: &[f64], rounds: usize) {
+    let n = y.len();
+    let k = model.k_fit;
+    let p = codes.len();
+    let target = pit_pseudo_outcomes(a_rows, y, k);
+    let mut intercept = vec![0.0; k];
+    for i in 0..n {
+        for c in 0..k {
+            intercept[c] += target[i * k + c];
+        }
+    }
+    for v in intercept.iter_mut() {
+        *v /= n as f64;
+    }
+    let mut effects: Vec<Vec<f64>> = (0..p).map(|j| vec![0.0; model.n_bins[j] * k]).collect();
+    let mut pred: Vec<f64> = (0..n * k).map(|t| intercept[t % k]).collect();
+    for _ in 0..rounds {
+        for j in 0..p {
+            let nb = model.n_bins[j];
+            let mut sums = vec![0.0; nb * k];
+            let mut counts = vec![0.0; nb];
+            for i in 0..n {
+                let b = codes[j][i] as usize;
+                counts[b] += 1.0;
+                for c in 0..k {
+                    let current = effects[j][b * k + c];
+                    sums[b * k + c] += target[i * k + c] - pred[i * k + c] + current;
+                }
+            }
+            let mut means = vec![0.0; nb * k];
+            for b in 0..nb {
+                if counts[b] > 0.0 {
+                    for c in 0..k {
+                        means[b * k + c] = sums[b * k + c] / counts[b];
+                    }
+                }
+            }
+            for c in 0..k {
+                let centre: f64 =
+                    (0..nb).map(|b| means[b * k + c] * counts[b]).sum::<f64>() / n as f64;
+                for b in 0..nb {
+                    if counts[b] > 0.0 {
+                        means[b * k + c] -= centre;
+                    }
+                }
+            }
+            for i in 0..n {
+                let b = codes[j][i] as usize;
+                for c in 0..k {
+                    pred[i * k + c] += means[b * k + c] - effects[j][b * k + c];
+                }
+            }
+            effects[j] = means;
+        }
+    }
+    model.intercept = intercept;
+    model.effects = effects;
 }
 
 fn newton_round(
@@ -1192,6 +1330,88 @@ pub struct MonoReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn uniform_stream(seed: u64, n: usize) -> Vec<f64> {
+        let mut z = seed;
+        (0..n)
+            .map(|_| {
+                z = z.wrapping_add(0x9E37_79B9_7F4A_7C15);
+                let mut v = z;
+                v = (v ^ (v >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+                v = (v ^ (v >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+                v ^= v >> 31;
+                ((v >> 11) as f64 + 0.5) / (1u64 << 53) as f64
+            })
+            .collect()
+    }
+
+    #[test]
+    fn shifted_legendre_matches_closed_forms() {
+        for &u in &[0.0, 0.17, 0.5, 0.9, 1.0] {
+            let p = shifted_legendre(u, 4);
+            let x = 2.0 * u - 1.0;
+            assert!((p[2] - 0.5 * (3.0 * x * x - 1.0)).abs() < 1e-14);
+            assert!((p[3] - 0.5 * (5.0 * x * x * x - 3.0 * x)).abs() < 1e-14);
+        }
+    }
+
+    #[test]
+    fn pit_refit_recovers_lmoment_shape_of_a_location_scale_law() {
+        // y = x + (1 + x/2)(E - 1), E ~ Exp(1): λ2 = 1/2, λ3 = 1/6, λ4 = 1/12 per unit scale,
+        // so c_k(x) = (2k+1) λ_{k+1} (1 + x/2) for k ≥ 1.
+        let n = 40_000;
+        let ux = uniform_stream(11, n);
+        let ue = uniform_stream(12, n);
+        let x: Vec<f64> = ux.clone();
+        let y: Vec<f64> = (0..n)
+            .map(|i| x[i] + (1.0 + 0.5 * x[i]) * (-(1.0 - ue[i]).ln() - 1.0))
+            .collect();
+        let base = V1Config {
+            k_fit: 4,
+            k_report: 4,
+            max_bins: 8,
+            max_rounds: 12,
+            tol: 1e-8,
+            mono: MonoMode::None,
+            ..V1Config::default()
+        };
+        let pit = V1Config {
+            pit_rounds: 10,
+            ..base.clone()
+        };
+        let mean_scale = 1.0 + 0.25;
+        let truth = [0.0, 3.0 * 0.5, 5.0 / 6.0, 7.0 / 12.0];
+        let m = fit_v1(&x, n, 1, &y, &pit).unwrap();
+        let fitted = fit_v1(&x, n, 1, &y, &base).unwrap();
+        let mut a_rows = vec![0.0; n * 4];
+        let codes = codes_of(&m, &x, n).unwrap();
+        scatter_all(&m, &codes, &mut a_rows);
+        let mut f_rows = vec![0.0; n * 4];
+        let f_codes = codes_of(&fitted, &x, n).unwrap();
+        scatter_all(&fitted, &f_codes, &mut f_rows);
+        for c in 1..4 {
+            let to_c = ((2 * c + 1) as f64).sqrt();
+            let got: f64 = (0..n).map(|i| a_rows[i * 4 + c]).sum::<f64>() / n as f64 * to_c;
+            let want = truth[c] * mean_scale;
+            assert!(
+                (got / want - 1.0).abs() < 0.06,
+                "channel {c}: pit {got} vs {want}"
+            );
+            let pin: f64 = (0..n).map(|i| f_rows[i * 4 + c]).sum::<f64>() / n as f64 * to_c;
+            assert!(
+                (got - want).abs() <= (pin - want).abs() + 0.02,
+                "channel {c}: pit {got} pinball {pin} truth {want}"
+            );
+        }
+        // Effects stay centred under the training law.
+        for c in 0..4 {
+            let mut tot = 0.0;
+            for (b, &cnt) in m.train_counts[0].iter().enumerate() {
+                tot += cnt as f64 * m.effects[0][b * 4 + c];
+            }
+            assert!(tot.abs() / (n as f64) < 1e-12);
+        }
+    }
 
     fn cfg_small() -> V1Config {
         V1Config {

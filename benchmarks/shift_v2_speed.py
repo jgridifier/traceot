@@ -9,6 +9,7 @@ timed section is the decomposition with those models already in hand.
 from __future__ import annotations
 
 import json
+import os
 import resource
 import time
 from pathlib import Path
@@ -20,7 +21,11 @@ from traceot import TraceV1, shift
 N = 1_000_000
 P = 100
 FIT_N = 4_000
-OUT = Path(__file__).resolve().parent / "results" / "shift_v2_speed.json"
+OUT = Path(
+    os.environ.get(
+        "SHIFT_SPEED_OUT", Path(__file__).resolve().parent / "results" / "shift_v2_speed.json"
+    )
+)
 
 
 def rss_mb() -> float:
