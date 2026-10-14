@@ -171,3 +171,17 @@ maturin (release). Pre-run checks of TRACE_ADAPTER_SPEC.md §6 were run on rando
   against the Shapley truth; DFL/CFM on their L-moment read-outs against the A-reference truth.
   Frozen-track primary endpoints are also tabulated with the frozen union-band rule for comparability
   with the ShiftBench rival numbers.
+
+## D13 (2026-10-14): runs stopped early at user request (logged before scoring)
+
+The long validation was stopped at the user's request on 2026-10-14 to use the progress so far.
+Completed: `acc` (825/825, incl. H5 checks and rival contrast), `shape` (350/350), `inv` (110/110),
+`cover` (400/400), `real` (151/151). `null200` stopped at **192/200** complete replications (the
+user's note said ~189; the file holds 192 complete records). **Not run:** `placebo` (H8c),
+`h6syn` (H6 synthetic arm), `scale` (TRACE scale cells).
+Scoring rule for the stop: the frozen scoring script is used unchanged. A hypothesis gets PASS/FAIL
+only where the data its bar needs is complete; otherwise INCOMPLETE. H8(a) is scored on the 192
+available replications with the exact one-sided Clopper–Pearson bound on the actual count and is
+labelled *partial* (the frozen bar is defined at n = 200, x ≤ 11). Holm is applied over the tests that
+exist. H6 needs all four primary tests; with the synthetic arm missing, H6 is INCOMPLETE whatever the
+real-panel arm shows.
