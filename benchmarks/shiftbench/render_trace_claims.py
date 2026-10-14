@@ -29,6 +29,7 @@ L = [
     "",
     "Scored exactly per [PREREG_TRACE_CLAIMS.md](PREREG_TRACE_CLAIMS.md) as amended by "
     "[AMENDMENT_1](PREREG_TRACE_CLAIMS_AMENDMENT_1.md) (deviations D1–D12 logged before results). "
+    "Runs were stopped early at the user's request (D13): `placebo`, `h6syn` and `scale` not run; `null200` has 192 of 200 replications. "
     "Raw records: `benchmarks/results/trace_claims_*.jsonl`; summary: `trace_claims_summary.json` "
     "(produced by `summarize_trace_claims.py`, rendered by `render_trace_claims.py`). Failures stay on record.",
     "",
@@ -73,6 +74,19 @@ if "placebo" in h8:
     L.append(
         f"| H8(c) placebo (secondary) | ≤ 0.10 | {f(h8['placebo']['TRACE'])} | {'PASS' if h8['placebo_pass'] else 'FAIL'} |"
     )
+L.append("| H6 synthetic bootstrap / split-half | as above | not run (D13) | INCOMPLETE |")
+L.append(
+    "| **H6 overall** | all four pass | real arm: both intervals below 0 (recorded failures); synthetic arm not run | **FAIL** (synthetic arm INCOMPLETE) |"
+)
+L.append(
+    f"| **H7 overall** | every recovery bar and >= 4/5 rival wins | {sum(v['pass'] for v in h7['recovery'].values())}/{len(h7['recovery'])} recovery cells pass; {h7['rival_wins']}/5 rival wins | **{'PASS' if h7['recovery_pass'] and h7['rival_supported'] else 'FAIL'}** |"
+)
+L.append(
+    f"| H8(a) partial-data note | frozen bar defined at n = 200 | x = {a.get('x')} of {a.get('n')}; x already exceeds 11, so the n = 200 bar fails whatever the 8 missing replications show | FAIL (partial, outcome determined) |"
+)
+if "placebo" not in h8:
+    L.append("| H8(c) placebo (secondary) | <= 0.10 | not run (D13) | INCOMPLETE |")
+L.append("| Scale (frozen track, TRACE) | runtime/memory caps | not run (D13) | INCOMPLETE |")
 L += [
     "",
     "## Holm (family of tests with p-values, D9)",

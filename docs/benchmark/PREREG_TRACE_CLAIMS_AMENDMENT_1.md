@@ -185,3 +185,9 @@ available replications with the exact one-sided Clopper–Pearson bound on the a
 labelled *partial* (the frozen bar is defined at n = 200, x ≤ 11). Holm is applied over the tests that
 exist. H6 needs all four primary tests; with the synthetic arm missing, H6 is INCOMPLETE whatever the
 real-panel arm shows.
+
+## D14 (2026-10-14): scoring-script bug fix (key access only)
+
+`summarize_trace_claims.py` read the real-panel split-half TRACE records as `rec["h1"]["TRACE"]`;
+the runner stores them as `rec["h1"]`. The key was corrected; no metric, bar or rule changed. The
+renderer gained INCOMPLETE rows for the tracks not run (D13).

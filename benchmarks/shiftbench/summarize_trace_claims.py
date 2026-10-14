@@ -294,9 +294,7 @@ def h6():
             for m in ("OB", "RIF", "SHAP"):
                 boot[m].append(sp(vec(full[m]), vec(rb[k][m]), nan[m]))
         for k in sorted(set(rs) & set(ts)):
-            half["TRACE"].append(
-                sp(vec(ts[k]["h1"]["TRACE"]), vec(ts[k]["h2"]["TRACE"]), nan["TRACE"])
-            )
+            half["TRACE"].append(sp(vec(ts[k]["h1"]), vec(ts[k]["h2"]), nan["TRACE"]))
             for m in ("OB", "RIF", "SHAP"):
                 half[m].append(sp(vec(rs[k]["h1"][m]), vec(rs[k]["h2"][m]), nan[m]))
         out["real"] = {}
