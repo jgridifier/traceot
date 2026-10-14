@@ -440,6 +440,7 @@ def shift_decompose(
     max_rounds: int = 6,
     fit_tol: float = 1e-6,
     n_boot: int = 0,
+    pit_rounds: int = 0,
 ) -> dict:
     """Order-free composition/structure split of a shift between two periods.
 
@@ -466,6 +467,8 @@ def shift_decompose(
     are ``((composition_lo, structure_lo), (composition_hi, structure_hi))``.
     The uniform band is the joint max-|t| interval across those pieces.
     ``n_boot=0`` sets every end equal to the point.
+    ``pit_rounds`` turns on the PIT pseudo-outcome refit in both period fits
+    (``0``, the default, leaves it off).
     """
     if seed < 0:
         raise ValueError("seed must be non-negative")
@@ -496,6 +499,7 @@ def shift_decompose(
             float(fit_tol),
             int(n_boot),
             bool(return_model),
+            int(pit_rounds),
         )
     )
     for key in ("split", "split_aref", "split_anchor_A", "split_anchor_B"):

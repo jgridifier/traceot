@@ -987,7 +987,7 @@ fn role_ends<'py>(py: Python<'py>, lo: &[f64], hi: &[f64]) -> PyResult<Bound<'py
 #[pyo3(signature = (
     x_a, y_a, x_b, y_b, seed=0, k=4, n_quad=64, n_folds=5, trim_quantile=0.99,
     logit_ridge=1e-6, logit_iters=40, logit_tol=1e-12, k_fit=4, max_bins=16,
-    max_rounds=6, fit_tol=1e-6, n_boot=0, return_model=false
+    max_rounds=6, fit_tol=1e-6, n_boot=0, return_model=false, pit_rounds=0
 ))]
 fn shift_v2_decompose<'py>(
     py: Python<'py>,
@@ -1009,6 +1009,7 @@ fn shift_v2_decompose<'py>(
     fit_tol: f64,
     n_boot: usize,
     return_model: bool,
+    pit_rounds: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     let (na, _) = x_a.as_array().dim();
     let (nb, _) = x_b.as_array().dim();
@@ -1027,6 +1028,7 @@ fn shift_v2_decompose<'py>(
         fit_tol,
         n_boot,
         return_model,
+        pit_rounds,
     };
     let (xa, ya, xb, yb) = (slice2(&x_a)?, slice1(&y_a)?, slice2(&x_b)?, slice1(&y_b)?);
     let got = py
