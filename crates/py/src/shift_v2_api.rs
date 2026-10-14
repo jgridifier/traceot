@@ -103,6 +103,7 @@ fn v1_cfg(
         sobolev_lambda: 0.0,
         sobolev_s: 0.0,
         tail_gamma: 0.0,
+        pit_rounds: 0,
     })
 }
 
@@ -447,7 +448,7 @@ fn shift_v2_bootstrap_marginal<'py>(
 #[pyo3(signature = (
     x_a, y_a, x_b, y_b, reps, seed, k_fit=6, k_report=6, n_u=0, max_bins=16,
     max_rounds=12, tol=1e-6, min_count=1, ridge=1e-6, learning_rate=1.0, mono="none",
-    bernstein_elevation=4, reporting="legendre"
+    bernstein_elevation=4, reporting="legendre", pit_rounds=0
 ))]
 fn shift_v2_bootstrap_barycenter<'py>(
     py: Python<'py>,
@@ -469,10 +470,11 @@ fn shift_v2_bootstrap_barycenter<'py>(
     mono: &str,
     bernstein_elevation: usize,
     reporting: &str,
+    pit_rounds: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     let (na, p) = x_a.as_array().dim();
     let (nb, _) = x_b.as_array().dim();
-    let v1 = v1_cfg(
+    let mut v1 = v1_cfg(
         k_fit,
         k_report,
         n_u,
@@ -486,6 +488,7 @@ fn shift_v2_bootstrap_barycenter<'py>(
         bernstein_elevation,
         reporting,
     )?;
+    v1.pit_rounds = pit_rounds;
     let (xa, ya, xb, yb) = (slice2(&x_a)?, slice1(&y_a)?, slice2(&x_b)?, slice1(&y_b)?);
     let draws = py
         .detach(|| bootstrap_barycenter(xa, ya, na, xb, yb, nb, &v1, reps, seed))
@@ -556,7 +559,8 @@ fn shift_v2_entry_from_models<'py>(
 #[pyo3(signature = (
     x_a, y_a, exit_a, x_b, y_b, entry_b, reps, seed,
     k_fit=6, k_report=6, n_u=0, max_bins=16, max_rounds=12, tol=1e-6, min_count=1,
-    ridge=1e-6, learning_rate=1.0, mono="none", bernstein_elevation=4, reporting="legendre"
+    ridge=1e-6, learning_rate=1.0, mono="none", bernstein_elevation=4, reporting="legendre",
+    pit_rounds=0
 ))]
 fn shift_v2_bootstrap_entry<'py>(
     py: Python<'py>,
@@ -580,6 +584,7 @@ fn shift_v2_bootstrap_entry<'py>(
     mono: &str,
     bernstein_elevation: usize,
     reporting: &str,
+    pit_rounds: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     let (na, _) = x_a.as_array().dim();
     let (nb, _) = x_b.as_array().dim();
@@ -591,7 +596,7 @@ fn shift_v2_bootstrap_entry<'py>(
         slice1(&y_b)?,
         slice_u8(&entry_b)?,
     );
-    let v1 = v1_cfg(
+    let mut v1 = v1_cfg(
         k_fit,
         k_report,
         n_u,
@@ -605,6 +610,7 @@ fn shift_v2_bootstrap_entry<'py>(
         bernstein_elevation,
         reporting,
     )?;
+    v1.pit_rounds = pit_rounds;
     let draws = py
         .detach(|| bootstrap_entry_exit(xa, ya, ea, na, xb, yb, eb, nb, &v1, reps, seed))
         .map_err(err)?;

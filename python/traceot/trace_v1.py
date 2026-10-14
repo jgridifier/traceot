@@ -67,6 +67,7 @@ class TraceV1(EstimatorMixin):
         sobolev_lambda: float = 0.0,
         sobolev_s: float = 1.0,
         tail_gamma: float = 0.0,
+        pit_rounds: int = 0,
     ):
         self.k_fit = k_fit
         self.k_report = k_report
@@ -85,6 +86,7 @@ class TraceV1(EstimatorMixin):
         self.sobolev_lambda = sobolev_lambda
         self.sobolev_s = sobolev_s
         self.tail_gamma = tail_gamma
+        self.pit_rounds = pit_rounds
 
     def _kwargs(self) -> dict:
         return dict(
@@ -105,6 +107,7 @@ class TraceV1(EstimatorMixin):
             sobolev_lambda=float(self.sobolev_lambda),
             sobolev_s=float(self.sobolev_s),
             tail_gamma=float(self.tail_gamma),
+            pit_rounds=int(self.pit_rounds),
         )
 
     def fit(self, X, y):

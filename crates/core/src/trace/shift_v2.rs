@@ -354,7 +354,74 @@ impl<'a> Pooled<'a> {
     }
 }
 
-fn fit_logit(pooled: &Pooled<'_>, rows: &[usize], cfg: &ShiftV2Config) -> Result<Vec<f64>> {
+/// Gradient and Hessian of the logistic log-likelihood over `rows`.
+///
+/// Rows are summed in fixed-size chunks and the chunk totals are added in chunk
+/// order, so the result does not depend on the thread count.
+fn logit_gh(pooled: &Pooled<'_>, rows: &[usize], beta: &[f64]) -> (Vec<f64>, Vec<f64>) {
+    let p = pooled.p;
+    let d = p + 1;
+    let chunk_gh = |chunk: &[usize]| -> (Vec<f64>, Vec<f64>) {
+        let mut g = vec![0.0; d];
+        let mut h = vec![0.0; d * d];
+        for &i in chunk {
+            let row = pooled.row(i);
+            let mut z = beta[0];
+            for j in 0..p {
+                z += beta[j + 1] * row[j];
+            }
+            let pr = sigmoid(z).clamp(1e-12, 1.0 - 1e-12);
+            let resid = pooled.label(i) - pr;
+            let wi = pr * (1.0 - pr);
+            g[0] += resid;
+            h[0] += wi;
+            for j in 0..p {
+                let xj = row[j];
+                g[j + 1] += xj * resid;
+                h[(j + 1) * d] += wi * xj;
+                let wx = wi * xj;
+                let hrow = &mut h[(j + 1) * d + 1..(j + 1) * d + 2 + j];
+                for (t, slot) in hrow.iter_mut().enumerate() {
+                    *slot += wx * row[t];
+                }
+            }
+        }
+        (g, h)
+    };
+    const CHUNK: usize = 4096;
+    #[cfg(feature = "parallel")]
+    let parts: Vec<(Vec<f64>, Vec<f64>)> = rows.par_chunks(CHUNK).map(chunk_gh).collect();
+    #[cfg(not(feature = "parallel"))]
+    let parts: Vec<(Vec<f64>, Vec<f64>)> = rows.chunks(CHUNK).map(chunk_gh).collect();
+    let mut g = vec![0.0; d];
+    let mut h = vec![0.0; d * d];
+    for (pg, ph) in parts {
+        for t in 0..d {
+            g[t] += pg[t];
+        }
+        for t in 0..d * d {
+            h[t] += ph[t];
+        }
+    }
+    // Only the lower triangle (and column 0) was accumulated; mirror it.
+    for j in 1..d {
+        h[j] = h[j * d];
+        for t in 1..j {
+            h[t * d + j] = h[j * d + t];
+        }
+    }
+    (g, h)
+}
+
+/// Newton–Raphson for the period-odds logit. `init` warm-starts the iteration
+/// (the cross-fit passes the previous fold's solution); the fixed point and the
+/// stopping rule are unchanged, so the result agrees with a cold start to `logit_tol`.
+fn fit_logit_from(
+    pooled: &Pooled<'_>,
+    rows: &[usize],
+    cfg: &ShiftV2Config,
+    init: Option<&[f64]>,
+) -> Result<Vec<f64>> {
     let p = pooled.p;
     let d = p + 1;
     let mut beta = vec![0.0; d];
@@ -373,36 +440,14 @@ fn fit_logit(pooled: &Pooled<'_>, rows: &[usize], cfg: &ShiftV2Config) -> Result
     if n_a > 0.0 && n_b > 0.0 {
         beta[0] = (n_a / n_b).ln();
     }
+    if let Some(start) = init {
+        if start.len() == d && start.iter().all(|v| v.is_finite()) {
+            beta.copy_from_slice(start);
+        }
+    }
     let ridge = cfg.logit_ridge.max(0.0);
     for _ in 0..cfg.logit_iters {
-        let mut g = vec![0.0; d];
-        let mut h = vec![0.0; d * d];
-        for &i in rows {
-            let row = pooled.row(i);
-            let mut z = beta[0];
-            for j in 0..p {
-                z += beta[j + 1] * row[j];
-            }
-            let pr = sigmoid(z).clamp(1e-12, 1.0 - 1e-12);
-            let resid = pooled.label(i) - pr;
-            let wi = pr * (1.0 - pr);
-            g[0] += resid;
-            h[0] += wi;
-            for j in 0..p {
-                let xj = row[j];
-                g[j + 1] += xj * resid;
-                h[(j + 1) * d] += wi * xj;
-                h[j + 1] += wi * xj;
-                for t in 0..=j {
-                    let xt = row[t];
-                    let add = wi * xj * xt;
-                    h[(j + 1) * d + (t + 1)] += add;
-                    if t != j {
-                        h[(t + 1) * d + (j + 1)] += add;
-                    }
-                }
-            }
-        }
+        let (mut g, mut h) = logit_gh(pooled, rows, &beta);
         for j in 1..d {
             g[j] -= ridge * beta[j];
             h[j * d + j] += ridge;
@@ -478,9 +523,11 @@ fn cross_fit_lp_folds(
         ));
     }
     let mut lp = vec![0.0; n];
+    let mut warm: Option<Vec<f64>> = None;
     for fold in 0..n_folds {
         let train: Vec<usize> = (0..n).filter(|&i| folds[i] != fold).collect();
-        let beta = fit_logit(pooled, &train, cfg)?;
+        let beta = fit_logit_from(pooled, &train, cfg, warm.as_deref())?;
+        warm = Some(beta.clone());
         for i in 0..n {
             if folds[i] == fold {
                 lp[i] = linear_predictor(&beta, pooled.row(i));
@@ -2130,6 +2177,7 @@ fn v1_for(cfg: &DecomposeConfig, k_fit: usize) -> V1Config {
         sobolev_lambda: 0.0,
         sobolev_s: 0.0,
         tail_gamma: 0.0,
+        pit_rounds: 0,
     }
 }
 
@@ -2656,6 +2704,57 @@ pub fn shift_decompose(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn warm_started_parallel_logit_matches_cold_serial_fit() {
+        let (n_a, n_b, p) = (3000usize, 2500usize, 4usize);
+        let mut rng = SplitMix64::new(77);
+        let mut x_a = vec![0.0; n_a * p];
+        let mut x_b = vec![0.0; n_b * p];
+        for v in x_a.iter_mut() {
+            *v = rng.next_f64() * 2.0 - 1.0;
+        }
+        for (t, v) in x_b.iter_mut().enumerate() {
+            *v = rng.next_f64() * 2.0 - 1.0 + if t % p == 0 { 0.4 } else { 0.0 };
+        }
+        let pooled = Pooled {
+            x_a: &x_a,
+            n_a,
+            x_b: &x_b,
+            n_b,
+            p,
+        };
+        let cfg = ShiftV2Config::default();
+        let rows: Vec<usize> = (0..n_a + n_b).filter(|i| i % 5 != 0).collect();
+        let cold = fit_logit_from(&pooled, &rows, &cfg, None).unwrap();
+        let warm = fit_logit_from(&pooled, &rows, &cfg, Some(&[0.3, -0.2, 0.1, 0.0, 0.5])).unwrap();
+        for (a, b) in cold.iter().zip(&warm) {
+            assert!((a - b).abs() < 1e-8, "{a} vs {b}");
+        }
+        // Chunked gradient/Hessian equals the plain row loop.
+        let beta = [0.1, -0.3, 0.2, 0.05, -0.1];
+        let (g, h) = logit_gh(&pooled, &rows, &beta);
+        let d = p + 1;
+        let mut g2 = vec![0.0; d];
+        let mut h2 = vec![0.0; d * d];
+        for &i in &rows {
+            let mut z1 = vec![1.0];
+            z1.extend_from_slice(pooled.row(i));
+            let pr = sigmoid(linear_predictor(&beta, pooled.row(i)));
+            for r in 0..d {
+                g2[r] += z1[r] * (pooled.label(i) - pr);
+                for c in 0..d {
+                    h2[r * d + c] += pr * (1.0 - pr) * z1[r] * z1[c];
+                }
+            }
+        }
+        for t in 0..d {
+            assert!((g[t] - g2[t]).abs() < 1e-8);
+        }
+        for t in 0..d * d {
+            assert!((h[t] - h2[t]).abs() < 1e-8, "h[{t}] {} vs {}", h[t], h2[t]);
+        }
+    }
     use crate::trace::{MonoMode, QuadBasis, ReportKind};
 
     #[test]
@@ -2797,6 +2896,7 @@ mod tests {
             sobolev_lambda: 0.0,
             sobolev_s: 0.0,
             tail_gamma: 0.0,
+            pit_rounds: 0,
         };
         let a = make([1.0, 0.2], [-0.4, 0.3], [0.4, -0.1]);
         let b = make([1.5, -0.1], [-0.2, -0.4], [0.8, 0.2]);

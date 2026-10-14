@@ -1,0 +1,14 @@
+{
+  "rows_per_period": 1000000,
+  "features": 100,
+  "fit_rows": 4000,
+  "fit_seconds_not_in_decomposition": 1.4696077069966123,
+  "barycenter_seconds": 8.113029688000097,
+  "explain_seconds": 17.42980737700418,
+  "barycenter_w2": 0.0010308366892262044,
+  "explain_order_gap": 0.0,
+  "rss_mb_after_data": 1585.796875,
+  "rss_mb_after_barycenter": 1681.13671875,
+  "rss_mb_after_explain": 1683.05078125,
+  "peak_rss_mb": 1683.05078125
+}
