@@ -1577,6 +1577,8 @@ pub struct DecomposeConfig {
     pub n_boot: usize,
     /// When set, [`ShiftDecompose::model`] carries the two fitted curves.
     pub return_model: bool,
+    /// PIT pseudo-outcome refit rounds for both period fits. `0` (default) is off.
+    pub pit_rounds: usize,
 }
 
 impl Default for DecomposeConfig {
@@ -1596,6 +1598,7 @@ impl Default for DecomposeConfig {
             fit_tol: 1e-6,
             n_boot: 0,
             return_model: false,
+            pit_rounds: 0,
         }
     }
 }
@@ -2177,7 +2180,7 @@ fn v1_for(cfg: &DecomposeConfig, k_fit: usize) -> V1Config {
         sobolev_lambda: 0.0,
         sobolev_s: 0.0,
         tail_gamma: 0.0,
-        pit_rounds: 0,
+        pit_rounds: cfg.pit_rounds,
     }
 }
 
