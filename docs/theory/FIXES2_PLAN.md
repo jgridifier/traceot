@@ -135,3 +135,17 @@ B = 200 for the marginal bootstrap; **B_refit = 100** for the bootstraps that re
 Expectations stated before running: B1, B2, B6–B10 pass; B3 and B4 likely improve but may still
 miss a component (no fix aimed at coverage of quadratic terms); B9 k = 4, 5 is the weakest point
 (pseudo-outcomes are noisy and the additive model is evaluated on groups cut inside bins).
+
+## Deviation log
+
+* **2026-10-14: validation stopped early at user request** (logged before scoring). The frozen
+  runner was stopped to use the progress so far. Completed seeds (from the runner's per-seed cache):
+  S1 20/20, S2 20/20, S3 8/20 (6000–6007); S4, S5 and the B5b calibration (seeds 6100–6499) not run.
+  Scoring: the frozen bar logic of `prereg_fixes2.py` at `cc699b2` applied to the completed seeds by
+  `verify/score_fixes2_partial.py` (no bar edited). Each bar is reported as k/n completed. A bar is
+  PASS or FAIL only when its outcome is determined by the completed seeds whatever the missing seeds
+  would show (e.g. more than 2 misses already, for an 18/20 bar); otherwise INCOMPLETE. B7/B8 are
+  reported on the completed seeds of every scenario run. B10 is run as specified.
+* **2026-10-14: B11 speed thread count.** The plan specifies 2 threads (shared machine). The machine is
+  now free and the run uses all 8 cores (`RAYON_NUM_THREADS=8`); the thread count is recorded with
+  the result. B11 is not a correctness gate.
