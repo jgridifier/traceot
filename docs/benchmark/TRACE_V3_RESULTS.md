@@ -90,3 +90,22 @@ Replications per scenario: {'null': 300, 'mixed': 300, 'tail': 300, 'hetero': 30
 
 H5.1b: 0 misses in 3500 shape replications; worst |W_rec − Σφ| = 1.83e-15 (scaled 1.83e-15).
 Marginal vs empirical W2² (descriptive, **not a claim**; see PREREG_TRACE_V3 §2): absolute median 1.34e-03, max 4.93e-01; relative median 7.23%, max 86.09%. The PR #12 H5 FAIL stays on record.
+
+## Reading (hand-written after scoring)
+
+* The run finished in full (08:39:59 → 09:27 ET, under the 2.5 h cap); no cell is INCOMPLETE.
+* **Turning on the PIT refit did not rescue H7 or H8(b).** Every verdict matches PR #12. The H7
+  recovery pattern is the same: 1 of 10 cells passes, again `skew_struct` at n = 20,000. The
+  composition-driven scenarios (`skew_comp`, `tail_comp`, `shape_mixed`) recover 0 of 200 and 0 of 500.
+  TRACE's error there (≈ 0.08 on λ₃) is the same as before and about 4–7× CFM's. So the gap is not a
+  fit-quality problem that the PIT refit fixes: TRACE does not attribute composition-driven
+  higher-order shape changes. The 10× larger samples tighten the intervals; they do not move the
+  point estimates.
+* **H8(b):** pooled coverage is 0.815 (0.807 in PR #12). The failing cells are again the
+  composition-driven λ₃/λ₄ channels (as low as 0.067), plus `entry_exit` and a few `tail`/`hetero` cells.
+  Undercoverage follows from the bias above; bands built on a biased point cannot cover.
+* **H5:** the restated H5.1b (exactness against the model barycenter) holds in all 3,500 replications.
+  This was restated after PR #12 and is not a new claim. The marginal-vs-empirical gap is large in
+  relative terms when the shift itself is tiny (median 7%). It is descriptive only.
+* **Overall:** none of H7 or H8(b) survives v3. The only claim that holds is the algebraic exactness of
+  the decomposition on the fitted model.
