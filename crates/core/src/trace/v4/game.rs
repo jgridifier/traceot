@@ -29,7 +29,7 @@ pub fn role_shapley(g_aa: f64, g_ba: f64, g_ab: f64, g_bb: f64) -> RolePieces {
 pub fn phi_budget(
     w: &[f64],
     delta_c: &[f64],
-    a_comp: &[f64],  // length K*p
+    a_comp: &[f64], // length K*p
     a_struct: &[f64],
 ) -> Vec<f64> {
     let k = w.len();
@@ -56,7 +56,7 @@ mod tests {
     fn budget_sums_when_no_interaction() {
         let w = [1.0 / 3.0];
         let delta = [3.0];
-        // I=0 table: G=[[0,1],[1,2]] → a_comp=1, a_struct=1, Δc from one feature = 2? 
+        // I=0 table: G=[[0,1],[1,2]] → a_comp=1, a_struct=1, Δc from one feature = 2?
         // Use two features sharing Δc=3 with a summing to 3.
         let a_c = [2.0];
         let a_s = [1.0];

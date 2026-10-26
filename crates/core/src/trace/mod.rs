@@ -56,10 +56,14 @@ pub use shift_v2::{
     PercentileBand, PermutationFloor, ShiftDecompose, ShiftModelHandle, ShiftReport, ShiftV2Config,
     TwoPlayer,
 };
-pub use v4::{mixture_from_conditionals, mixture_from_conditionals_weighted, mixture_identical_rows, rake_bin_marginals, role_shapley, phi_budget, split_product, symmetrised_coord_players, BalanceConfig, FitL2Config, MixtureConfig, MixtureLaw, RolePieces};
 pub use v1fit::{
     attribute, channel_energy, channel_slope, codes_of, feature_pinball_gains,
     feature_report_table, fit_v1, leave_feature_gains, monotonicity_report, pinball_gh,
     player_coefficients, predict_quantiles, projection_pair, Attribution, FeatureGains, MonoMode,
     MonoReport, ProjectionPair, ReportKind, V1Config, V1Model,
+};
+pub use v4::{
+    mixture_from_conditionals, mixture_from_conditionals_weighted, mixture_identical_rows,
+    phi_budget, rake_bin_marginals, role_shapley, split_product, symmetrised_coord_players,
+    BalanceConfig, FitL2Config, MixtureConfig, MixtureLaw, RolePieces,
 };
