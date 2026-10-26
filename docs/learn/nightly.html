@@ -367,6 +367,7 @@
 <h2 id="paper">7. One paper / idea for tonight</h2>
 <p><strong>Chernozhukov, Fernández-Val &amp; Melly (2013).</strong> <em>Inference on counterfactual distributions.</em> <a href="https://arxiv.org/abs/0904.0951">arXiv:0904.0951</a> (CFM).</p>
 <p>Practical intuition for our change: CFM asks what the outcome distribution would look like if period B’s people were run through period A’s conditional law—or the reverse. That object is a <em>mixture</em>: average the conditional CDFs, then invert. It is not the average of the conditional quantile curves. When centres differ across people, the mixture spreads even if every conditional shape is unchanged. That is exactly why CFM recovered composition-driven shape cells while TRACE’s barycenter did not. v4’s mixing player does not replace TRACE’s per-feature game; it adds the missing mixture-minus-barycenter term so the budget can see what CFM already saw, while keeping order-free feature shares. When you skim the paper tonight, watch how they build the counterfactual distribution from conditional distributions—then map that picture onto M1.</p>
+<p class="muted" style="margin-top:.75rem"><strong>Related reading (structure, not OT):</strong> <a href="bayesdb_crosscat.html">BayesDB + CrossCat</a> — column partitions × row mixtures as a glass-box composition/structure scaffold (MIT ProbComp; ideas only).</p>
 
 <h2 id="tomorrow">8. Tomorrow’s build step</h2>
 <p>Honest freeze is in <a href="https://github.com/jgridifier/traceot/blob/quant/v4-spec/docs/benchmark/V4_RESULTS.md">V4_RESULTS.md</a>. Next engineering: (1) emit per-cell lsplit / mean-channel multiplier bands so coverage can be scored; (2) diagnose why graded L-moment error still trails CFM/DFL on composition shape cells despite M1; (3) only then re-prereg if bars or estimands must change. Do not quietly edit <code>PREREG_V4.md</code>.</p>
@@ -375,6 +376,8 @@
   <p>Dated <strong>2026-10-26</strong>, America/New_York (EDT). Git sha on publish branch: will match merge of <code>quant/nightly-learning</code>; content frozen against main <code>2276793</code>.</p>
   <p>
     <a href="research_board.html">research_board.html</a> ·
+    <a href="bayesdb_crosscat.html">bayesdb_crosscat.html</a> ·
+    <a href="faraday_mixture_crates.html">faraday_mixture_crates.html</a> ·
     <a href="shift_benchmark.html">shift_benchmark.html</a> ·
     <a href="explaining_shifts.html">explaining_shifts.html</a> ·
     <a href="https://github.com/jgridifier/traceot/blob/quant/v4-spec/docs/theory/V4_IMPL_SPEC.md">V4_IMPL_SPEC.md</a> (branch <code>quant/v4-spec</code>)
