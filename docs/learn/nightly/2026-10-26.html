@@ -144,7 +144,7 @@
 
 <h1>TRACE nightly</h1>
 <p class="lede">A short applied refresher for after work: what changed in the method, and what that means when you actually explain a distribution shift between two periods.</p>
-<p class="meta">Dated snapshot for <strong>2026-10-26</strong> · live page: <a href="../nightly.html">nightly.html</a> · main @ <code>2276793</code> (PR #14 / TRACE v3)</p>
+<p class="meta">Today’s snapshot: <a href="nightly/2026-10-26.html">2026-10-26</a> · scored on <code>quant/v4-spec</code> · prereg <code>d50732f</code> · overall accuracy <strong>FAIL</strong></p>
 
 <nav class="toc" aria-label="Contents">
 <ol>
@@ -161,7 +161,7 @@
 
 <h2 id="takeaway">1. Tonight’s takeaway</h2>
 <div class="takeaway">
-<p>Main is TRACE <strong>v3</strong> (merged PR #14). The algebra still holds: the W₂² L-moment budget splits exactly and order-free across features. The accuracy claims did not. On composition-only shape cells, recovery was essentially <strong>0/200</strong>; error sat near <strong>0.08</strong>, about <strong>4–7×</strong> worse than CFM. Band coverage (H8b) pooled at <strong>~0.815</strong>, short of 0.90. Root cause RC2: we averaged people’s quantile curves (a barycenter), but the overall distribution is a <em>mixture</em>—and mix changes reshape the pool even when nobody’s response curve moves. v4 is designed and written (<code>quant/v4-spec</code>); the Rust build has not started. Bar for success: best outright, or match best and ≥5× faster.</p>
+<p>TRACE <strong>v4</strong> is built and scored on <code>quant/v4-spec</code> (prereg SHA <code>d50732f</code>). The mixing-player design shipped; the pre-registered accuracy bar did <strong>not</strong> pass. On every H7 shape cell, graded-channel error stayed worse than the best rival (CFM or DFL)—upper 95% CIs of the paired gap sit well above the non-inferiority margin. ShiftBench mean-channel: <strong>BEST</strong> on <code>tail</code>, <strong>FAIL</strong> on <code>mixed</code> and <code>hetero</code>. Coverage stays <strong>INCOMPLETE</strong> (budget CI only; no per-cell multiplier bands yet). Conditional speed vs CFM is about <strong>1.0×</strong> at 100k and <strong>2.9×</strong> at 1M—short of the 5× gate. Failures stay failures. When you open a shift report tomorrow, treat v4 shape composition claims as still unproven against CFM.</p>
 </div>
 
 <h2 id="job">2. The practical job</h2>
@@ -211,7 +211,9 @@
 <h3>v3 (on main tonight)</h3>
 <p>What we changed: tighter fitting (including PIT-style shape work) and a restated exactness check against the <em>model barycenter</em>. Algebra of that split still passes (H5.1b: 0 misses in 3,500 reps). What failed: accuracy and coverage bars (H6–H8). <em>Reading tip:</em> trust the <strong>additivity</strong> of the reported pieces on the fitted model; do <strong>not</strong> trust a near-zero shape budget when the pool’s mix clearly changed—v3’s curve average is blind to mix-driven shape.</p>
 
-<h3>Planned v4 (spec on <code>quant/v4-spec</code>, build not started)</h3>
+<h3>v4 scored (branch <code>quant/v4-spec</code>, prereg <code>d50732f</code>)</h3>
+<p>What shipped: mixture target, mixing-player game, L²/PIT fit, split-product + multiplier bands (budget CI), TRACE_V4 adapter—no neural nets. What failed the freeze bars: H7 non-inferiority vs CFM/DFL on all ten shape cells; ShiftBench mean-channel on mixed/hetero; speed gate. One bright spot: mean-channel <strong>BEST</strong> vs rivals on the <code>tail</code> scenario. <em>Reading tip:</em> a lighted mixing / composition shape bar is now <em>possible</em> in the method, but tonight’s numbers say the estimate is still larger-error than CFM’s mixture counterfactual on the composition shape cells—do not prefer v4 over CFM there yet.</p>
+<h3>v4 pillars (what each was meant to change in a report)</h3>
 <div class="scroll">
 <table>
   <thead>
@@ -251,7 +253,7 @@
   </tbody>
 </table>
 </div>
-<p><em>Rule of thumb after v4:</em> big shape budget with flat mixing → response-driven. Big mixing with flat structure → composition-driven. Tonight, without M1, that second sentence can look like “nothing happened” even when the pool clearly widened.</p>
+<p><em>Rule of thumb after v4 scored:</em> big shape budget with flat mixing → response-driven. Big mixing with flat structure → composition-driven. Method can book the second case now, but tonight’s graded errors still lose to CFM on those cells—prefer the rival reading until a re-prereg passes.</p>
 
 <h2 id="vignette">4. Worked vignette (exam scores)</h2>
 <p>Two cohorts take the same exam. Score = centre(group) + noise. Two study groups: <strong>Steady</strong> (centre 50) and <strong>Stretch</strong> (centre 70). Noise width is the same for everyone; nobody’s personal response curve changes between periods.</p>
@@ -290,11 +292,11 @@
   <li><strong>Mix vs structure.</strong> Composition = who showed up; structure = how they respond. Use both, not just the total distance.</li>
   <li><strong>Feature ranks — with a grain of salt.</strong> H6 failed: ranks flip under bootstrap/split-half more than the best rival. Prefer coarse stories (“these two features dominate composition”) over fine orderings until M5.</li>
   <li><strong>Bands / coverage.</strong> Pooled H8b ≈ 0.815. Treat intervals as provisional, especially on shape channels and entry/exit cells.</li>
-  <li><strong>When to distrust shape claims (until v4).</strong> If the feature mix clearly moved and TRACE shows almost no shape composition, believe the vignette over the bar chart. Structure-only shape moves (same mix, different skew/tails) are the regime where v3 was closer to working.</li>
+  <li><strong>When to distrust shape claims (after v4 FAIL).</strong> Mixing can light up, but v4’s graded error still trails CFM/DFL on composition shape cells. If the feature mix clearly moved, cross-check against a mixture counterfactual (CFM) before trusting TRACE’s shape composition magnitude.</li>
 </ul>
 
 <h2 id="scoreboard">6. Scoreboard</h2>
-<p>Honest freeze from TRACE v3 results (PR #14). Failures stay failures. v4 bars are pre-registered targets, not results.</p>
+<p>Honest freeze: v3 on main (PR #14) plus v4 scored on <code>quant/v4-spec</code> (prereg <code>d50732f</code>). Failures stay failures.</p>
 <div class="scroll">
 <table>
   <thead>
@@ -344,22 +346,19 @@
       <td class="fail">FAIL</td>
     </tr>
     <tr>
-      <td>v4 accuracy (planned)</td>
-      <td>best, or non-inferior + ≥5× vs CFM</td>
-      <td>—</td>
-      <td class="pending">NOT RUN</td>
+      <td>v4 accuracy (H7 + ShiftBench mean)</td>
+      <td>Every cell BEST or NI (else FAIL); NI needs ≥5× CFM</td>
+      <td class="fail">FAIL</td>
     </tr>
     <tr>
-      <td>v4 coverage (planned)</td>
-      <td>pooled ≥0.90 (impl. ≥0.88), cells ≥0.85</td>
-      <td>—</td>
-      <td class="pending">NOT RUN</td>
+      <td>v4 coverage</td>
+      <td>Pooled ≥0.90 and every cell ≥0.85</td>
+      <td class="pending">INCOMPLETE</td>
     </tr>
     <tr>
-      <td>v4 speed (planned)</td>
-      <td>≥5× CFM when only non-inferior</td>
-      <td>—</td>
-      <td class="pending">NOT RUN</td>
+      <td>v4 speed (conditional)</td>
+      <td>CFM/v4 ≥5 at 1e5 and 1e6 when any cell is only NI</td>
+      <td class="fail">FAIL (~1.0× / 2.9×)</td>
     </tr>
   </tbody>
 </table>
@@ -370,7 +369,7 @@
 <p>Practical intuition for our change: CFM asks what the outcome distribution would look like if period B’s people were run through period A’s conditional law—or the reverse. That object is a <em>mixture</em>: average the conditional CDFs, then invert. It is not the average of the conditional quantile curves. When centres differ across people, the mixture spreads even if every conditional shape is unchanged. That is exactly why CFM recovered composition-driven shape cells while TRACE’s barycenter did not. v4’s mixing player does not replace TRACE’s per-feature game; it adds the missing mixture-minus-barycenter term so the budget can see what CFM already saw, while keeping order-free feature shares. When you skim the paper tonight, watch how they build the counterfactual distribution from conditional distributions—then map that picture onto M1.</p>
 
 <h2 id="tomorrow">8. Tomorrow’s build step</h2>
-<p>From <code>V4_IMPL_SPEC.md</code>, do <strong>Step 1 only</strong>: write and run <code>docs/theory/verify/v4_derivations.py</code> (pure numpy/scipy, seeded PASS/FAIL) for the four sketched identities—mixing-term expansion (D1), bin-marginal sufficiency (D2), half-sample unbiasedness (D3), path-attribution equivalence (D4). Drop or fix any that fail, log it in the future <code>V4.md</code>. Do <strong>not</strong> start the Rust module until those checks exist. Sequence after that: theory write-up → freeze <code>PREREG_V4</code> → Rust → run.</p>
+<p>Honest freeze is in <a href="https://github.com/jgridifier/traceot/blob/quant/v4-spec/docs/benchmark/V4_RESULTS.md">V4_RESULTS.md</a>. Next engineering: (1) emit per-cell lsplit / mean-channel multiplier bands so coverage can be scored; (2) diagnose why graded L-moment error still trails CFM/DFL on composition shape cells despite M1; (3) only then re-prereg if bars or estimands must change. Do not quietly edit <code>PREREG_V4.md</code>.</p>
 
 <footer>
   <p>Dated <strong>2026-10-26</strong>, America/New_York (EDT). Git sha on publish branch: will match merge of <code>quant/nightly-learning</code>; content frozen against main <code>2276793</code>.</p>

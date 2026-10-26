@@ -15,6 +15,7 @@ mod meanboost;
 mod shift;
 mod shift_v2;
 mod v1fit;
+mod v4;
 
 pub use basis::{
     column_order, conformal_quantile, empirical_quantile, inv_norm, pinball_quantile_index,
@@ -60,4 +61,11 @@ pub use v1fit::{
     feature_report_table, fit_v1, leave_feature_gains, monotonicity_report, pinball_gh,
     player_coefficients, predict_quantiles, projection_pair, Attribution, FeatureGains, MonoMode,
     MonoReport, ProjectionPair, ReportKind, V1Config, V1Model,
+};
+pub use v4::{
+    entropy_balance, explain_v4, fit_l2_channels, mixture_from_conditionals,
+    mixture_from_conditionals_weighted, mixture_identical_rows, phi_budget, play_mixing_game,
+    rake_bin_marginals, riesz_ridge, role_shapley, split_product, symmetrised_coord_players,
+    BalanceConfig, BalanceResult, ExplainV4Config, ExplainV4Report, FitL2Config, FitL2Result,
+    InferConfig, MixingGameConfig, MixingGameResult, MixtureConfig, MixtureLaw, RolePieces,
 };

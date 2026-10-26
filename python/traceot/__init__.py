@@ -27,6 +27,7 @@ from .primitives import quantile_grid
 from .shift import shift_decompose
 from .trace import TraceRegressor
 from .trace_v1 import FrechetV1, RobustV1, TraceHybrid, TraceV1
+from .v4 import explain_v4
 
 __version__ = "0.1.0"
 
@@ -45,4 +46,5 @@ __all__ = [
     "quantile_grid",
     "shift",
     "shift_decompose",
+    "explain_v4",
 ]
