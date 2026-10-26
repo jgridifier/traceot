@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-10-26 · traceot</title>
+<meta name="description" content="Nighttime applied refresher: where TRACE stands, what failed, how method changes translate into reading a shift report.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1d1f;
+    --bg: #f7f4ef;
+    --muted: #5b5b60;
+    --rule: #ddd5c8;
+    --accent: #1b6ca8;
+    --note: #ebe6dc;
+    --ok: #2f7d4a;
+    --bad: #a33b2b;
+    --warn: #8a6d1d;
+    --card: #fffdf8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e9e9ec;
+      --bg: #141416;
+      --muted: #a3a3aa;
+      --rule: #333;
+      --accent: #6fb3e6;
+      --note: #1d2229;
+      --ok: #6cbc86;
+      --bad: #e08a7a;
+      --warn: #d4b45a;
+      --card: #1a1a1e;
+    }
+    svg.sketch { background: #fff; border-radius: 6px; }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 1rem 0 .35rem; }
+  h2 {
+    font-size: 1.22rem;
+    margin: 2rem 0 .55rem;
+    padding-top: .7rem;
+    border-top: 1px solid var(--rule);
+  }
+  h3 { font-size: 1.02rem; margin: 1.25rem 0 .35rem; }
+  p, li { max-width: 42rem; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); margin-top: 0; }
+  .status {
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #664d03;
+  }
+  @media (prefers-color-scheme: dark) {
+    .status { background: #3a3218; color: #e6d48a; }
+  }
+  .takeaway {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: .85rem 1rem;
+    border-radius: 6px;
+    margin: 1rem 0 1.4rem;
+  }
+  .note {
+    background: var(--note);
+    border-left: 4px solid var(--accent);
+    padding: .6rem .9rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+  }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1rem 0; }
+  table {
+    border-collapse: collapse;
+    font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    min-width: 28rem;
+  }
+  th, td {
+    border-bottom: 1px solid var(--rule);
+    padding: .4rem .5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { font-weight: 600; }
+  .fail { color: var(--bad); font-weight: 600; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .pending { color: var(--warn); font-weight: 600; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .88em;
+  }
+  nav.toc ol { margin: .2rem 0 0 1.1rem; padding: 0; }
+  nav.toc li { margin: .15rem 0; }
+  figure { margin: 1.1rem 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { color: var(--muted); font-size: .9rem; margin-top: .35rem; }
+  ul.check { list-style: none; padding-left: 0; }
+  ul.check li {
+    position: relative;
+    padding-left: 1.4rem;
+    margin: .55rem 0;
+  }
+  ul.check li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+  }
+  footer {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  footer a { color: var(--accent); }
+  .meta { font-size: .9rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<p>
+  <a href="../index.html">Learn home</a> ·
+  <a href="research_board.html">Research board</a> ·
+  <a href="explaining_shifts.html">Explaining a shift</a> ·
+  <a href="shift_benchmark.html">Shift benchmark</a> ·
+  <span class="status">nightly · 2026-10-26 ET</span>
+</p>
+
+<h1>TRACE nightly</h1>
+<p class="lede">A short applied refresher for after work: what changed in the method, and what that means when you actually explain a distribution shift between two periods.</p>
+<p class="meta">Today’s snapshot: <a href="nightly/2026-10-26.html">2026-10-26</a> · scored on <code>quant/v4-spec</code> · prereg <code>d50732f</code> · overall accuracy <strong>FAIL</strong></p>
+
+<nav class="toc" aria-label="Contents">
+<ol>
+  <li><a href="#takeaway">Tonight’s takeaway</a></li>
+  <li><a href="#job">The practical job</a></li>
+  <li><a href="#changelog">What changed recently</a></li>
+  <li><a href="#vignette">Worked vignette</a></li>
+  <li><a href="#read">How to read a TRACE output tomorrow</a></li>
+  <li><a href="#scoreboard">Scoreboard</a></li>
+  <li><a href="#paper">One paper / idea for tonight</a></li>
+  <li><a href="#tomorrow">Tomorrow’s build step</a></li>
+</ol>
+</nav>
+
+<h2 id="takeaway">1. Tonight’s takeaway</h2>
+<div class="takeaway">
+<p>TRACE <strong>v4</strong> is built and scored on <code>quant/v4-spec</code> (prereg SHA <code>d50732f</code>). The mixing-player design shipped; the pre-registered accuracy bar did <strong>not</strong> pass. On every H7 shape cell, graded-channel error stayed worse than the best rival (CFM or DFL)—upper 95% CIs of the paired gap sit well above the non-inferiority margin. ShiftBench mean-channel: <strong>BEST</strong> on <code>tail</code>, <strong>FAIL</strong> on <code>mixed</code> and <code>hetero</code>. Coverage stays <strong>INCOMPLETE</strong> (budget CI only; no per-cell multiplier bands yet). Conditional speed vs CFM is about <strong>1.0×</strong> at 100k and <strong>2.9×</strong> at 1M—short of the 5× gate. Failures stay failures. When you open a shift report tomorrow, treat v4 shape composition claims as still unproven against CFM.</p>
+</div>
+
+<h2 id="job">2. The practical job</h2>
+<p>You have two periods, call them A and B. Each period is a table: people (rows), features (columns), and one outcome. The outcome’s distribution moved. You want to know <em>why</em>—not a single number, but a readable budget.</p>
+
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Question you care about</th><th>TRACE piece (today / next)</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Did the mix of people change?</td>
+      <td><strong>Composition</strong> share of the budget</td>
+    </tr>
+    <tr>
+      <td>Do the same kinds of people now respond differently?</td>
+      <td><strong>Structure</strong> share</td>
+    </tr>
+    <tr>
+      <td>Did “who is in the pool” alone change the <em>shape</em> (spread / skew / tails)?</td>
+      <td>Missed in v3 (curve average). <strong>Mixing player (M1)</strong> in v4</td>
+    </tr>
+    <tr>
+      <td>Which features drive each piece?</td>
+      <td>Per-feature Shapley split (exact on the model; ranks still shaky—M5)</td>
+    </tr>
+    <tr>
+      <td>Who entered or left?</td>
+      <td>Entry/exit mass; v4 uses growth–death OT when IDs are known</td>
+    </tr>
+    <tr>
+      <td>Is this just noise?</td>
+      <td>Bands / null tests (under-cover today; half-sample bands in M3)</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p class="note">Domain-neutral framing on purpose. Think “exam scores across two cohorts,” “lab assay scores across two weeks,” or “widget wear across two production runs”—same math.</p>
+
+<h2 id="changelog">3. What changed recently (changelog for humans)</h2>
+
+<h3>v2 → what you read in a report</h3>
+<p>Shift decomposition became an exact, order-free budget of W₂² in L-moment channels: composition vs structure, per feature. <em>Reading tip:</em> a big structure bar with a flat composition bar means “same mix of people, different response.” The reverse means “mix moved, response held.”</p>
+
+<h3>v3 (on main tonight)</h3>
+<p>What we changed: tighter fitting (including PIT-style shape work) and a restated exactness check against the <em>model barycenter</em>. Algebra of that split still passes (H5.1b: 0 misses in 3,500 reps). What failed: accuracy and coverage bars (H6–H8). <em>Reading tip:</em> trust the <strong>additivity</strong> of the reported pieces on the fitted model; do <strong>not</strong> trust a near-zero shape budget when the pool’s mix clearly changed—v3’s curve average is blind to mix-driven shape.</p>
+
+<h3>v4 scored (branch <code>quant/v4-spec</code>, prereg <code>d50732f</code>)</h3>
+<p>What shipped: mixture target, mixing-player game, L²/PIT fit, split-product + multiplier bands (budget CI), TRACE_V4 adapter—no neural nets. What failed the freeze bars: H7 non-inferiority vs CFM/DFL on all ten shape cells; ShiftBench mean-channel on mixed/hetero; speed gate. One bright spot: mean-channel <strong>BEST</strong> vs rivals on the <code>tail</code> scenario. <em>Reading tip:</em> a lighted mixing / composition shape bar is now <em>possible</em> in the method, but tonight’s numbers say the estimate is still larger-error than CFM’s mixture counterfactual on the composition shape cells—do not prefer v4 over CFM there yet.</p>
+<h3>v4 pillars (what each was meant to change in a report)</h3>
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Pillar</th><th>Method change</th><th>What you’ll see in a report</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>M1</strong> Mixing player</td>
+      <td>Book the gap between mixture and curve-average</td>
+      <td>Composition can light up <em>shape</em> channels, not only the mean</td>
+    </tr>
+    <tr>
+      <td><strong>M2</strong> Fit what we report</td>
+      <td>Least squares / PIT targets aligned to reported channels</td>
+      <td>Less-shrunken shape numbers; fairer mean</td>
+    </tr>
+    <tr>
+      <td><strong>M3</strong> Half-sample bands</td>
+      <td>No 100× refits; debiased squared pieces</td>
+      <td>Faster bands, honest coverage target ≥0.88–0.90</td>
+    </tr>
+    <tr>
+      <td><strong>M4</strong> Histogram-matching reweight</td>
+      <td>Match bin counts, not just averages</td>
+      <td>Composition pieces stop leaking when mixes differ in shape</td>
+    </tr>
+    <tr>
+      <td><strong>M5</strong> Stability layer</td>
+      <td>Bags, grouping, selection frequencies</td>
+      <td>Feature ranks you can re-run without flip-flops</td>
+    </tr>
+    <tr>
+      <td>Entry/exit</td>
+      <td>Growth–death OT when IDs known</td>
+      <td>Arrivals/departures as their own line, not smeared into structure</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p><em>Rule of thumb after v4 scored:</em> big shape budget with flat mixing → response-driven. Big mixing with flat structure → composition-driven. Method can book the second case now, but tonight’s graded errors still lose to CFM on those cells—prefer the rival reading until a re-prereg passes.</p>
+
+<h2 id="vignette">4. Worked vignette (exam scores)</h2>
+<p>Two cohorts take the same exam. Score = centre(group) + noise. Two study groups: <strong>Steady</strong> (centre 50) and <strong>Stretch</strong> (centre 70). Noise width is the same for everyone; nobody’s personal response curve changes between periods.</p>
+<ul>
+  <li><strong>Period A:</strong> 80% Steady, 20% Stretch. Pool is mostly near 50; a thin right shoulder.</li>
+  <li><strong>Period B:</strong> 40% Steady, 60% Stretch. Same people-types, just more Stretch. The <em>mixture</em> spreads and the right side thickens. Mean rises; shape changes too.</li>
+</ul>
+
+<figure>
+<svg class="sketch" role="img" aria-label="Curve average stays narrow while the mixture spreads when Stretch becomes common" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="220" fill="#f7f5f2"/>
+  <text x="24" y="28" font-size="14" font-family="system-ui,sans-serif" fill="#1d1d1f">Period B: more Stretch students</text>
+  <!-- axes -->
+  <line x1="40" y1="170" x2="300" y2="170" stroke="#ccc"/>
+  <line x1="340" y1="170" x2="600" y2="170" stroke="#ccc"/>
+  <!-- left: mixture (wide) -->
+  <text x="40" y="52" font-size="12" font-family="system-ui,sans-serif" fill="#b85c38">true pool (mixture)</text>
+  <path d="M50,160 C80,155 100,40 140,40 C180,40 200,155 230,160 C250,165 270,168 290,170"
+        fill="none" stroke="#b85c38" stroke-width="2.4"/>
+  <text x="40" y="196" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">score → wider, two humps blending</text>
+  <!-- right: barycenter (narrow) -->
+  <text x="340" y="52" font-size="12" font-family="system-ui,sans-serif" fill="#1b6ca8">v3 curve-average</text>
+  <path d="M380,160 C410,80 440,55 470,55 C500,55 530,80 560,160"
+        fill="none" stroke="#1b6ca8" stroke-width="2.4"/>
+  <text x="340" y="196" font-size="12" font-family="system-ui,sans-serif" fill="#5b5b60">same width as one group — shape change invisible</text>
+</svg>
+<figcaption>Left: pooling more Stretch students widens the overall score distribution. Right: averaging each student’s quantile curve keeps the width of a single group. v3 books almost none of the shape move; the mixing player (M1) is where that budget should land.</figcaption>
+</figure>
+
+<p><strong>Numbers you can hold in your head.</strong> Suppose each group has sd ≈ 8. With centres 20 apart, a 50/50 mix has extra variance ≈ 100 from the centre gap alone, so the pool sd jumps from ~8 toward ~12. That is a real shape (scale) change with <em>zero</em> structure change. On the frozen composition-shape cells, TRACE’s graded error stayed ~0.08 while CFM’s was ~0.01–0.02—same story as this vignette, measured.</p>
+<p>When you read a v3 report on a B-like period: flat structure + flat shape ≠ “nothing changed.” It may mean “the method could not see the mix-driven shape.” After M1, expect a mixing line that absorbs that spread.</p>
+
+<h2 id="read">5. How to read a TRACE output tomorrow</h2>
+<ul class="check">
+  <li><strong>Exactness of the budget.</strong> Pieces should sum to the model’s W₂² (they do on v3). That is bookkeeping health, not accuracy vs truth.</li>
+  <li><strong>Mix vs structure.</strong> Composition = who showed up; structure = how they respond. Use both, not just the total distance.</li>
+  <li><strong>Feature ranks — with a grain of salt.</strong> H6 failed: ranks flip under bootstrap/split-half more than the best rival. Prefer coarse stories (“these two features dominate composition”) over fine orderings until M5.</li>
+  <li><strong>Bands / coverage.</strong> Pooled H8b ≈ 0.815. Treat intervals as provisional, especially on shape channels and entry/exit cells.</li>
+  <li><strong>When to distrust shape claims (after v4 FAIL).</strong> Mixing can light up, but v4’s graded error still trails CFM/DFL on composition shape cells. If the feature mix clearly moved, cross-check against a mixture counterfactual (CFM) before trusting TRACE’s shape composition magnitude.</li>
+</ul>
+
+<h2 id="scoreboard">6. Scoreboard</h2>
+<p>Honest freeze: v3 on main (PR #14) plus v4 scored on <code>quant/v4-spec</code> (prereg <code>d50732f</code>). Failures stay failures.</p>
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Claim</th><th>Bar</th><th>v3 outcome</th><th>Verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>H5.1b algebraic exactness (model barycenter)</td>
+      <td>gap ≤ 1e-8 every rep</td>
+      <td>0/3500 misses (worst ~1e-15)</td>
+      <td class="pass">PASS</td>
+    </tr>
+    <tr>
+      <td>H5 vs empirical W₂² (older claim)</td>
+      <td>match harness empirical</td>
+      <td>internal sum exact; vs empirical up to ~3% rel.</td>
+      <td class="fail">FAIL (on record)</td>
+    </tr>
+    <tr>
+      <td>H6 rank stability</td>
+      <td>beat best rival</td>
+      <td>bootstrap ~0.50 vs OB ~0.77</td>
+      <td class="fail">FAIL</td>
+    </tr>
+    <tr>
+      <td>H7 shape recovery (10 cells)</td>
+      <td>each cell ≥ bar</td>
+      <td>1/10 pass (only skew_struct @ n=20k)</td>
+      <td class="fail">FAIL</td>
+    </tr>
+    <tr>
+      <td>H7 composition-shape cells</td>
+      <td>recover mix-driven shape</td>
+      <td>~0/200 (and 0/500) recovery; err ~0.08</td>
+      <td class="fail">FAIL (RC2)</td>
+    </tr>
+    <tr>
+      <td>H7 vs CFM/DFL</td>
+      <td>≥4/5 rival wins</td>
+      <td>0/5</td>
+      <td class="fail">FAIL</td>
+    </tr>
+    <tr>
+      <td>H8b band coverage</td>
+      <td>pooled ≥0.90, cells ≥0.85</td>
+      <td>pooled 0.815; worst cells ~0.07</td>
+      <td class="fail">FAIL</td>
+    </tr>
+    <tr>
+      <td>v4 accuracy (H7 + ShiftBench mean)</td>
+      <td>Every cell BEST or NI (else FAIL); NI needs ≥5× CFM</td>
+      <td class="fail">FAIL</td>
+    </tr>
+    <tr>
+      <td>v4 coverage</td>
+      <td>Pooled ≥0.90 and every cell ≥0.85</td>
+      <td class="pending">INCOMPLETE</td>
+    </tr>
+    <tr>
+      <td>v4 speed (conditional)</td>
+      <td>CFM/v4 ≥5 at 1e5 and 1e6 when any cell is only NI</td>
+      <td class="fail">FAIL (~1.0× / 2.9×)</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="paper">7. One paper / idea for tonight</h2>
+<p><strong>Chernozhukov, Fernández-Val &amp; Melly (2013).</strong> <em>Inference on counterfactual distributions.</em> <a href="https://arxiv.org/abs/0904.0951">arXiv:0904.0951</a> (CFM).</p>
+<p>Practical intuition for our change: CFM asks what the outcome distribution would look like if period B’s people were run through period A’s conditional law—or the reverse. That object is a <em>mixture</em>: average the conditional CDFs, then invert. It is not the average of the conditional quantile curves. When centres differ across people, the mixture spreads even if every conditional shape is unchanged. That is exactly why CFM recovered composition-driven shape cells while TRACE’s barycenter did not. v4’s mixing player does not replace TRACE’s per-feature game; it adds the missing mixture-minus-barycenter term so the budget can see what CFM already saw, while keeping order-free feature shares. When you skim the paper tonight, watch how they build the counterfactual distribution from conditional distributions—then map that picture onto M1.</p>
+
+<h2 id="tomorrow">8. Tomorrow’s build step</h2>
+<p>Honest freeze is in <a href="https://github.com/jgridifier/traceot/blob/quant/v4-spec/docs/benchmark/V4_RESULTS.md">V4_RESULTS.md</a>. Next engineering: (1) emit per-cell lsplit / mean-channel multiplier bands so coverage can be scored; (2) diagnose why graded L-moment error still trails CFM/DFL on composition shape cells despite M1; (3) only then re-prereg if bars or estimands must change. Do not quietly edit <code>PREREG_V4.md</code>.</p>
+
+<footer>
+  <p>Dated <strong>2026-10-26</strong>, America/New_York (EDT). Git sha on publish branch: will match merge of <code>quant/nightly-learning</code>; content frozen against main <code>2276793</code>.</p>
+  <p>
+    <a href="research_board.html">research_board.html</a> ·
+    <a href="shift_benchmark.html">shift_benchmark.html</a> ·
+    <a href="explaining_shifts.html">explaining_shifts.html</a> ·
+    <a href="https://github.com/jgridifier/traceot/blob/quant/v4-spec/docs/theory/V4_IMPL_SPEC.md">V4_IMPL_SPEC.md</a> (branch <code>quant/v4-spec</code>)
+  </p>
+  <p>Rules that stay: Rust core / thin Python; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>
