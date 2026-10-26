@@ -5,7 +5,9 @@
 **Constraints:** no neural nets; prefer classical OT / stats / physics-style numerics; age OK; 1–2 developers / few stars is a feature; Rust core preferred; do **not** merge foreign crates unless clearly MIT/Apache and tiny — prefer algorithm borrow notes; never mention banks/industry in repo artifacts.  
 **Method:** Faraday crate survey (cast ≥15 → Faraday cards → shortlist with TRACE hooks). Every claim below was checked against clone / README / tests / license files on 2026-10-26. Ideas that started as brainstorm were labeled and verified.
 
-Related: [BOARD_V4.md](BOARD_V4.md) (RC2, M1, M4), [LANDSCAPE.md](LANDSCAPE.md), [REFS_V4.md](REFS_V4.md). Teaching page: [faraday_mixture_crates.html](../learn/faraday_mixture_crates.html).
+Related: [BOARD_V5.md](BOARD_V5.md) (v4 M1 failed H7 composition cells; Direction A = mixture-first game), [BOARD_V4.md](BOARD_V4.md) (RC2, M1, M4 math), [LANDSCAPE.md](LANDSCAPE.md), [REFS_V4.md](REFS_V4.md). Teaching page: [faraday_mixture_crates.html](../learn/faraday_mixture_crates.html).
+
+**Alignment with BOARD_V5.** Frozen v4 results show the bolted mixing player put mass in the wrong role on `skew_comp` / `tail_comp` and did not NI vs CFM. This survey’s R1 (build the **mixture counterfactual** by averaging CDFs, then play the feature game on that object) is the concrete numerics for V5 Direction A — not another patch on curve-averages. R2/R3 supply dual mixture-weight derivatives and balance weights once that object is primary.
 
 ---
 
