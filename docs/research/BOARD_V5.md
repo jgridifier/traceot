@@ -1,5 +1,7 @@
 # Research board v5 — after v4 FAIL
 
+> Related structure track (not Q_mix): [CROSSCAT_MODERNIZATION.md](CROSSCAT_MODERNIZATION.md) — Rust CrossCat rebuild with oracle parity.
+
 **Date:** 2026-10-26 (America/New_York).  
 **Freeze input:** [`V4_RESULTS.md`](../benchmark/V4_RESULTS.md) @ prereg `d50732f`, branch `quant/v4-spec`.  
 **Rule:** no new full scored suite here. Failures stay failures. No banks / industry framing.

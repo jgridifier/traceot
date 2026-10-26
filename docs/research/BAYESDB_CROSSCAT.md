@@ -3,7 +3,7 @@
 **Date:** 2026-10-26 (America/New_York)  
 **Pinned question:** What glass-box tabular **structure / mixture composition** ideas can TRACE borrow from CrossCat (and the BayesDB query layer) **without neural nets** — and without adopting a Bayesian database wholesale?  
 **Constraints:** no banks/industry mentions in repo artifacts; no neural nets as the method; prefer algorithm borrow notes over new dependencies; verify stars / licenses / dates from sources (never invent).  
-**Method:** Faraday pass on MIT ProbComp tabular NPBayes stack. Teaching page: [bayesdb_crosscat.html](../learn/bayesdb_crosscat.html).
+**Method:** Faraday pass on MIT ProbComp tabular NPBayes stack. Teaching page: [bayesdb_crosscat.html](../learn/bayesdb_crosscat.html). Follow-on plan: [CROSSCAT_MODERNIZATION.md](CROSSCAT_MODERNIZATION.md) · [crosscat_modernization.html](../learn/crosscat_modernization.html).
 
 Related: [FARADAY_MIXTURE_CRATES.md](FARADAY_MIXTURE_CRATES.md) (RC2 numerics: \(Q_{\mathrm{mix}}\) vs barycenter), [BOARD_V5.md](BOARD_V5.md), [BOARD_V4.md](BOARD_V4.md) (RC2), [LANDSCAPE.md](LANDSCAPE.md).
 

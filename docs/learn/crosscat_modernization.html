@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE: Modernizing CrossCat ideas (Rust rebuild plan)</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .kill{ border-left-color: #e06070; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  ol{ padding-left: 1.3rem; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="bayesdb_crosscat.html">BayesDB + CrossCat review</a> ·
+  <a href="research_board.html">Research board v4</a> ·
+  <a href="faraday_mixture_crates.html">Faraday mixture crates</a> ·
+  <a href="landscape.html">Research landscape</a> ·
+  <a href="nightly.html">Nightly</a>
+</p>
+
+<h1>Modernizing CrossCat ideas for TRACE (Rust rebuild plan)</h1>
+<p class="muted">Plan only · 2026-10-26 (America/New_York) · technical detail in
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/CROSSCAT_MODERNIZATION.md">CROSSCAT_MODERNIZATION.md</a>
+· prior review: <a href="bayesdb_crosscat.html">bayesdb_crosscat.html</a></p>
+
+<div class="callout good">
+<strong>Decision framing (Jared, 2026-10-26 ET).</strong>
+This is an <strong>optimized rebuild</strong> of CrossCat’s generative model and
+inference surface — not a loose “inspired by” rewrite.
+The original <code>probcomp/crosscat</code> (+ thin bayeslite predictive hooks where
+needed) is the <strong>validation oracle</strong>: same synthetic / public-academic
+tables, same seeds where possible, documented tolerances on predictive queries,
+co-assignment, cluster structure, and likelihood-style checks.
+Rust must <em>match</em> the oracle first, then beat wall-clock and memory by a
+large margin. We still do <strong>not</strong> rebuild BayesDB as a product.
+</div>
+
+<h2>1. Why modernize</h2>
+<p>
+Last night’s review
+(<a href="bayesdb_crosscat.html">BayesDB + CrossCat nighttime reading</a>,
+merge <code>0258408</code>) concluded the <em>ideas</em> are glass-box and TRACE-adjacent,
+but the C++/Cython/Python stack is bitrotted (Travis-era packaging; CrossCat master tip
+<strong>2019-11-19</strong>; bayeslite tip <strong>2020-04-16</strong>; bayeslite README warns of
+shifting behavior and insecure data handling).
+TRACE wants a Rust core with thin Python bindings, no neural nets, and methods that
+either are novel or match best rivals while being clearly faster.
+CrossCat’s factorial views × per-view row clusters are worth keeping as a
+<strong>TRACE-adjacent research track</strong> for mixture/composition attribution
+(views, \(\pi\), co-assignment) — as diagnostics / generative foil — not as a
+Bayesian database.
+</p>
+
+<h2>2. Timeless ideas vs dated machinery</h2>
+<table>
+<thead>
+<tr><th>Keep (timeless)</th><th>Fix / replace (dated)</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>Outer column CRP (views) × inner row CRP per view; type-specific conjugates (JMLR §2)</td>
+  <td>Single-site Gibbs engine (slow mixing; paper §2.6 local-minima warning)</td>
+</tr>
+<tr>
+  <td>Soft co-assignment / \(z\)-matrix dependence probabilities; context-sensitive row similarity</td>
+  <td>Typing / hyper-prior layer glued to Python2-era heuristics; Travis packaging</td>
+</tr>
+<tr>
+  <td>Explicit category masses \(\pi\) as composition object; collapsed conjugates where possible</td>
+  <td>Weak convergence diagnostics; hard posterior summarization / label switching</td>
+</tr>
+<tr>
+  <td>Efficient conditionals for simulate / densify once state is frozen</td>
+  <td>Serialization, parallelism, numeric kernels; batch-table-only / no streaming story</td>
+</tr>
+</tbody>
+</table>
+<p class="muted">
+Discard for TRACE scope: BQL DBMS, SQLite storage shell, MML product surface, any
+neural density heads. Keep bayeslite only as an optional oracle for a few predictive
+query shapes — not as runtime.
+</p>
+
+<h2>3. Known failure modes</h2>
+<table>
+<thead>
+<tr><th>Issue</th><th>Evidence / citation</th><th>Proposed fix in rebuild</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>Slow / Gibbs wall-clock; \(O(RDVC)\) sweeps</td>
+  <td>JMLR §2.4 complexity; recommends ~10–100 chains × 100–1,000 iters; empirical ~10M cells ceiling in paper</td>
+  <td>Rust collapsed Gibbs + SAMS-style split-merge (Jain &amp; Neal 2004); rayon over chains/views; cache-friendly contingency / suff-stats; SIMD where profiles show hot loops</td>
+</tr>
+<tr>
+  <td>Convergence / mixing traps (reject new views)</td>
+  <td>JMLR §2.6 explicitly warns single-site Gibbs can look “converged” while stuck</td>
+  <td>Parallel chains from prior; Geweke/NSE-style traces on \(\alpha\), #views; split-merge; documented ESS / IAT gates before claiming parity</td>
+</tr>
+<tr>
+  <td>Bitrot / Python2-era / Travis / packaging</td>
+  <td>crosscat README Travis badge; master tip <code>1f2ac5a</code> (2019-11-19); bayeslite tip <code>211e5eb</code> (2020-04-16); conda/Anaconda install path</td>
+  <td>Frozen oracle container (pinned Python + deps); never vendor their tree into TRACE core — separate harness only</td>
+</tr>
+<tr>
+  <td>Model assumptions (hard views; type kernels; missingness)</td>
+  <td>JMLR §2 generative model; missing cells handled in likelihood; hard non-overlapping views</td>
+  <td>Spec freeze in P0 with invariants; missing-at-random as in paper; optional MNAR later only if oracle has a comparable path</td>
+</tr>
+<tr>
+  <td>Identifiability / label switching; hard summarization</td>
+  <td>Inherent to CRP partitions; paper reports Monte Carlo co-assignment rather than “the” clustering</td>
+  <td>Ship co-assignment / \(\pi\) summaries as first-class APIs; avoid exposing raw label ids without alignment</td>
+</tr>
+<tr>
+  <td>Batch-table focus; limited streaming</td>
+  <td>Paper + repos are offline tables</td>
+  <td>Non-goal for P0–P2; kill any streaming feature creep</td>
+</tr>
+<tr>
+  <td>Insecure data handling</td>
+  <td>bayeslite README: “SHOULD NOT BE EXPECTED TO TREAT YOUR DATA SECURELY”</td>
+  <td>Oracle in isolated container; TRACE harness uses synthetic / public-academic tables only</td>
+</tr>
+<tr>
+  <td>Modern rivals already faster / better mixed</td>
+  <td>Lace (Rust PCC, Baxter Eaves et al.; crates.io lace 0.9.1 MIT; lace_cc Gibbs/SAMS/Slice); VB-CRP (Kurihara/Welling/Teh 2007); DP survey arXiv:2303.17182</td>
+  <td>Benchmark vs CrossCat oracle <em>and</em> Lace as speed foil; borrow algorithms (not trees) unless explicit ask to depend</td>
+</tr>
+</tbody>
+</table>
+
+<h2>4. Target architecture</h2>
+<div class="callout">
+<strong>Rust core modules (planned, not implemented in this PR):</strong>
+<code>model</code> (generative + invariants) ·
+<code>suffstats</code> (typed conjugate tables) ·
+<code>partition</code> (CRP state, alignment helpers) ·
+<code>kernel</code> (collapsed Gibbs, optional SAMS) ·
+<code>chains</code> (parallel chains, diagnostics) ·
+<code>query</code> (conditionals, co-assignment, \(\pi\)) ·
+<code>serde_state</code> (reproducible dumps).
+<strong>Python:</strong> thin PyO3 surface for TRACE pre-flight diagnostics only.
+<strong>Oracle harness (separate path):</strong> pinned CrossCat/bayeslite container + parity suite.
+</div>
+<p><strong>What we will NOT build yet:</strong></p>
+<ul>
+  <li>Full BQL / BayesDB DBMS, SQLite shell, or MML.</li>
+  <li>Neural nets / amortized encoders.</li>
+  <li>V5 \(Q_{\mathrm{mix}}\) scored suite (stays separate; this track is structure diagnostics).</li>
+  <li>Vendoring <code>probcomp/crosscat</code> or <code>promised-ai/lace</code> into the TRACE library crate without an explicit later ask.</li>
+</ul>
+
+<h2>5. Oracle parity protocol (rebuild gate)</h2>
+<p>
+Frozen reference commits (verified <code>gh api</code> 2026-10-26 America/New_York):
+</p>
+<ul>
+  <li><strong>crosscat</strong> <code>master</code> tip
+      <code>1f2ac5a43a50ebd7aaa89f0c5ac3815a170848c5</code>
+      (2019-11-19 UTC) — Apache-2.0; 328★.</li>
+  <li><strong>bayeslite</strong> tip
+      <code>211e5eb3821a464a2fffeb9d35e3097e1b7a99ba</code>
+      (2020-04-16 UTC) — Apache-2.0; 942★; used only for optional predictive-query shapes.</li>
+</ul>
+<p><strong>Bitrot workarounds for the oracle:</strong> Docker/Podman image with pinned
+Python 3.x + numpy/Cython versions known to build that commit; run
+<code>./check.sh</code> smoke first; never upgrade deps silently; record image digest in the
+parity log. If the tip will not build, stop and document — do not “fix” oracle math.
+</p>
+<p><strong>Quantities that must match</strong> (same table, same seed, same #chains/#iters when
+the oracle exposes them), within documented tolerances after label-alignment:</p>
+<ol>
+  <li>Column co-assignment / dependence \(z\)-matrix (Frobenius or max-entry error).</li>
+  <li>Within-view row co-assignment (or ARI / pairwise agreement after alignment).</li>
+  <li>Category mass vectors \(\pi\) (sorted / Wasserstein-1 on weights) for composition views.</li>
+  <li>Predictive: held-out conditional log score and/or imputation RMSE/0-1 on synthetic cells.</li>
+  <li>Likelihood-style joint score of latent state under the shared generative density (JMLR §2.2), up to documented numerical tolerance.</li>
+</ol>
+<div class="callout kill">
+<strong>Kill if parity fails:</strong>
+If after P1 budget (spec + two sampler iterations) the Rust core cannot meet the
+frozen tolerances on the synthetic partition suite, <em>stop the rebuild</em>.
+Options then are: (a) narrow to a TRACE diagnostic that only needs co-assignment
+approx quality without full CrossCat likelihood parity, or (b) evaluate depending
+on Lace as an external engine behind a TRACE API — both require an explicit ask.
+Do not quietly loosen tolerances to “pass.”
+</div>
+
+<h2>6. Phased roadmap (acceptance / kill)</h2>
+<table>
+<thead>
+<tr><th>Phase</th><th>Deliverable</th><th>Accept</th><th>Kill</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>P0</strong> math/spec freeze</td>
+  <td>Generative model + invariants + parity protocol written as testable claims; oracle image builds tip SHAs</td>
+  <td>Spec review signed off; oracle smoke green</td>
+  <td>Oracle tip unbuildable after documented bitrot attempt → pause track</td>
+</tr>
+<tr>
+  <td><strong>P1</strong> sampler in Rust</td>
+  <td>Collapsed Gibbs (± SAMS) on synthetic tables; parity vs CrossCat; speed vs CrossCat and vs naive DP-MM; Lace as optional foil</td>
+  <td>Parity tolerances met; ≥5× wall-clock vs CrossCat on agreed synthetic sizes <em>or</em> clear profile showing path to ≥5× with one more iteration</td>
+  <td>Parity miss (see above); or no credible path to large speedup vs CrossCat <em>and</em> no win vs Lace foil</td>
+</tr>
+<tr>
+  <td><strong>P2</strong> TRACE pre-flight APIs</td>
+  <td>views / \(\pi\) / co-assignment usable as composition-vs-response diagnostics</td>
+  <td>On synthetic independent feature blocks, high Pr[different views]; API usable from Python without BQL</td>
+  <td>APIs do not change any TRACE-facing diagnostic decision vs a dumb correlation baseline</td>
+</tr>
+<tr>
+  <td><strong>P3</strong> optional predict / impute</td>
+  <td>Only if P1–P2 clear speed+quality gates</td>
+  <td>Match oracle predictive checks within tol; still no BQL product</td>
+  <td>Predictive work without P1–P2 green — forbidden</td>
+</tr>
+</tbody>
+</table>
+<p class="muted">P0 is <em>not</em> V5 \(Q_{\mathrm{mix}}\). Keep Q_mix on its own board.</p>
+
+<h2>7. How we’ll know it worked</h2>
+<ol>
+  <li><strong>Parity.</strong> Frozen synthetic partitions (known view/cluster truth) recover structure vs CrossCat within tolerances; no industry datasets.</li>
+  <li><strong>Speed / memory.</strong> Large-margin win vs CrossCat oracle on the same machine/image class; report Lace foil numbers honestly.</li>
+  <li><strong>TRACE usefulness.</strong> Co-assignment / \(\pi\) APIs change a pre-flight call on composition vs response feature blocks (synthetic).</li>
+  <li><strong>Falsifiers.</strong> Parity fail; speed stall; diagnostics no better than correlation; scope creep into BQL.</li>
+</ol>
+
+<h2>8. Risks &amp; non-goals</h2>
+<ul>
+  <li><strong>Lace already exists</strong> (Rust PCC + Python; Gibbs/SAMS/Slice in <code>lace_cc</code>). Ignoring it would be dishonest; depending on it without ask would violate TRACE “Rust core we own” preference. Plan: foil + algorithm borrow first.</li>
+  <li>Label switching can fake “parity fail” — alignment protocol required.</li>
+  <li>Hyper-parameter grids in CrossCat are heuristic; P0 must freeze comparable grids.</li>
+  <li>Non-goals: BayesDB product, neural nets, streaming, industry data, merging foreign trees into <code>traceot</code> core, starting V5 Q_mix from this page.</li>
+</ul>
+
+<h2>9. Citations</h2>
+<ul>
+  <li>Mansinghka, V., Shafto, P., Jonas, E., Petschulat, C., Gasner, M., &amp; Tenenbaum, J. B. (2016). CrossCat. <em>JMLR</em> 17(138).
+      <a href="https://jmlr.org/papers/v17/11-392.html">jmlr.org</a> ·
+      <a href="https://arxiv.org/abs/1512.01272">arXiv:1512.01272</a></li>
+  <li>Mansinghka, V., Tibbetts, R., Baxter, J., Shafto, P., &amp; Eaves, B. (2015). BayesDB.
+      <a href="https://arxiv.org/abs/1512.05006">arXiv:1512.05006</a></li>
+  <li>Neal, R. M. (2000). Markov chain sampling methods for Dirichlet process mixture models. <em>JCGS</em> 9(2).</li>
+  <li>Jain, S., &amp; Neal, R. M. (2004). A split-merge MCMC procedure for the DP mixture model. <em>JCGS</em> 13(1).</li>
+  <li>Kurihara, K., Welling, M., &amp; Teh, Y. W. (2007). Collapsed variational Dirichlet process mixture models. IJCAI.</li>
+  <li>Quintana, F. A., et al. related survey context: “Advances in Bayesian random partition models” —
+      <a href="https://arxiv.org/abs/2303.17182">arXiv:2303.17182</a> (2023).</li>
+  <li>Vicentini, C. (2023). Transcoding sampler for stick-breaking DP mixtures.
+      <a href="https://arxiv.org/abs/2304.02563">arXiv:2304.02563</a>.</li>
+  <li>Code oracles: <a href="https://github.com/probcomp/crosscat">probcomp/crosscat</a> @ <code>1f2ac5a</code> ·
+      <a href="https://github.com/probcomp/bayeslite">probcomp/bayeslite</a> @ <code>211e5eb</code>.</li>
+  <li>Modern Rust foil: <a href="https://github.com/promised-ai/lace">promised-ai/lace</a> (MIT; crates.io <code>lace</code> 0.9.1, <code>lace_cc</code>, <code>rv</code>).</li>
+  <li>Prior TRACE review: <a href="bayesdb_crosscat.html">bayesdb_crosscat.html</a> ·
+      <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BAYESDB_CROSSCAT.md">BAYESDB_CROSSCAT.md</a>.</li>
+</ul>
+
+<p class="muted">
+Verified 2026-10-26 America/New_York against JMLR/arXiv HTML, GitHub API tip SHAs,
+crates.io (User-Agent fetch), and bayeslite/crosscat READMEs. Plan only — no Rust
+crate in this PR. No banks/industry wording.
+</p>
+</body>
+</html>
