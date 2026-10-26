@@ -3,7 +3,7 @@
 //! Spec: V4_IMPL_SPEC `fit_l2.rs`. Channel 0 by squared-loss boosting; k≥1 by
 //! least squares on (2k+1) Y P*_k(Û); ridge λ k^{2s} across k.
 
-#![allow(dead_code, clippy::too_many_arguments)]
+#![allow(dead_code, clippy::too_many_arguments, clippy::type_complexity)]
 
 use crate::error::{Result, TraceError};
 use crate::linalg::solve_spd;

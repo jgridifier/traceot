@@ -23,7 +23,11 @@ pub use game::{
     cov_mix_shares, phi_budget, play_mixing_game, role_shapley, split_mixing_by_cov, swap_g_table,
     swap_negate, MixingGameConfig, MixingGameResult, PlayerShare, RolePieces,
 };
-pub use infer::{multiplier_replicate, split_product, symmetrised_coord_players};
+pub use infer::{
+    bin_level_ifs, bootstrap_multiplier, infer_from_contrib, multiplier_replicate, split_product,
+    studentized_perm, symmetrised_coord_players, InferConfig, InferResult, InfluenceRow,
+    V4Inference,
+};
 pub use mixture::{
     barycenter_from_conditionals, cdf_from_q, interp_q, mixing_term, mixture_from_conditionals,
     mixture_from_conditionals_weighted, mixture_hybrid, mixture_identical_rows, pooled_y_range,
