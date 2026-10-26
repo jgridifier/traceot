@@ -17,7 +17,10 @@ pub use balance::{
     riesz_ridge, BalanceConfig, BalanceDiagnostics, BalanceResult,
 };
 pub use fit_l2::{sobolev_penalty, FitL2Config};
-pub use game::{phi_budget, role_shapley, RolePieces};
+pub use game::{
+    cov_mix_shares, phi_budget, play_mixing_game, role_shapley, split_mixing_by_cov, swap_g_table,
+    swap_negate, MixingGameConfig, MixingGameResult, PlayerShare, RolePieces,
+};
 pub use infer::{multiplier_replicate, split_product, symmetrised_coord_players};
 pub use mixture::{
     barycenter_from_conditionals, cdf_from_q, interp_q, mixing_term, mixture_from_conditionals,
