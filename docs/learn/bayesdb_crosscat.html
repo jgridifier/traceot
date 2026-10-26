@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE: BayesDB + CrossCat — nighttime reading</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{
+    border-left-color: #e0a050;
+  }
+  .good{
+    border-left-color: #4caf8f;
+  }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  ol{ padding-left: 1.3rem; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="research_board.html">Research board v4</a> ·
+  <a href="landscape.html">Research landscape</a> ·
+  <a href="faraday_mixture_crates.html">Faraday mixture crates</a> ·
+  <a href="trace_theory.html">TRACE theory</a> ·
+  <a href="nightly.html">Nightly</a>
+</p>
+
+<h1>BayesDB + CrossCat: nighttime reading for TRACE</h1>
+<p class="muted">Applied reading · 2026-10-26 (America/New_York) · research cards in
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BAYESDB_CROSSCAT.md">BAYESDB_CROSSCAT.md</a></p>
+
+<div class="callout">
+<strong>Remember tomorrow morning.</strong>
+CrossCat is a <em>mixture of mixtures over a table</em>: it partitions
+<em>columns</em> into independent “views,” and inside each view partitions
+<em>rows</em> into clusters. BayesDB / BQL is a query layer on top of that
+kind of generative model — not a replacement for TRACE’s OT game.
+The TRACE hook is the <strong>feature partition × row clusters</strong> story
+for composition vs response, glass-box and nonparametric — not adopting the
+full Bayesian database stack.
+</div>
+
+<h2>1. Why these two repos tonight</h2>
+<p>
+You asked to save
+<a href="https://github.com/probcomp/BayesDB">probcomp/BayesDB</a> and
+<a href="https://github.com/probcomp/crosscat">probcomp/crosscat</a>
+for later and to get a review page for tonight. They are MIT Probabilistic
+Computing Project work on <em>tabular</em> joint modelling without neural nets.
+</p>
+<ul>
+  <li><strong>CrossCat</strong> — the structure-discovery / joint-density engine
+      (column partitions × row clusters).</li>
+  <li><strong>BayesDB</strong> — the product framing and query language (BQL)
+      for asking “probable implications” of a table the way SQL asks for facts.
+      The legacy <code>BayesDB</code> repo redirects to
+      <a href="https://github.com/probcomp/bayeslite">probcomp/bayeslite</a>
+      (the implementation that actually lived on).</li>
+</ul>
+<p>
+Verified GitHub signals (via <code>gh api</code>, 2026-10-26 America/New_York):
+</p>
+<table>
+<thead>
+<tr><th>Repo</th><th>Stars</th><th>License</th><th>Last default-branch tip (API)</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><a href="https://github.com/probcomp/crosscat">crosscat</a></td>
+  <td>328</td>
+  <td>Apache-2.0</td>
+  <td>2019-11-19 (master tip); GitHub <code>pushed_at</code> 2024-02-21 ET</td>
+  <td>C++/Cython + Python; <code>./check.sh</code>; Travis badge in README</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/probcomp/bayeslite">bayeslite</a></td>
+  <td>942</td>
+  <td>Apache-2.0</td>
+  <td>~2020-04-16 tip; <code>pushed_at</code> 2023-11-19 ET</td>
+  <td>BQL + storage; README warns of shifting code and insecure data handling</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/probcomp/BayesDB">BayesDB</a> (legacy)</td>
+  <td>888</td>
+  <td>Apache-2.0</td>
+  <td>2015-09-24</td>
+  <td>README only: points to bayeslite</td>
+</tr>
+</tbody>
+</table>
+<p class="muted">
+Honest bitrot: these are research-era codebases. Useful as <em>ideas and papers</em>,
+not as a dependency TRACE would vendor. CrossCat’s last visible master commit in the
+API is late 2019; bayeslite’s tip is ~2020. Travis CI is largely sunset.
+</p>
+
+<h2>2. What CrossCat found / does</h2>
+<p>
+Cite first:
+<strong>Mansinghka, Shafto, Jonas, Petschulat, Gasner &amp; Tenenbaum (2016).</strong>
+<em>CrossCat: A Fully Bayesian Nonparametric Method for Analyzing Heterogeneous,
+High Dimensional Data.</em>
+<em>Journal of Machine Learning Research</em> 17(138):1–49.
+Also <a href="https://arxiv.org/abs/1512.01272">arXiv:1512.01272</a>
+(submitted 2015-12-03).
+Earlier workshop framing: “cross-categorization” for multiple overlapping clusterings.
+</p>
+
+<h3>Claims (from the paper, not hype)</h3>
+<ul>
+  <li>Estimate a flexible joint over mixed-type table columns without fixing a
+      single clustering for every variable.</li>
+  <li>Discover <em>independencies between variables</em> (outer partition into views)
+      while still using mixture models inside each view for multi-modal dependence.</li>
+  <li>Support efficient conditional simulation / density evaluation for prediction,
+      imputation, and pairwise dependence probabilities.</li>
+  <li>Scale empirically to heterogeneous tables on the order of
+      <strong>~10 million cells</strong> in the JMLR experiments (voting records,
+      handwritten digits, gene-expression subsets, and other public tabular sets
+      named in the paper).</li>
+</ul>
+
+<h3>Setup in one picture</h3>
+<p>
+Think of a data table with rows = entities and columns = variables.
+</p>
+<ol>
+  <li><strong>Outer CRP / DP over columns</strong> → partition variables into
+      non-overlapping <em>views</em>. Variables in different views are modeled as
+      independent given the latent structure.</li>
+  <li><strong>Inner CRP / DP over rows, per view</strong> → a separate clustering
+      of entities for that view’s variables.</li>
+  <li><strong>Type-specific component models</strong> inside each
+      (category, column) cell — e.g. Beta–Bernoulli for binary, Normal–Gamma for
+      continuous, Dirichlet–Discrete for categorical (paper §2).</li>
+</ol>
+<p>
+Inference: collapsed / auxiliary-variable Gibbs over view assignments, row
+categories, and hyper-parameters (paper §2.4). Predictions average (or sample)
+over approximate posterior samples.
+</p>
+
+<h3>Results &amp; limitations (honest)</h3>
+<ul>
+  <li><strong>Results the paper actually reports:</strong> latent structures that
+      match domain intuition on several public tables; competitive imputation /
+      prediction vs mixtures, Bayes-net structure learning, and some model-free
+      baselines on the tasks they chose; resistance to “distractor” columns that
+      swamp a plain mixture (paper §2.6, §3).</li>
+  <li><strong>Limitations:</strong> approximate MCMC (not a closed-form fit);
+      runtime grows with rows × dims × views × categories; single-site Gibbs can
+      need many parallel chains; component models are classical conjugates, not
+      arbitrary response surfaces; modern packaging / CI is aged (see bitrot above).
+      CrossCat discovers <em>column partitions and row clusters</em> — it does not
+      speak Wasserstein or TRACE’s channel game.</li>
+</ul>
+
+<h2>3. What BayesDB / BQL adds on top</h2>
+<p>
+Cite first:
+<strong>Mansinghka, Tibbetts, Baxter, Shafto &amp; Eaves (2015).</strong>
+<em>BayesDB: A probabilistic programming system for querying the probable
+implications of data.</em>
+<a href="https://arxiv.org/abs/1512.05006">arXiv:1512.05006</a>
+(submitted 2015-12-15).
+</p>
+<p>
+Plain language: SQL answers “what is in the table?” BQL answers “what does the
+table make probable?” by Bayesian model averaging over an implicit ensemble of
+multivariate models (CrossCat-style factorial mixtures are the default baseline
+meta-model in that paper).
+</p>
+<ul>
+  <li><strong>BQL primitives</strong> (paper): <code>SIMULATE</code>, <code>INFER</code>,
+      <code>ESTIMATE</code> — simulate plausible rows, impute, and estimate dependence /
+      similarity — alongside ordinary SQL-style selection.</li>
+  <li><strong>Generative population model (GPM) interface</strong> — any backend that
+      can simulate and score conditionals can plug into BQL.</li>
+  <li><strong>MML</strong> — a small meta-modeling language for qualitative dependence
+      constraints and mixing custom models with the automatic baseline.</li>
+</ul>
+<p>
+<strong>Repo map:</strong> <code>probcomp/BayesDB</code> is the old landing page;
+<code>probcomp/bayeslite</code> is “BayesDB on SQLite” (BQL interpretation + storage).
+bayeslite’s README is blunt: expect shifting behavior; do not expect secure data
+handling; smoke tests via <code>./check.sh</code>.
+</p>
+<div class="callout warn">
+<strong>For TRACE tonight:</strong> treat BayesDB as the <em>query / UX layer idea</em>
+and CrossCat as the <em>structure idea</em>. We are not building a Bayesian database,
+and we are not merging bayeslite.
+</div>
+
+<h2>4. Core math / intuition</h2>
+<p>
+Chinese restaurant process (CRP) reminder — sequential seating that induces a
+partition with concentration \(\alpha\):
+</p>
+\[
+Pr(z_i = j) \propto
+\begin{cases}
+\alpha & \text{if \(j\) is a new table}\\
+m_j & \text{otherwise ( \(m_j\) = size of table \(j\) )}
+\end{cases}
+\]
+<p>
+CrossCat stacks two levels (paper §2.1, generative process):
+</p>
+\[
+\begin{aligned}
+\alpha_D &\sim \mathrm{Gamma}(1,1), &
+z_d &\sim \mathrm{CRP}(\alpha_D) && \text{(column → view)} \\
+\alpha_v &\sim \mathrm{Gamma}(1,1), &
+y^v_r &\sim \mathrm{CRP}(\alpha_v) && \text{(row → category | view \(v\))} \\
+x_{(r,d)} &\sim L_d(\theta^{d}_{y^{z_d}_r}) &&&& \text{(type-specific likelihood)}
+\end{aligned}
+\]
+<p>
+<strong>Predictive implication.</strong>
+To sample \(X_{\mathrm{target}} \mid X_{\mathrm{given}}\): for each posterior sample,
+assign the new row to a category in each relevant view given the observed cells,
+then draw targets from that category’s component models; average across samples
+(paper §2.5). Pairwise dependence can be read off as the posterior probability
+that two columns share a view.
+</p>
+<div class="callout good">
+<strong>Intuition to sleep on.</strong>
+A plain DP mixture forces <em>one</em> clustering of rows for <em>all</em> columns —
+so a strong signal in one block of features can drown another. CrossCat’s outer
+partition lets composition-like structure live in one view while response-like
+structure lives in another, each with its own row clustering. That is the
+mixture-of-mixtures / feature-partition story.
+</div>
+
+<h2>5. What this means for TRACE</h2>
+<p>
+TRACE’s board problem (RC2 / H7 composition cells): averaging quantile curves
+is not the same as the mixture of people. Faraday’s survey already pointed at
+Eulerian \(Q_{\mathrm{mix}}\) numerics. CrossCat is a different angle on the
+<em>same family of mistakes</em>: assuming one latent grouping explains every column.
+</p>
+
+<h3>Assumptions we would inherit if we borrowed the <em>idea</em></h3>
+<ul>
+  <li>Table = rows × typed columns; missing cells OK in their model.</li>
+  <li>Dependence structure is a partition of features (hard views), not a dense graph.</li>
+  <li>Within a view, a nonparametric mixture is rich enough for the joint.</li>
+  <li>Inference is MCMC over discrete partitions — glass-box latent state, not a net.</li>
+</ul>
+
+<h3>What we might borrow (hooks, not a port)</h3>
+<ol>
+  <li><strong>Feature partition for composition vs response.</strong>
+      Treat “who is in the population” features and “how the outcome responds”
+      features as candidates for different views — so composition shifts and
+      structural shifts are not forced through one clustering.</li>
+  <li><strong>Per-view row clusters as glass-box mixture weights.</strong>
+      Inside a composition view, category masses \(\pi_c\) are explicit; a change
+      in \(\pi\) is exactly the mix-driven story TRACE needs to book beside CFM.</li>
+  <li><strong>Posterior dependence as a diagnostic.</strong>
+      Column co-assignment probability is a readable “do these features share a
+      signal?” check before trusting a single additive TRACE decomposition.</li>
+</ol>
+
+<h3>What we will <em>not</em> do</h3>
+<div class="callout warn">
+<ul>
+  <li>Adopt BayesDB / bayeslite / BQL wholesale as TRACE’s interface.</li>
+  <li>Vendor CrossCat’s C++/Cython stack into the Rust core.</li>
+  <li>Replace TRACE’s OT / L-moment channel game with CRP Gibbs.</li>
+  <li>Use neural nets, or claim CrossCat “solves” H7 without a TRACE-native check.</li>
+  <li>Start a V5 scored suite or Eulerian \(Q_{\mathrm{mix}}\) experiment from this page alone.</li>
+</ul>
+</div>
+
+<h2>6. How we’ll know a borrowed idea worked</h2>
+<p>
+High-level falsifiers only (no full suite tonight):
+</p>
+<ol>
+  <li><strong>Partition sanity.</strong> On a synthetic table where composition features
+      are independent of response features by construction, a CrossCat-style outer
+      partition (or a TRACE analogue) should put them in different views with high
+      posterior probability; a single global clustering baseline should look worse
+      on held-out conditional log score.</li>
+  <li><strong>Mix masses move shape.</strong> If only category weights \(\pi_c\) change
+      between periods (locations fixed), TRACE’s composition / mixing term should
+      move when those masses are wired in; if it stays flat while CFM moves, the
+      borrow failed.</li>
+  <li><strong>No silent merge.</strong> Any prototype stays out-of-core (Python notebook
+      or a thin experiment crate). Merging foreign code into <code>traceot</code> still
+      needs an explicit ask.</li>
+</ol>
+
+<h2>7. Full citations + links</h2>
+<ul>
+  <li>Mansinghka, V., Shafto, P., Jonas, E., Petschulat, C., Gasner, M., &amp; Tenenbaum, J. B. (2016).
+      CrossCat: A Fully Bayesian Nonparametric Method for Analyzing Heterogeneous, High Dimensional Data.
+      <em>JMLR</em> 17(138), 1–49.
+      <a href="https://jmlr.org/papers/v17/11-392.html">jmlr.org</a> ·
+      <a href="https://arxiv.org/abs/1512.01272">arXiv:1512.01272</a></li>
+  <li>Mansinghka, V., Tibbetts, R., Baxter, J., Shafto, P., &amp; Eaves, B. (2015).
+      BayesDB: A probabilistic programming system for querying the probable implications of data.
+      <a href="https://arxiv.org/abs/1512.05006">arXiv:1512.05006</a></li>
+  <li>Code (Apache-2.0):
+      <a href="https://github.com/probcomp/crosscat">github.com/probcomp/crosscat</a> ·
+      <a href="https://github.com/probcomp/bayeslite">github.com/probcomp/bayeslite</a> ·
+      <a href="https://github.com/probcomp/BayesDB">github.com/probcomp/BayesDB</a> (legacy redirect)</li>
+  <li>Project pages linked from the READMEs:
+      <a href="http://probcomp.csail.mit.edu/crosscat/">CrossCat</a> ·
+      <a href="http://probcomp.csail.mit.edu/software/bayesdb">BayesDB</a>
+      (ProbComp URLs as published in the repos; availability may vary).</li>
+  <li>TRACE research card file:
+      <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BAYESDB_CROSSCAT.md">docs/research/BAYESDB_CROSSCAT.md</a></li>
+  <li>Sibling reading:
+      <a href="faraday_mixture_crates.html">Faraday mixture crates</a> (RC2 numerics) ·
+      <a href="research_board.html">Research board v4</a> ·
+      <a href="nightly.html">Nightly</a></li>
+</ul>
+
+<p class="muted">
+Tone check: this is a teaching page for a hobby research method. Stars, dates,
+licenses, and paper claims were checked against GitHub API + arXiv/JMLR on
+2026-10-26 (America/New_York). If a number is not cited above, do not invent it.
+</p>
+</body>
+</html>
