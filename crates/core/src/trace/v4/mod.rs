@@ -12,7 +12,10 @@ pub mod game;
 pub mod infer;
 pub mod mixture;
 
-pub use balance::{rake_bin_marginals, BalanceConfig};
+pub use balance::{
+    apply_bin_weights, entropy_balance, ipf_bin_weights, rake_bin_marginals, riesz_dictionary,
+    riesz_ridge, BalanceConfig, BalanceDiagnostics, BalanceResult,
+};
 pub use fit_l2::{sobolev_penalty, FitL2Config};
 pub use game::{phi_budget, role_shapley, RolePieces};
 pub use infer::{multiplier_replicate, split_product, symmetrised_coord_players};
