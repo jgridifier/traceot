@@ -1,0 +1,12 @@
+{
+  "name": "traceot-v4",
+  "description": "Rust core + maturin Python bindings for TRACE. Cloud Agent Builds boot ready for cargo test and pytest.",
+  "install": "bash .cursor/install.sh",
+  "start": "echo \"traceot env ready: $(rustc --version) | $(python -V) | maturin $(maturin --version 2>/dev/null | head -1)\"",
+  "terminals": [
+    {
+      "name": "cargo-test-core",
+      "command": "cargo test -p traceot-core"
+    }
+  ]
+}
