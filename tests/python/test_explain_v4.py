@@ -30,7 +30,11 @@ def test_explain_v4_keys_and_shapes():
     not hasattr(traceot, "explain_v4"), reason="explain_v4 binding missing"
 )
 def test_trace_v4_adapter():
-    from benchmarks.shiftbench.sb_adapter_trace_v4 import TraceV4Method
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmarks" / "shiftbench"))
+    from sb_adapter_trace_v4 import TraceV4Method
 
     rng = np.random.default_rng(2)
     n, p = 40, 2

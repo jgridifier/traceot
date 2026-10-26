@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .sb_adapter import Decomposition, ShiftMethod
+from sb_adapter import Decomposition, ShiftMethod
 
 
 class TraceV4Method(ShiftMethod):
@@ -60,6 +60,7 @@ class TraceV4Method(ShiftMethod):
                 "seconds_total": r.get("seconds_total"),
                 "interaction_mass": r.get("interaction_mass"),
                 "mixing_residual": r.get("mixing_residual"),
+                "lsplit": r.get("lsplit"),
             },
         )
 

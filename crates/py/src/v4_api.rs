@@ -129,6 +129,25 @@ fn explain_v4_py<'py>(
         Array1::from_vec(report.feat_mix_struct).into_pyarray(py),
     )?;
 
+    // Per-channel order-free split (lsplit) from player roles 0/1
+    let k = report.k_channels;
+    let mut lcomp = vec![0.0; k];
+    let mut lstruct = vec![0.0; k];
+    for pl in &report.players {
+        if pl.channel >= k {
+            continue;
+        }
+        match pl.role {
+            0 | 2 => lcomp[pl.channel] += pl.value,
+            1 | 3 => lstruct[pl.channel] += pl.value,
+            _ => {}
+        }
+    }
+    let lsplit = PyDict::new(py);
+    lsplit.set_item("comp", Array1::from_vec(lcomp.clone()).into_pyarray(py))?;
+    lsplit.set_item("struct", Array1::from_vec(lstruct.clone()).into_pyarray(py))?;
+    d.set_item("lsplit", lsplit)?;
+
     // ShiftBench-facing split for the mean statistic
     let split = PyDict::new(py);
     split.set_item(
