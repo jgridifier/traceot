@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE: Faraday survey — mixture crates</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{
+    border-left-color: #e0a050;
+  }
+  .good{
+    border-left-color: #4caf8f;
+  }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="research_board.html">Research board v4</a> ·
+  <a href="landscape.html">Research landscape</a> ·
+  <a href="trace_theory.html">TRACE theory</a> ·
+  <a href="nightly.html">Nightly</a>
+</p>
+
+<h1>Faraday survey: obscure code that could fix TRACE’s mixture gap</h1>
+<p class="muted">Applied reading · 2026-10-26 (America/New_York) · full technical cards in
+<a href="https://github.com/jgridifier/traceot/blob/quant/faraday-mixture-crates/docs/research/FARADAY_MIXTURE_CRATES.md">FARADAY_MIXTURE_CRATES.md</a></p>
+
+<div class="callout">
+<strong>The pinned question.</strong>
+What little-known but solid method or code could make TRACE book
+<em>mix-driven shape change</em> correctly — and compete with CFM on composition
+cells — while staying fast and glass-box (no neural nets)?
+</div>
+
+<h2>1. Why this matters (RC2 in one picture)</h2>
+<p>
+Take two groups with the same bell-shaped noise, centres at −1 and +1.
+TRACE’s current “average of quantile curves” stays a bell of the <em>same width</em>.
+Pooling the people (a mixture) makes a <em>wider</em> law. If period B merely has
+more people far from the centre, the pooled shape moves and CFM sees it;
+TRACE’s barycenter channels \(k \ge 1\) book nothing. That is RC2 on the
+<a href="research_board.html">v4 board</a>:
+<strong>average of curves ≠ curve of the mixture</strong>.
+</p>
+
+<h2>2. What we looked for</h2>
+<ul>
+  <li>Classical OT / stats / physics-style numerics (age OK).</li>
+  <li>1–2 developers, few stars, thin reviews — treated as a <em>feature</em>.</li>
+  <li>Rust preferred for anything we might someday reimplement; foreign code is for <em>borrowing algorithms</em>, not merging crates.</li>
+  <li>Every claim checked against clone / README / tests / license on 2026-10-26.</li>
+</ul>
+
+<h2>3. Top three borrows (do these, not a laundry list)</h2>
+
+<h3>R1 — QAG’s 1-D quantile chart (math only)</h3>
+<p>
+<a href="https://github.com/Sensifai-BV/QAG">QAG</a> (0 stars, no license file — <strong>do not vendor</strong>)
+makes one fact unavoidable in code: in one dimension, Wasserstein-2 is flat in
+quantile coordinates, and the \(p=2\) barycenter is literally the pointwise mean
+of quantile functions. CFM’s target is different: average the <em>CDFs</em>, then invert.
+</p>
+<div class="callout good">
+<strong>TRACE hook.</strong>
+Build the model marginal by
+\(F_{[s,t]}(y)=\mathbb{E}_{x\sim F_s}[F_t(y\mid x)]\),
+set \(Q_{[s,t]}=F_{[s,t]}^{-1}\),
+and define the mixing term
+\(M=Q_{[s,t]}-\bar Q_{[s,t]}\).
+Run the existing switch game on the marginal quantiles so mixing players receive
+\(\langle D_M,\Delta M\rangle\). Use the board’s second-order covariance formula as the fast path; use grid inversion as the exact path and the falsifier.
+</div>
+<p><strong>Why v4 may have missed it.</strong>
+A mixing player that still averages quantile bumps stays Lagrangian. QAG pins the
+numerics to “invert the averaged CDF” — what CFM does on composition cells.</p>
+
+<h3>R2 — wnet’s mixture-proportion derivatives (idea only)</h3>
+<p>
+<a href="https://github.com/michalsta/wnet">wnet</a> (2 stars, MIT, one main developer)
+is a careful min-cost-flow Wasserstein library that exposes derivatives of transport
+cost with respect to <em>spectrum mixture proportions</em>, with dual certificates.
+</p>
+<div class="callout good">
+<strong>TRACE hook.</strong>
+When composition changes bin (or cluster) weights \(\pi_j\), the dual potentials of
+the 1-D monotone map give \(\partial W^2/\partial\pi_j\). Use that to audit or replace
+the second-order covariance split when the location spread is not small. Reimplement
+the 1-D dual form in Rust — do not pull LEMON into the core.
+</div>
+<p><strong>Why v4 may have missed it.</strong>
+v4 defaulted to a Taylor identity. Exact dual derivatives w.r.t. mixture weights are
+rare in small packages; wnet ships them.</p>
+
+<h3>R3 — Entropy balancing + Riesz weights (M4 solvers)</h3>
+<p>
+<a href="https://github.com/uscensusbureau/entropy-balance-weighting">Census EBW</a> (CC0)
+matches bin moments with minimum-KL weights.
+<a href="https://github.com/rieszreg/krrr">krrr</a> does classical kernel Riesz regression
+for density-ratio-like representers (no neural net).
+</p>
+<div class="callout good">
+<strong>TRACE hook.</strong>
+For barycenter composition pieces: EBW on TRACE’s own bin indicators (exact under the
+board’s sufficiency proposition). For the mixture target: least-squares Riesz on bin
+indicators (+ a few interactions). Drop the logistic period-odds model that balances
+the wrong moments (RC4).
+</div>
+
+<h2>4. Shortlist at a glance</h2>
+<table>
+<thead>
+<tr><th>Candidate</th><th>Why it is here</th><th>Use how?</th></tr>
+</thead>
+<tbody>
+<tr><td>QAG</td><td>Exact 1-D quantile geometry</td><td>Borrow math; no license to vendor</td></tr>
+<tr><td>wnet</td><td>Mixture-weight derivatives + duals</td><td>Borrow 1-D dual idea</td></tr>
+<tr><td>wass (Rust)</td><td>1-D W, free-support bary, Gaussian W₂, unbalanced Sinkhorn</td><td>Borrow / optional tiny MIT-Apache dep</td></tr>
+<tr><td>MAM</td><td>Exact W barycenter (Douglas–Rachford)</td><td>Note if TRACE leaves 1-D</td></tr>
+<tr><td>Census EBW</td><td>Scalable entropy balancing</td><td>Adopt algorithm for M4</td></tr>
+<tr><td>krrr</td><td>Kernel Riesz representers</td><td>Adopt algorithm for mixture weights</td></tr>
+<tr><td>fast_uot</td><td>1-D Frank–Wolfe unbalanced OT</td><td>Partial (entry/exit)</td></tr>
+<tr><td>free-support barycenters</td><td>Approximative free-support W₂</td><td>Foil / algorithm note</td></tr>
+<tr><td>rust-optimal-transport</td><td>Solid POT-style Rust solvers</td><td>Foil; not RC2-specific</td></tr>
+<tr><td>sliced GMM OT</td><td>“Mixture Wasserstein” for GMMs</td><td>Partial; TRACE outcome is 1-D</td></tr>
+</tbody>
+</table>
+
+<h2>5. Do not touch</h2>
+<div class="callout warn">
+<ul>
+  <li><strong>GeomLoss / POT</strong> — foils only (already well reviewed).</li>
+  <li><strong>SuperInstance OT agent repos</strong> — near-duplicate stubs, not careful numerics.</li>
+  <li><strong>UGW / imaging WDL / neural barycenter papers</strong> — wrong geometry or neural nets.</li>
+  <li><strong>emd-ring</strong> — exact but locked to 9-bin circular HOG.</li>
+  <li><strong>Merging foreign crates into the TRACE core</strong> unless tiny, MIT/Apache, and clearly worth it — prefer a page of borrowed math in Rust.</li>
+</ul>
+</div>
+
+<h2>6. The single sharp next experiment</h2>
+<ol>
+  <li>On a two-component location mixture, compute TRACE’s \(\bar Q\) and the Eulerian \(Q_{\mathrm{mix}}\) from the same fitted conditionals.</li>
+  <li>Check that \(M=Q_{\mathrm{mix}}-\bar Q\) recovers the known shape gap and that H7 composition cells move when \(M\) enters the game.</li>
+  <li>Compare covariance split vs 1-D dual \(\partial W^2/\partial\pi_j\).</li>
+  <li>Swap logistic composition weights for EBW on bins; keep the board’s pre-registered bars.</li>
+</ol>
+<p>
+If composition error stays &gt; 2× CFM at \(n=2\times 10^4\), the bottleneck is the
+conditional model itself — not the game — which is exactly the board’s falsifier.
+</p>
+
+<p class="muted">
+Faraday here means a skeptical, source-level reading pass of under-reviewed packages.
+This page is the applied summary; the Faraday cards and verification log live in the research markdown.
+</p>
+</body>
+</html>
