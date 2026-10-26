@@ -16,7 +16,9 @@ pub use balance::{
     apply_bin_weights, entropy_balance, ipf_bin_weights, rake_bin_marginals, riesz_dictionary,
     riesz_ridge, BalanceConfig, BalanceDiagnostics, BalanceResult,
 };
-pub use fit_l2::{sobolev_penalty, FitL2Config};
+pub use fit_l2::{
+    fit_l2_channels, predict_channel, sobolev_penalty, ChannelFit, FitL2Config, FitL2Result,
+};
 pub use game::{
     cov_mix_shares, phi_budget, play_mixing_game, role_shapley, split_mixing_by_cov, swap_g_table,
     swap_negate, MixingGameConfig, MixingGameResult, PlayerShare, RolePieces,
