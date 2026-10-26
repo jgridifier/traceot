@@ -63,9 +63,9 @@ pub use v1fit::{
     MonoReport, ProjectionPair, ReportKind, V1Config, V1Model,
 };
 pub use v4::{
-    entropy_balance, fit_l2_channels, mixture_from_conditionals,
+    entropy_balance, explain_v4, fit_l2_channels, mixture_from_conditionals,
     mixture_from_conditionals_weighted, mixture_identical_rows, phi_budget, play_mixing_game,
     rake_bin_marginals, riesz_ridge, role_shapley, split_product, symmetrised_coord_players,
-    BalanceConfig, BalanceResult, FitL2Config, FitL2Result, MixingGameConfig, MixingGameResult,
-    MixtureConfig, MixtureLaw, RolePieces,
+    BalanceConfig, BalanceResult, ExplainV4Config, ExplainV4Report, FitL2Config, FitL2Result,
+    InferConfig, MixingGameConfig, MixingGameResult, MixtureConfig, MixtureLaw, RolePieces,
 };

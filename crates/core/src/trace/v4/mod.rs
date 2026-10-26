@@ -7,6 +7,7 @@
 #![allow(unused_imports)]
 
 pub mod balance;
+pub mod explain;
 pub mod fit_l2;
 pub mod game;
 pub mod infer;
@@ -16,6 +17,7 @@ pub use balance::{
     apply_bin_weights, entropy_balance, ipf_bin_weights, rake_bin_marginals, riesz_dictionary,
     riesz_ridge, BalanceConfig, BalanceDiagnostics, BalanceResult,
 };
+pub use explain::{explain_v4, ExplainV4Config, ExplainV4Report, MeanSplit};
 pub use fit_l2::{
     fit_l2_channels, predict_channel, sobolev_penalty, ChannelFit, FitL2Config, FitL2Result,
 };

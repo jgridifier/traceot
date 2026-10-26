@@ -25,6 +25,7 @@ from .adopt import ADOPTRegressor
 from .baselines import FrechetMeanRegressor, GlobalFrechetRegressor, L2AdditiveQuantileRegressor
 from .primitives import quantile_grid
 from .shift import shift_decompose
+from .v4 import explain_v4
 from .trace import TraceRegressor
 from .trace_v1 import FrechetV1, RobustV1, TraceHybrid, TraceV1
 
@@ -45,4 +46,5 @@ __all__ = [
     "quantile_grid",
     "shift",
     "shift_decompose",
+    "explain_v4",
 ]
