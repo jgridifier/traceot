@@ -1,0 +1,21 @@
+TRACE v4 derivation verification
+run: 2026-10-26 10:05 EDT, python 3.13.5, numpy 2.5.4
+seed: 20261014 (D1), 42 (D2), 7 (D3), 11 (D4); wall 47.8s
+
+SUMMARY: 10 PASS, 0 FAIL, 5 INFO
+
+[INFO] v4d:D1  mixing expansion; REWRITE: residual O((s/sigma)^3) generically, O((s/sigma)^4) for symmetric delta (odd moments vanish); bar slope in [2.4,4.5]
+[PASS] v4d:D1.sup_residual_scales_as_r3  normal: slope=4.115 (ok=True), remove@0.1=0.998 (ok=True), leg_slope=4.221 rem_c=0.998 (ok=True); resid=[6.000e-06 2.000e-05 3.910e-04 6.084e-03]; skew: slope=3.578 (ok=True), remove@0.1=0.971 (ok=True), leg_slope=3.599 rem_c=0.980 (ok=True); resid=[4.90000e-05 8.26000e-04 1.12920e-02 1.17742e-01]; gumbel: slope=4.300 (ok=True), remove@0.1=0.996 (ok=True), leg_slope=4.165 rem_c=0.997 (ok=True); resid=[3.0000e-05 5.2000e-05 1.4030e-03 2.0189e-02]
+[PASS] v4d:D1.correction_removes_90pct_at_r01  normal: slope=4.115 (ok=True), remove@0.1=0.998 (ok=True), leg_slope=4.221 rem_c=0.998 (ok=True); skew: slope=3.578 (ok=True), remove@0.1=0.971 (ok=True), leg_slope=3.599 rem_c=0.980 (ok=True); gumbel: slope=4.300 (ok=True), remove@0.1=0.996 (ok=True), leg_slope=4.165 rem_c=0.997 (ok=True)
+[PASS] v4d:D1.legendre_channel_version  normal: slope=4.115 (ok=True), remove@0.1=0.998 (ok=True), leg_slope=4.221 rem_c=0.998 (ok=True); resid=[6.000e-06 2.000e-05 3.910e-04 6.084e-03]; skew: slope=3.578 (ok=True), remove@0.1=0.971 (ok=True), leg_slope=3.599 rem_c=0.980 (ok=True); resid=[4.90000e-05 8.26000e-04 1.12920e-02 1.17742e-01]; gumbel: slope=4.300 (ok=True), remove@0.1=0.996 (ok=True), leg_slope=4.165 rem_c=0.997 (ok=True); resid=[3.0000e-05 5.2000e-05 1.4030e-03 2.0189e-02]
+[INFO] v4d:D2  bin-marginal balance => exact E_s f_kj for piecewise-constant f; logistic fails
+[PASS] v4d:D2.raking_exact_for_bin_piecewise_f  max|sum w f - E_s f|=7.216e-16 over 100 random f × 3 features
+[PASS] v4d:D2.logistic_odds_negative_control_fails  logistic max err=1.204e+00, n_large_err=300/300 (need many failures)
+[INFO] v4d:D3  split-product E<D1,D2>=||D||^2; ||Dhat||^2 biased by tr Var; symmetrised players
+[PASS] v4d:D3.split_product_unbiased  E<D1,D2>=0.161019 vs ||D||^2=0.160000; MC-SE=0.004322; |diff|/SE=0.24
+[PASS] v4d:D3.plugin_biased_by_trVar  E||Dhat||^2=1.389950; ||D||^2+trVar=1.395535; trVar=1.235535
+[PASS] v4d:D3.symmetrised_players_sum_to_cross  coord identity err=0.000e+00; channel-player err=1.249e-16
+[INFO] v4d:D4  Aumann-Shapley along geodesic equals Phi iff interactions vanish
+[PASS] v4d:D4.AS_equals_Phi_when_I_zero  max|Phi-AS|=4.885e-15 at I=0 (max|I|=2.914e-16); budgets W=4.653297 sumPhi=4.653297 sumAS=4.653297
+[PASS] v4d:D4.AS_Phi_gap_when_I_nonzero  max|Phi-AS|=0.442080 at I≠0 (max|I|=2.271575); REWRITE CLAIM: AS along geodesic/diagonal equals Phi iff all interactions vanish. budgets W=7.233187 sumPhi=7.233187 sumAS=7.233187
+[INFO] v4d:D4.gap_report  I=0 max|Phi-AS|=4.885e-15; I≠0 max|Phi-AS|=0.442080, mean|Phi-AS|=0.222039, rel gap vs W=0.0611
