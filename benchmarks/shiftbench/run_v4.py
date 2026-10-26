@@ -35,6 +35,7 @@ SHAPE_GRID = [(2000, 5, H7_N2K), (20000, 20, H7_N20K)]
 
 V4 = TraceV4Method(k_channels=4, n_boot=2000)
 
+
 def _jsonify(obj):
     if isinstance(obj, dict):
         return {k: _jsonify(v) for k, v in obj.items()}
@@ -45,7 +46,6 @@ def _jsonify(obj):
     if isinstance(obj, (np.floating, np.integer)):
         return obj.item()
     return obj
-
 
 
 def run_v4(XA, yA, XB, yB, seed):
@@ -75,23 +75,25 @@ def t_shape(a):
                 rivals[name]["lsplit"] = rd.extra.get("lsplit")
         except Exception as e:  # noqa: BLE001 — keep failure on record
             rivals[name] = {"error": str(e), "sec": time.perf_counter() - t1}
-    return _jsonify({
-        "scen": scen,
-        "n": n,
-        "p": p,
-        "rep": rep,
-        "TRACE_V4": {
-            "split": {k: (float(a), float(b)) for k, (a, b) in res.split.items()},
-            "feat_comp": None if res.feat_comp is None else res.feat_comp.tolist(),
-            "feat_struct": None if res.feat_struct is None else res.feat_struct.tolist(),
-            "lsplit": res.extra.get("lsplit"),
-            "budget": res.extra.get("budget"),
-            "budget_ci": res.extra.get("budget_ci"),
-            "sec": sec,
-        },
-        "rivals": rivals,
-        "sdA": float(np.std(yA)),
-    })
+    return _jsonify(
+        {
+            "scen": scen,
+            "n": n,
+            "p": p,
+            "rep": rep,
+            "TRACE_V4": {
+                "split": {k: (float(a), float(b)) for k, (a, b) in res.split.items()},
+                "feat_comp": None if res.feat_comp is None else res.feat_comp.tolist(),
+                "feat_struct": None if res.feat_struct is None else res.feat_struct.tolist(),
+                "lsplit": res.extra.get("lsplit"),
+                "budget": res.extra.get("budget"),
+                "budget_ci": res.extra.get("budget_ci"),
+                "sec": sec,
+            },
+            "rivals": rivals,
+            "sdA": float(np.std(yA)),
+        }
+    )
 
 
 def t_cover(a):
@@ -103,17 +105,19 @@ def t_cover(a):
     a_, b_ = centred(XA, XB)
     t0 = time.perf_counter()
     point, _ = run_v4(a_, yA, b_, yB, seed_of("m", rep))
-    return _jsonify({
-        "scen": scen,
-        "rep": rep,
-        "point": {
-            "split": {k: (float(a), float(b)) for k, (a, b) in point.split.items()},
-            "lsplit": point.extra.get("lsplit"),
-            "budget": point.extra.get("budget"),
-            "budget_ci": point.extra.get("budget_ci"),
-        },
-        "sec": time.perf_counter() - t0,
-    })
+    return _jsonify(
+        {
+            "scen": scen,
+            "rep": rep,
+            "point": {
+                "split": {k: (float(a), float(b)) for k, (a, b) in point.split.items()},
+                "lsplit": point.extra.get("lsplit"),
+                "budget": point.extra.get("budget"),
+                "budget_ci": point.extra.get("budget_ci"),
+            },
+            "sec": time.perf_counter() - t0,
+        }
+    )
 
 
 def t_shiftbench(a):

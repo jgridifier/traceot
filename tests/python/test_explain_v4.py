@@ -8,9 +8,7 @@ import pytest
 traceot = pytest.importorskip("traceot")
 
 
-@pytest.mark.skipif(
-    not hasattr(traceot, "explain_v4"), reason="explain_v4 binding missing"
-)
+@pytest.mark.skipif(not hasattr(traceot, "explain_v4"), reason="explain_v4 binding missing")
 def test_explain_v4_keys_and_shapes():
     rng = np.random.default_rng(0)
     n, p = 60, 3
@@ -26,9 +24,7 @@ def test_explain_v4_keys_and_shapes():
     assert r["budget_ci_lo"] <= r["budget_ci_hi"]
 
 
-@pytest.mark.skipif(
-    not hasattr(traceot, "explain_v4"), reason="explain_v4 binding missing"
-)
+@pytest.mark.skipif(not hasattr(traceot, "explain_v4"), reason="explain_v4 binding missing")
 def test_trace_v4_adapter():
     import sys
     from pathlib import Path

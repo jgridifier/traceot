@@ -7,7 +7,6 @@ Calls `traceot.explain_v4` and maps the mean-channel split into the frozen
 from __future__ import annotations
 
 import numpy as np
-
 from sb_adapter import Decomposition, ShiftMethod
 
 

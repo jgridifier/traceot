@@ -168,8 +168,6 @@ def main():
         cells[(r["scen"], r["n"])].append(r)
 
     accuracy_verdicts = []
-    any_ni = False
-    any_best = False
 
     for scen in SHAPE_SCEN:
         t_scen = truth_shape.get(scen, {})
@@ -181,7 +179,9 @@ def main():
         for n in (2000, 20000):
             rows = cells.get((scen, n), [])
             if not rows or shapley is None:
-                lines_body.append(f"| {scen} | {n} | {len(rows)} | — | — | — | — | — | INCOMPLETE |")
+                lines_body.append(
+                    f"| {scen} | {n} | {len(rows)} | — | — | — | — | — | INCOMPLETE |"
+                )
                 accuracy_verdicts.append("INCOMPLETE")
                 continue
             ev4, e_riv, names = [], [], []
@@ -214,10 +214,6 @@ def main():
             d = ev4[mask] - e_riv[mask]
             verd, ci, hi = cell_verdict(d, delta)
             accuracy_verdicts.append(verd)
-            if verd == "NON-INFERIOR":
-                any_ni = True
-            if verd == "BEST":
-                any_best = True
             rival = max(set(names), key=names.count) if names else "n/a"
             lines_body.append(
                 f"| {scen} | {n} | {int(mask.sum())} | {float(np.mean(ev4[mask])):.4g} | "
@@ -239,12 +235,11 @@ def main():
     for scen in SB_SCEN:
         t_scen = truth_sb.get(scen, {})
         rows = sb_by.get(scen, [])
-        for metric, err_fn in (
-            ("mean_channel", lambda r, nm: _sb_err(r, nm, t_scen, "mean")),
-            ("per_feature", lambda r, nm: _sb_err(r, nm, t_scen, "feat")),
-        ):
+        for metric, kind in (("mean_channel", "mean"), ("per_feature", "feat")):
             if not rows or not t_scen:
-                lines_body.append(f"| {scen} | {metric} | {len(rows)} | — | — | — | — | — | INCOMPLETE |")
+                lines_body.append(
+                    f"| {scen} | {metric} | {len(rows)} | — | — | — | — | — | INCOMPLETE |"
+                )
                 accuracy_verdicts.append("INCOMPLETE")
                 continue
             ev4, e_riv, names = [], [], []
@@ -253,13 +248,13 @@ def main():
                 sdA = float(r.get("sdA", t_scen.get("sd_A", 1.0)))
                 delta = 0.002  # already in sd units after scaling
                 deltas.append(delta)
-                e0 = err_fn(r, "TRACE_V4")
+                e0 = _sb_err(r, "TRACE_V4", t_scen, kind)
                 ev4.append(e0)
                 best_e, best_n = float("inf"), None
                 for nm, rv in r.get("rivals", {}).items():
                     if "error" in rv:
                         continue
-                    e = err_fn({"TRACE_V4": rv, "sdA": sdA}, "TRACE_V4")
+                    e = _sb_err({"TRACE_V4": rv, "sdA": sdA}, "TRACE_V4", t_scen, kind)
                     if np.isfinite(e) and e < best_e:
                         best_e, best_n = e, nm
                 if best_n is None:
@@ -282,10 +277,6 @@ def main():
             d = ev4[mask] - e_riv[mask]
             verd, ci, hi = cell_verdict(d, delta)
             accuracy_verdicts.append(verd)
-            if verd == "NON-INFERIOR":
-                any_ni = True
-            if verd == "BEST":
-                any_best = True
             rival = max(set(names), key=names.count) if names else "n/a"
             lines_body.append(
                 f"| {scen} | {metric} | {int(mask.sum())} | {float(np.mean(ev4[mask])):.4g} | "
@@ -337,7 +328,6 @@ def main():
             ratios[n] = ratio
             lines_body.append(f"| {n} | {len(rows)} | {sv:.3g} | {sc:.3g} | {ratio:.3g} |")
         # Conditional gate
-        need_speed = any_ni and not all(v == "BEST" for v in accuracy_verdicts if v != "INCOMPLETE")
         # PREREG: if ANY cell is only NI (and not all BEST), require ≥5× at both sizes
         all_acc_best = accuracy_verdicts and all(v == "BEST" for v in accuracy_verdicts)
         if all_acc_best:
@@ -345,12 +335,7 @@ def main():
         elif "INCOMPLETE" in accuracy_verdicts or "FAIL" in accuracy_verdicts:
             # still report whether ratio would pass
             r1, r2 = ratios.get(100_000), ratios.get(1_000_000)
-            ok = (
-                np.isfinite(r1)
-                and np.isfinite(r2)
-                and r1 >= 5
-                and r2 >= 5
-            )
+            ok = np.isfinite(r1) and np.isfinite(r2) and r1 >= 5 and r2 >= 5
             speed_pass = f"{'PASS' if ok else 'FAIL'} conditional (≥5× both sizes); ratios={ratios}"
             if "FAIL" in accuracy_verdicts:
                 speed_pass += " (accuracy already FAIL — speed does not rescue)"
