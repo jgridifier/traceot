@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5 pre-registration — mixture-first first gate</title>
+<meta name="description" content="TRACE v5 Direction A pre-registration: Eulerian mixture CDF first gate only. Status PRE-REGISTERED; no scored run started.">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+  .pending{ color: #e0a050; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="research_board.html">Research board v4</a> ·
+  <a href="landscape.html">Research landscape</a> ·
+  <a href="faraday_mixture_crates.html">Faraday mixture crates</a> ·
+  <a href="crosscat_modernization.html">CrossCat modernization</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="v5_prereg.html">V5 pre-reg</a>
+</p>
+
+<p><span class="status">PRE-REGISTERED · awaiting first-gate run</span></p>
+<h1>TRACE v5 pre-registration: mixture-first (first gate only)</h1>
+<p class="muted">Applied status · frozen 2026-10-28 (America/New_York) · full protocol in
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5.md">PREREG_V5.md</a>
+· board <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BOARD_V5.md">BOARD_V5.md</a></p>
+
+<div class="callout good">
+<strong>Status.</strong> Pre-registered. No v5 scored run has started. No
+<code>benchmarks/results/v5_*</code> files. First gate = Eulerian
+\(Q_{\mathrm{mix}}\) / pure-mix falsifier on existing H7 composition cells only.
+Do <em>not</em> read this page as “suite in progress.”
+</div>
+
+<h2>1. Why v4 failed (one picture)</h2>
+<p>
+v4’s game sat on a <strong>Lagrangian</strong> average of conditional quantile curves.
+Composition that spreads locations changes the <strong>Eulerian</strong> mixture
+marginal without moving barycenter shape channels. CFM’s object <em>is</em> that
+mixture; TRACE attributed the wrong object. Board: all ten H7 cells FAIL; ShiftBench
+mean FAIL on <code>mixed</code>/<code>hetero</code>.
+</p>
+
+<div class="callout warn">
+<strong>Greenhouse telltale</strong> (frozen v4 <code>mixed</code> mean split; from
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BOARD_V5.md">BOARD_V5</a>,
+not invented): truth \(\approx(0.660,-0.181)\), CFM \(\approx(0.646,-0.174)\),
+v4 \(\approx(0.238,0.238)\) — a symmetric 50/50 split when composition dominates the mean.
+</div>
+
+<h2>2. Claim</h2>
+<p>
+Make the <strong>mixture counterfactual</strong> the primitive, then run TRACE’s
+order-free per-feature game on that marginal. Lead papers:
+Chernozhukov–Fernández-Val–Melly (2013) counterfactual distributions;
+Kolouri–Park–Rohde cumulative distribution transform (arXiv:1511.03206).
+</p>
+
+\[
+F_{[s,t]}(y)=\mathbb{E}_{x\sim F_s}\bigl[F_t(y\mid x)\bigr],
+\qquad
+Q_{[s,t]}(u)=F_{[s,t]}^{-1}(u).
+\]
+
+<p>
+Lagrangian residual (what v4 centered on, wrongly as the primary object):
+</p>
+
+\[
+\bar Q_{[s,t]}(u)=\mathbb{E}_{x\sim F_s}Q_t(u\mid x),
+\qquad
+M_{[s,t]}(u)=Q_{[s,t]}(u)-\bar Q_{[s,t]}(u).
+\]
+
+<p>
+V5 scores the game on \(Q_{[s,t]}\), not on \(\bar Q_{[s,t]}\). Same Rust-core /
+thin-Python rule; no neural nets.
+</p>
+
+<h2>3. First gate only</h2>
+<table>
+  <thead>
+    <tr><th>Item</th><th>This freeze</th><th>Not this freeze</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Cells</td>
+      <td><code>skew_comp</code>, <code>tail_comp</code> at \(n=2\cdot10^3\) and \(2\cdot10^4\)</td>
+      <td>Other H7 cells, H8b, ShiftBench, speed</td>
+    </tr>
+    <tr>
+      <td>Seeds</td>
+      <td>9500–9549 / 9600–9619 (new; not v4’s 9100–9429)</td>
+      <td>Any reused v4 index</td>
+    </tr>
+    <tr>
+      <td>Bars</td>
+      <td>PREREG_V4 §5 BEST / NI (\(\delta=0.10\times\) planted magnitude); Holm \(\alpha=0.05\)</td>
+      <td>New invented thresholds</td>
+    </tr>
+    <tr>
+      <td>Kill</td>
+      <td>Any cell FAIL, or pure-mix role-swap falsifier FAIL</td>
+      <td>“Almost” suite expansion</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout bad">
+<strong>Kill, don’t park.</strong> If the pure-mix falsifier fails, stop expanding.
+Record FAIL. Do not open the full scored suite. Do not silently edit
+<code>PREREG_V4.md</code>. Pre-register was the chosen fork; kill means stop expanding,
+not abandon the program quietly.
+</div>
+
+<h2>4. What this page is not</h2>
+<ul>
+  <li>Not a claim that a first-gate run has started.</li>
+  <li>Not CrossCat / BayesDB work — that adjacent track is
+    <a href="crosscat_modernization.html">CrossCat modernization</a> only.</li>
+  <li>Not Direction B (Hellinger–Kantorovich).</li>
+  <li>Not permission to invent new accuracy bars.</li>
+</ul>
+
+<h2>5. Scoreboard (empty until gate runs)</h2>
+<table>
+  <thead>
+    <tr><th>Cell</th><th>Bar</th><th>Result</th><th>Verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>skew_comp</code> n=2e3</td><td>BEST or NI vs CFM</td><td>—</td><td class="pending">NOT RUN</td></tr>
+    <tr><td><code>skew_comp</code> n=2e4</td><td>BEST or NI vs CFM</td><td>—</td><td class="pending">NOT RUN</td></tr>
+    <tr><td><code>tail_comp</code> n=2e3</td><td>BEST or NI vs CFM</td><td>—</td><td class="pending">NOT RUN</td></tr>
+    <tr><td><code>tail_comp</code> n=2e4</td><td>BEST or NI vs CFM</td><td>—</td><td class="pending">NOT RUN</td></tr>
+    <tr><td>Pure-mix falsifier</td><td>Mass in mix role, not silent role</td><td>—</td><td class="pending">NOT RUN</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Links</h2>
+<ul>
+  <li>Protocol: <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5.md">docs/research/PREREG_V5.md</a></li>
+  <li>Board: <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BOARD_V5.md">BOARD_V5.md</a></li>
+  <li>Failed prior: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/PREREG_V4.md">PREREG_V4.md</a>,
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V4_RESULTS.md">V4_RESULTS.md</a></li>
+  <li>Mixture borrow: <a href="faraday_mixture_crates.html">Faraday mixture crates</a></li>
+  <li>Adjacent (separate): <a href="crosscat_modernization.html">CrossCat modernization</a></li>
+  <li>Nightly: <a href="nightly.html">nightly.html</a></li>
+</ul>
+
+<p class="muted">Constraints: Rust core / thin Python · no neural nets · no banks or industry mentions · simulated data only.</p>
+</body>
+</html>

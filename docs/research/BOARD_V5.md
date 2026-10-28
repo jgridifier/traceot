@@ -8,6 +8,12 @@
 
 ---
 
+## Status (2026-10-28 ET)
+
+**Direction A pre-registered:** [`PREREG_V5.md`](PREREG_V5.md) — first gate only (Eulerian \(Q_{\mathrm{mix}}\) / pure-mix falsifier on `skew_comp` / `tail_comp`). Teaching page: [`docs/learn/v5_prereg.html`](../learn/v5_prereg.html). Status: **PRE-REGISTERED**, awaiting first-gate run. Full scored suite **not** started. CrossCat modernization remains a separate adjacent track.
+
+---
+
 ## 1. Honest status
 
 TRACE v4 **failed** Jared’s SOTA / speed bar.

@@ -137,6 +137,7 @@
 <p>
   <a href="../index.html">Learn home</a> ·
   <a href="research_board.html">Research board</a> ·
+  <a href="v5_prereg.html">V5 pre-reg</a> ·
   <a href="explaining_shifts.html">Explaining a shift</a> ·
   <a href="shift_benchmark.html">Shift benchmark</a> ·
   <span class="status">nightly · 2026-10-27 evening ET</span>
@@ -144,7 +145,7 @@
 
 <h1>TRACE nightly</h1>
 <p class="lede">A short applied refresher for after work: what changed in the method today, and what that means when you actually explain a distribution shift between two periods.</p>
-<p class="meta">Today’s snapshot: <a href="nightly/2026-10-27.html">2026-10-27</a> (previous: <a href="nightly/2026-10-26.html">2026-10-26</a>) · main <code>ebae939</code> · v4 freeze prereg <code>d50732f</code> (merged to main in PR #17) · overall accuracy <strong>FAIL</strong> · next direction: <strong>V5 mixture-first</strong></p>
+<p class="meta">Today’s snapshot: <a href="nightly/2026-10-27.html">2026-10-27</a> (previous: <a href="nightly/2026-10-26.html">2026-10-26</a>) · main <code>ebae939</code> · v4 freeze prereg <code>d50732f</code> (merged to main in PR #17) · overall accuracy <strong>FAIL</strong> · next: <strong>V5 mixture-first PRE-REGISTERED</strong> (<a href="v5_prereg.html">v5_prereg</a>)</p>
 
 <nav class="toc" aria-label="Contents">
 <ol>
@@ -161,7 +162,7 @@
 
 <h2 id="takeaway">1. Tonight’s takeaway</h2>
 <div class="takeaway">
-<p><strong>No method change today.</strong> Main is still at <code>ebae939</code> (last night’s nightly merge), with no new PRs, no new scored results, and no amendments to the v4 freeze or BOARD_V5. The V5 Direction A theory note that was tomorrow’s step last night has not been written yet, so it carries over. The reading rule from last night stands: until a V5 prereg passes, treat TRACE’s mix/response split on shape channels as weaker than CFM’s, and check any near-50/50 mean split against a counterfactual before believing it.</p>
+<p><strong>Pre-registration landed; no scored run.</strong> V5 Direction A is now <a href="v5_prereg.html">pre-registered</a> (first gate only). No new scored results and no edits to <code>PREREG_V4.md</code>. The reading rule stands: until the first gate <em>passes</em>, treat TRACE’s mix/response split on shape channels as weaker than CFM’s, and check any near-50/50 mean split against a counterfactual before believing it. Do not treat this nightly as a suite start.</p>
 </div>
 
 <h2 id="changelog">2. What changed since last night</h2>
@@ -216,7 +217,7 @@
 <p>When you skim it, focus on the definition of the counterfactual distribution and the section on uniform inference bands. The question for V5 is narrow: if TRACE adopts this object, can its order-free per-feature shares sit on top without losing CFM’s band guarantees?</p>
 
 <h2 id="tomorrow">8. Tomorrow’s build step</h2>
-<p>Carried over, unchanged: write the V5 Direction A theory note before any code. Define the mixture counterfactual by averaging conditional CDFs on a shared grid and inverting (the R1 borrow), state the feature game on CDT coordinates of those laws, and include a falsifier that a pure location-mix change lands entirely in the mix role. Explain the symmetric 50/50 mean split on <code>mixed</code> from the frozen v4 records, and add a short section mapping the note onto the Chernozhukov–Fernández-Val–Melly band construction. No new scored suite and no edits to <code>PREREG_V4.md</code>. Core numerics in Rust, Python as thin bindings, no neural nets.</p>
+<p>Done this freeze: <a href="v5_prereg.html">V5 Direction A pre-registration</a> (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5.md">PREREG_V5.md</a>) — mixture CDF \(F_{[s,t]}\), invert to \(Q_{[s,t]}\), game on that marginal, pure-mix falsifier on <code>skew_comp</code>/<code>tail_comp</code>, bars inherited from PREREG_V4 §5. Status <strong>PRE-REGISTERED</strong>; first-gate run <em>not</em> started; no full suite. Next build step: implement the Eulerian object + falsifier, then lock/run first gate only. No edits to <code>PREREG_V4.md</code>. CrossCat modernization stays a separate track.</p>
 
 <footer>
   <p>Dated <strong>2026-10-27 (evening)</strong>, America/New_York (EDT). Content written against main <code>ebae939</code>. No method change since 2026-10-26.</p>
