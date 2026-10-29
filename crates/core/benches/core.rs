@@ -10,7 +10,9 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Through
 use std::hint::black_box;
 use traceot_core::adopt::{adopt_w2_fit, BackfitConfig};
 use traceot_core::scalable::{binning, histogram, pinball, sketch::QuantileSketch};
-use traceot_core::trace::{fit_trace, TraceConfig};
+use traceot_core::trace::{
+    explain_v5, fit_trace, mixture_cdf_location, support_grid, ExplainV5Config, TraceConfig,
+};
 use traceot_core::w2::{pava, quantile_grid, transport_apply};
 use traceot_core::Mat;
 
@@ -149,5 +151,39 @@ fn bench_trace(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, bench_w2, bench_adopt, bench_scalable, bench_trace);
+fn bench_v5(c: &mut Criterion) {
+    let mut g = c.benchmark_group("v5");
+    g.sample_size(10);
+    for &n in &[2_000usize, 20_000, 200_000] {
+        let mu = normals(n, 1);
+        let r = normals(n, 2);
+        let grid = support_grid(-8.0, 8.0, 256).unwrap();
+        g.throughput(Throughput::Elements(n as u64));
+        g.bench_with_input(BenchmarkId::new("mixture_cdf_location", n), &n, |b, _| {
+            b.iter(|| mixture_cdf_location(black_box(&mu), black_box(&r), &grid).unwrap())
+        });
+    }
+    for &n in &[2_000usize, 20_000] {
+        let p = 5;
+        let xa = normals(n * p, 3);
+        let xb: Vec<f64> = normals(n * p, 4).iter().map(|v| v + 0.3).collect();
+        let e = normals(2 * n, 5);
+        let ya: Vec<f64> = (0..n).map(|i| xa[i * p] + e[i]).collect();
+        let yb: Vec<f64> = (0..n).map(|i| xb[i * p] + 1.2 * e[n + i]).collect();
+        let cfg = ExplainV5Config::default();
+        g.bench_with_input(BenchmarkId::new("explain_v5_p5", n), &n, |b, _| {
+            b.iter(|| explain_v5(&xa, n, &ya, &xb, n, &yb, p, &cfg).unwrap())
+        });
+    }
+    g.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_w2,
+    bench_adopt,
+    bench_scalable,
+    bench_trace,
+    bench_v5
+);
 criterion_main!(benches);

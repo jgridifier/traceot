@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5 first gate — result</title>
+<meta name="description" content="TRACE v5 first gate: Eulerian mixture counterfactual on the pure-composition cells. Verdict FAIL on the n=2000 dev seeds; n=20000 cells not run.">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+  .pending{ color: #e0a050; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_prereg.html">V5 pre-reg</a> ·
+  <a href="research_board.html">Research board</a> ·
+  <a href="nightly.html">Nightly</a>
+</p>
+
+<h1>TRACE v5 first gate: does the mixture view fix the composition cells?</h1>
+<p><span class="status" style="background:#3a1c18;color:#f0b0a0">FAIL — kill rule applies</span>
+<span class="muted">Run 2026-10-29 (ET) · prereg <code>bce021e</code> · full suite <strong>not started</strong></span></p>
+
+<div class="callout bad">
+<strong>Short version.</strong> We built the object the v4 post-mortem asked for — the
+<em>mixture counterfactual</em> — in the Rust core and ran the pre-registered first gate on the
+50 development seeds (n = 2000). It got the roles mostly right on one cell and wrong on the
+other, and on both cells it is <strong>not provably as accurate as CFM</strong> within the
+pre-registered margin. By the frozen rules that is a <strong>FAIL</strong>, and we stop here
+instead of expanding to a full suite.
+</div>
+
+<h2>1. What was being tested</h2>
+<p>When an outcome's distribution changes between two periods A and B, part of the change comes
+from <em>who is in the data</em> (the covariates moved — "composition") and part from
+<em>how the outcome responds to the covariates</em> (the conditional law moved — "response").
+The v5 idea is to build the counterfactual by <strong>averaging conditional CDFs, then
+inverting</strong>:</p>
+<p>\[ F_{[s,t]}(y) = \mathbb{E}_{x\sim F_s} F_t(y\mid x), \qquad Q_{[s,t]} = F_{[s,t]}^{-1}. \]</p>
+<p>(Covariates from period \(s\), response from period \(t\).) This is the counterfactual
+distribution of Chernozhukov, Fernández-Val and Melly (2013). v4 instead averaged
+<em>quantile curves</em>, \(\bar Q_{[s,t]}(u)=\mathbb{E}_{x\sim F_s}Q_t(u\mid x)\), which cannot
+see the extra skew or tail weight that appears when you mix groups with different centres.
+The difference \(M = Q - \bar Q\) is the "mixing residual".</p>
+<p>The change in each L-moment (mean, spread, skew, tail weight) is split fairly between the two
+roles with the two-player Shapley value:</p>
+<p>\[ \text{comp} = \tfrac12\big[(\lambda_{[B,A]}-\lambda_{[A,A]}) + (\lambda_{[B,B]}-\lambda_{[A,B]})\big],\quad
+\text{resp} = \tfrac12\big[(\lambda_{[A,B]}-\lambda_{[A,A]}) + (\lambda_{[B,B]}-\lambda_{[B,A]})\big]. \]</p>
+<p>The two pieces always add up exactly to the total change.</p>
+
+<h2>2. Sanity checks that passed</h2>
+<ul>
+<li><strong>DiNardo–Fortin–Lemieux (1996) toy check.</strong> With discrete covariates, the mixture
+counterfactual \(F_{[B,A]}\) and DFL reweighting of the A sample (weights \(P_B(x)/P_A(x)\)) agree
+to within 0.005 in sup-norm (Rust test) and 0.01 (Python test). They should — they are two routes
+to the same object.</li>
+<li><strong>Kill criterion 3 (are we really Eulerian?).</strong> On a two-group location mixture
+the mixing residual is clearly non-zero while the barycenter's shape L-moments do not move at all.
+v5 attributes on \(Q\), not \(\bar Q\).</li>
+<li><strong>Exact budget.</strong> comp + resp equals the total change to \(10^{-12}\).</li>
+</ul>
+
+<h2>3. The gate result (n = 2000, seeds 9500–9549)</h2>
+<p>Error = |estimated − true| summed over both roles, on the graded L-moment of each cell
+(skew \(\lambda_3\) for <code>skew_comp</code>, tail \(\lambda_4\) for <code>tail_comp</code>).
+\(d\) = v5 error − best rival error, paired by seed. NON-INFERIOR needs the one-sided 95% upper
+bound of \(d\) below \(\delta\) = 10% of the planted effect.</p>
+<table>
+<tr><th>cell</th><th>v5 err</th><th>CFM err</th><th>DFL err</th><th>mean d</th><th>upper 95%</th><th>δ</th><th>accuracy</th><th>|comp| / |resp| (truth)</th><th>roles</th></tr>
+<tr><td>skew_comp</td><td>0.0270</td><td>0.0222</td><td>0.0799</td><td>+0.0048</td><td>0.0071</td><td>0.0040</td><td class="fail">FAIL</td><td>0.026 / 0.013 (0.040 / 0.0001)</td><td class="pass">PASS</td></tr>
+<tr><td>tail_comp</td><td>0.0097</td><td>0.0106</td><td>0.0143</td><td>−0.00001</td><td>0.0016</td><td>0.00046</td><td class="fail">FAIL</td><td>0.0031 / 0.0049 (0.0043 / 0.0003)</td><td class="fail">FAIL</td></tr>
+<tr><td>skew_comp, n=20000</td><td colspan="9" class="pending">INCOMPLETE — seeds 9600–9619 held back, not run</td></tr>
+<tr><td>tail_comp, n=20000</td><td colspan="9" class="pending">INCOMPLETE — seeds 9600–9619 held back, not run</td></tr>
+</table>
+<p>Normal and bootstrap (10 000 draws, seed 2026) upper bounds agree in both cells. Holm-adjusted
+p-values are in <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/v5_gate1_summary.json">v5_gate1_summary.json</a>.</p>
+
+<h2>4. How to read it</h2>
+<ul>
+<li><strong>Real progress on skew.</strong> v4 put almost all of the skew change in the wrong role
+(|comp| ≈ 0.003 vs |resp| ≈ 0.013 at n=20000). v5 moves it to the right role (0.026 vs 0.013), and
+its error is ~3× lower than DFL's. But CFM is still a little better, and "a little" is more than the
+0.004 margin.</li>
+<li><strong>Tail weight is still leaking.</strong> On <code>tail_comp</code>, v5 is on average as
+accurate as CFM (mean d ≈ 0) but too noisy to prove it within a very tight margin (0.00046), and
+the tail change still lands mostly in the response role. Our residual model treats the noise law
+as shared across covariates, which plausibly lets a heavy-tailed covariate's effect partly shows up as a "new noise
+law" — exactly the swap the falsifier is meant to catch.</li>
+<li><strong>Speed is not the problem.</strong> v5 took about 0.02 s per replicate versus 0.22 s for
+CFM (single thread). At n = 20 000, p = 5 the full decomposition runs in ~0.06 s on 8 cores.
+Speed was descriptive only here, not a gate.</li>
+</ul>
+
+<h2>5. What happens next</h2>
+<div class="callout warn">
+Per PREREG_V5 §6 the kill rule applies: no full suite, no seed changes, no re-tuning on these
+cells. The failure is kept on record. Next step is a return to the research board (a dated
+Direction A amendment with a richer conditional model, or Direction B). The mixture-CDF code
+itself stays: it is fast, tested, and useful on its own.
+</div>
+
+<h2>6. Use it</h2>
+<pre><code>import traceot
+r = traceot.explain_v5(x_a, y_a, x_b, y_b)   # Rust core; Python is a thin wrapper
+r["lsplit_comp"], r["lsplit_struct"]          # per L-moment, sums to the total change
+F = traceot.mixture_cdf_location(mu, resid, y_grid)       # exact, O((n+m)·grid)
+F = traceot.mixture_cdf_rows(u_nodes, q_rows, y_grid)     # any conditional quantile model
+Q = traceot.mixture_quantile(y_grid, F, u)</code></pre>
+<p class="muted">Runtime (criterion, 8 cores): mixture CDF 0.4 ms at n=2000, 3.8 ms at n=20 000,
+36 ms at n=200 000 (256-point grid). Results note:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_GATE1_RESULTS.md">V5_GATE1_RESULTS.md</a>.</p>
+
+<h2>Deviations, stated plainly</h2>
+<ul>
+<li>The two n = 20 000 cells (seeds 9600–9619) are part of the pre-registered gate but were held
+back by the project owner, so they are INCOMPLETE. The verdict would be FAIL whatever they show,
+because two required cells already fail.</li>
+<li>The falsifier rule is written in words in the prereg. We applied it as: the active role must
+carry more mean absolute mass than the silent one, and swapping roles must not lower the error.</li>
+<li>The per-feature split on the mixture law is not implemented yet; the gate scores only the
+composition/response split, which is what the prereg names as the scored estimand.</li>
+</ul>
+</body>
+</html>

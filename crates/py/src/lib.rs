@@ -15,6 +15,7 @@ mod shift_v2_api;
 mod trace_api;
 mod v1_api;
 mod v4_api;
+mod v5_api;
 
 use traceot_core::adopt::{BackfitConfig, BackfitResult};
 use traceot_core::scalable::{binning, histogram as hist, pinball, sketch};
@@ -1149,5 +1150,6 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     v1_api::register(m)?;
     shift_v2_api::register(m)?;
     v4_api::register(m)?;
+    v5_api::register(m)?;
     Ok(())
 }

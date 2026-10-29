@@ -1,0 +1,120 @@
+{
+  "prereg_sha": "bce021e",
+  "overall": "FAIL",
+  "cells": [
+    {
+      "scen": "skew_comp",
+      "n": 2000,
+      "graded_lmoment": 3,
+      "delta": 0.004025123083973093,
+      "reps": 50,
+      "truth": {
+        "comp": 0.04011372620723863,
+        "struct": -0.00013750463249229128
+      },
+      "mean_err_v5": 0.02698669478156195,
+      "mean_err_rivals": {
+        "DFL": 0.07987870756807748,
+        "CFM": 0.02217836533654204
+      },
+      "best_rival_mode": "CFM",
+      "mean_d": 0.004808329445019907,
+      "upper_t": 0.0071104635884757465,
+      "upper_boot": 0.007030723496111405,
+      "upper_used": 0.0071104635884757465,
+      "verdict": "FAIL",
+      "p_ni_unadj": 0.7121212865142456,
+      "p_best_unadj": 0.9997042687174321,
+      "mean_abs_comp_hat": 0.02620265230691695,
+      "mean_abs_struct_hat": 0.012938116248747971,
+      "mean_comp_hat": 0.02620265230691695,
+      "mean_struct_hat": 0.012938116248747971,
+      "rival_mean_abs_comp": {
+        "DFL": 0.0010781876989281191,
+        "CFM": 0.03145165604906626
+      },
+      "rival_mean_abs_struct": {
+        "DFL": 0.039705095931460474,
+        "CFM": 0.01091724558936674
+      },
+      "mean_err_v5_roles_swapped": 0.0535157668978999,
+      "falsifier": "PASS",
+      "sec_v5_mean": 0.018302315119071863,
+      "sec_cfm_mean": 0.22194324480195063,
+      "sec_dfl_mean": 0.07711626906180755,
+      "p_ni_holm": 0.7121212865142456,
+      "p_best_holm": 0.9997042687174321
+    },
+    {
+      "scen": "tail_comp",
+      "n": 2000,
+      "graded_lmoment": 4,
+      "delta": 0.0004585521831332207,
+      "reps": 50,
+      "truth": {
+        "comp": 0.00429751956063068,
+        "struct": 0.0002880022707015262
+      },
+      "mean_err_v5": 0.009707643966994391,
+      "mean_err_rivals": {
+        "DFL": 0.014272750711443474,
+        "CFM": 0.010602705403565109
+      },
+      "best_rival_mode": "CFM",
+      "mean_d": -1.3113686744087027e-05,
+      "upper_t": 0.0016436165619881612,
+      "upper_boot": 0.0016079300212437449,
+      "upper_used": 0.0016436165619881612,
+      "verdict": "FAIL",
+      "p_ni_unadj": 0.3197908972014556,
+      "p_best_unadj": 0.4948060579603426,
+      "mean_abs_comp_hat": 0.0031146683814263477,
+      "mean_abs_struct_hat": 0.004922203267249847,
+      "mean_comp_hat": -0.0003169711835310242,
+      "mean_struct_hat": 0.004653118569738049,
+      "rival_mean_abs_comp": {
+        "DFL": 0.0012096256883427471,
+        "CFM": 0.0028731505465859047
+      },
+      "rival_mean_abs_struct": {
+        "DFL": 0.009824334208837491,
+        "CFM": 0.006700947100619944
+      },
+      "mean_err_v5_roles_swapped": 0.00609511257704771,
+      "falsifier": "FAIL",
+      "sec_v5_mean": 0.01961818144132849,
+      "sec_cfm_mean": 0.21357391687983182,
+      "sec_dfl_mean": 0.07350153013831004,
+      "p_ni_holm": 0.6395817944029112,
+      "p_best_holm": 0.9896121159206852
+    },
+    {
+      "scen": "skew_comp",
+      "n": 20000,
+      "graded_lmoment": 3,
+      "delta": 0.004025123083973093,
+      "reps": 0,
+      "truth": {
+        "comp": 0.04011372620723863,
+        "struct": -0.00013750463249229128
+      },
+      "verdict": "INCOMPLETE",
+      "falsifier": "INCOMPLETE",
+      "note": "indices 9600-9619 held back by the owner; not run"
+    },
+    {
+      "scen": "tail_comp",
+      "n": 20000,
+      "graded_lmoment": 4,
+      "delta": 0.0004585521831332207,
+      "reps": 0,
+      "truth": {
+        "comp": 0.00429751956063068,
+        "struct": 0.0002880022707015262
+      },
+      "verdict": "INCOMPLETE",
+      "falsifier": "INCOMPLETE",
+      "note": "indices 9600-9619 held back by the owner; not run"
+    }
+  ]
+}

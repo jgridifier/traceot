@@ -1,0 +1,13 @@
+{
+  "note": "Descriptive runtime of the v5 Rust core on neutral simulated data (criterion, `cargo bench -p traceot-core --bench core -- v5`, 8-core box, rayon on). Not a PREREG speed track.",
+  "date": "2026-10-29",
+  "median_seconds": {
+    "mixture_cdf_location_n2000_grid256": 0.00041,
+    "mixture_cdf_location_n20000_grid256": 0.00383,
+    "mixture_cdf_location_n200000_grid256": 0.0361,
+    "explain_v5_p5_n2000": 0.00649,
+    "explain_v5_p5_n20000": 0.0587
+  },
+  "gate1_per_rep_mean_seconds_single_thread": {"TRACE_V5": 0.019, "CFM": 0.218, "DFL": 0.075},
+  "gate1_wall_seconds_100_tasks_8_workers": 4.1
+}

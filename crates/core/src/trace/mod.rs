@@ -16,6 +16,7 @@ mod shift;
 mod shift_v2;
 mod v1fit;
 mod v4;
+pub mod v5;
 
 pub use basis::{
     column_order, conformal_quantile, empirical_quantile, inv_norm, pinball_quantile_index,
@@ -68,4 +69,8 @@ pub use v4::{
     rake_bin_marginals, riesz_ridge, role_shapley, split_product, symmetrised_coord_players,
     BalanceConfig, BalanceResult, ExplainV4Config, ExplainV4Report, FitL2Config, FitL2Result,
     InferConfig, MixingGameConfig, MixingGameResult, MixtureConfig, MixtureLaw, RolePieces,
+};
+pub use v5::{
+    explain_v5, lmoments_from_cdf_grid, mixture_cdf_location, mixture_cdf_quantile_rows,
+    quantile_from_cdf, support_grid, ExplainV5Config, ExplainV5Report, Hybrid, MixtureLawV5,
 };
