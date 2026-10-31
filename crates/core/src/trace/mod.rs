@@ -72,5 +72,6 @@ pub use v4::{
 };
 pub use v5::{
     explain_v5, lmoments_from_cdf_grid, mixture_cdf_location, mixture_cdf_quantile_rows,
-    quantile_from_cdf, support_grid, ExplainV5Config, ExplainV5Report, Hybrid, MixtureLawV5,
+    quantile_from_cdf, support_grid, ExplainV5Config, ExplainV5Report, Hybrid, LocationModel,
+    MixtureLawV5,
 };

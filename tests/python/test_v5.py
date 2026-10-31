@@ -51,3 +51,28 @@ def test_explain_v5_budget_is_exact():
     np.testing.assert_allclose(np.add(r["lsplit_comp"], r["lsplit_struct"]), tot, atol=1e-12)
     assert r["lsplit_comp"][0] > 0.3  # mean moved through x0's shift
     assert r["lsplit_struct"][1] > 0.05  # wider noise moves λ2 through the response
+
+
+def test_explain_v5_1_ols_location():
+    import numpy as np
+
+    import traceot
+
+    rng = np.random.default_rng(11)
+    n, p = 3000, 3
+    beta = np.array([1.0, -0.5, 2.0])
+    xa = rng.normal(size=(n, p))
+    xb = rng.normal(size=(n, p)) + np.array([0.5, 0.0, 0.0])
+    ya = 0.3 + xa @ beta + rng.standard_exponential(n)
+    yb = 0.3 + xb @ beta + rng.standard_exponential(n)
+    r = traceot.explain_v5_1(xa, ya, xb, yb)
+    r2 = traceot.explain_v5(xa, ya, xb, yb, mean_model="ols")
+    assert r["lsplit_comp"] == r2["lsplit_comp"]
+    tot = r["bb"]["lmom"][0] - r["aa"]["lmom"][0]
+    assert abs(r["lsplit_comp"][0] + r["lsplit_struct"][0] - tot) < 1e-10
+    assert abs(r["lsplit_comp"][0] - 0.5) < 0.1
+    assert abs(r["lsplit_struct"][0]) < 0.05
+    import pytest
+
+    with pytest.raises(ValueError):
+        traceot.explain_v5(xa, ya, xb, yb, mean_model="tree")

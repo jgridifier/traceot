@@ -25,9 +25,101 @@ use super::mixture::{
     lmoments_from_cdf_grid, mixture_cdf_location, quantile_from_cdf, support_grid,
 };
 
+/// Location model for `μ_t`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum LocationModel {
+    /// v5: binned mean booster (`ExplainV5Config::mean`).
+    #[default]
+    Booster,
+    /// TRACE_V5_1 (PREREG_V5_1 §2): per-period OLS on an intercept plus all `p`
+    /// columns. Closed form, no tunable parameters.
+    Ols,
+}
+
+/// Per-period OLS location fit: coefficients `[β0, β1..βp]`.
+///
+/// Solved by Householder QR on `[1 | X]` (no penalty, no selection, no transforms).
+pub fn fit_ols(x: &[f64], n: usize, p: usize, y: &[f64]) -> Result<Vec<f64>> {
+    let m = p + 1;
+    if n < m || x.len() != n * p || y.len() != n {
+        return Err(TraceError::InvalidArgument(
+            "OLS location fit needs n >= p + 1 and matching shapes".into(),
+        ));
+    }
+    // column-major design A (n × m)
+    let mut a = vec![0.0f64; n * m];
+    for i in 0..n {
+        a[i] = 1.0;
+        for j in 0..p {
+            a[(j + 1) * n + i] = x[i * p + j];
+        }
+    }
+    let mut b = y.to_vec();
+    let mut rdiag = vec![0.0f64; m];
+    for k in 0..m {
+        let col = &mut a[k * n..(k + 1) * n];
+        let norm = col[k..].iter().map(|v| v * v).sum::<f64>().sqrt();
+        if norm == 0.0 {
+            return Err(TraceError::InvalidArgument(
+                "OLS location fit: design is rank deficient".into(),
+            ));
+        }
+        let alpha = if col[k] > 0.0 { -norm } else { norm };
+        col[k] -= alpha;
+        let vnorm2 = col[k..].iter().map(|v| v * v).sum::<f64>();
+        rdiag[k] = alpha;
+        let v: Vec<f64> = col[k..].to_vec();
+        for jj in (k + 1)..m {
+            let cj = &mut a[jj * n + k..(jj + 1) * n];
+            let dot: f64 = v.iter().zip(cj.iter()).map(|(p, q)| p * q).sum();
+            let f = 2.0 * dot / vnorm2;
+            for (c, vv) in cj.iter_mut().zip(&v) {
+                *c -= f * vv;
+            }
+        }
+        let dot: f64 = v.iter().zip(&b[k..]).map(|(p, q)| p * q).sum();
+        let f = 2.0 * dot / vnorm2;
+        for (c, vv) in b[k..].iter_mut().zip(&v) {
+            *c -= f * vv;
+        }
+    }
+    let scale = rdiag.iter().fold(0.0f64, |s, r| s.max(r.abs()));
+    if rdiag.iter().any(|r| r.abs() <= 1e-12 * scale) {
+        return Err(TraceError::InvalidArgument(
+            "OLS location fit: design is rank deficient".into(),
+        ));
+    }
+    let mut beta = vec![0.0f64; m];
+    for k in (0..m).rev() {
+        let mut s = b[k];
+        for jj in (k + 1)..m {
+            s -= a[jj * n + k] * beta[jj];
+        }
+        beta[k] = s / rdiag[k];
+    }
+    Ok(beta)
+}
+
+/// `β0 + xᵀβ` for each row of `x` (`n × p` row-major).
+pub fn predict_ols(beta: &[f64], x: &[f64], n: usize) -> Vec<f64> {
+    let p = beta.len() - 1;
+    (0..n)
+        .map(|i| {
+            beta[0]
+                + x[i * p..(i + 1) * p]
+                    .iter()
+                    .zip(&beta[1..])
+                    .map(|(a, b)| a * b)
+                    .sum::<f64>()
+        })
+        .collect()
+}
+
 /// Knobs for [`explain_v5`]. Defaults are the frozen in-repo values.
 #[derive(Clone, Debug)]
 pub struct ExplainV5Config {
+    /// Location model (default [`LocationModel::Booster`] = v5; `Ols` = TRACE_V5_1).
+    pub mean_model: LocationModel,
     /// Mean booster for `μ_t` (default: v4 `FitL2Config::default().mean`).
     pub mean: MeanConfig,
     /// Shared y-grid size (default 256, v4 `MixtureConfig::default().n_y`).
@@ -41,6 +133,7 @@ pub struct ExplainV5Config {
 impl Default for ExplainV5Config {
     fn default() -> Self {
         Self {
+            mean_model: LocationModel::Booster,
             mean: FitL2Config::default().mean,
             n_y: 256,
             k_lmoments: 4,
@@ -117,12 +210,28 @@ pub fn explain_v5(
         return Err(TraceError::InvalidArgument("bad ExplainV5Config".into()));
     }
     let t0 = Instant::now();
-    let m_a = fit_mean(x_a, n_a, p, y_a, &cfg.mean)?;
-    let m_b = fit_mean(x_b, n_b, p, y_b, &cfg.mean)?;
-    let mu_aa = predict_mean(&m_a, x_a, n_a)?; // cov A, cond A
-    let mu_ab = predict_mean(&m_b, x_a, n_a)?; // cov A, cond B
-    let mu_ba = predict_mean(&m_a, x_b, n_b)?; // cov B, cond A
-    let mu_bb = predict_mean(&m_b, x_b, n_b)?; // cov B, cond B
+    let (mu_aa, mu_ab, mu_ba, mu_bb) = match cfg.mean_model {
+        LocationModel::Booster => {
+            let m_a = fit_mean(x_a, n_a, p, y_a, &cfg.mean)?;
+            let m_b = fit_mean(x_b, n_b, p, y_b, &cfg.mean)?;
+            (
+                predict_mean(&m_a, x_a, n_a)?, // cov A, cond A
+                predict_mean(&m_b, x_a, n_a)?, // cov A, cond B
+                predict_mean(&m_a, x_b, n_b)?, // cov B, cond A
+                predict_mean(&m_b, x_b, n_b)?, // cov B, cond B
+            )
+        }
+        LocationModel::Ols => {
+            let b_a = fit_ols(x_a, n_a, p, y_a)?;
+            let b_b = fit_ols(x_b, n_b, p, y_b)?;
+            (
+                predict_ols(&b_a, x_a, n_a),
+                predict_ols(&b_b, x_a, n_a),
+                predict_ols(&b_a, x_b, n_b),
+                predict_ols(&b_b, x_b, n_b),
+            )
+        }
+    };
     let r_a: Vec<f64> = y_a.iter().zip(&mu_aa).map(|(y, m)| y - m).collect();
     let r_b: Vec<f64> = y_b.iter().zip(&mu_bb).map(|(y, m)| y - m).collect();
     let seconds_fit = t0.elapsed().as_secs_f64();
@@ -409,5 +518,87 @@ mod tests {
             let tot = rep.bb.lmom[j] - rep.aa.lmom[j];
             assert!((rep.lsplit_comp[j] + rep.lsplit_struct[j] - tot).abs() < 1e-12);
         }
+    }
+
+    #[test]
+    fn ols_recovers_linear_coefficients() {
+        let mut rng = SplitMix64::new(51);
+        let (n, p) = (4000, 3);
+        let x: Vec<f64> = (0..n * p).map(|_| normal(&mut rng)).collect();
+        let y: Vec<f64> = (0..n)
+            .map(|i| 0.7 + 1.5 * x[i * p] - 2.0 * x[i * p + 1] + 0.25 * x[i * p + 2])
+            .collect();
+        let b = fit_ols(&x, n, p, &y).unwrap();
+        for (got, want) in b.iter().zip([0.7, 1.5, -2.0, 0.25]) {
+            assert!((got - want).abs() < 1e-10, "{b:?}");
+        }
+        let yh = predict_ols(&b, &x, n);
+        assert!(yh.iter().zip(&y).all(|(a, c)| (a - c).abs() < 1e-9));
+        // residuals orthogonal to the design under noise
+        let yn: Vec<f64> = y.iter().map(|v| v + normal(&mut rng)).collect();
+        let b = fit_ols(&x, n, p, &yn).unwrap();
+        let r: Vec<f64> = yn
+            .iter()
+            .zip(predict_ols(&b, &x, n))
+            .map(|(a, c)| a - c)
+            .collect();
+        assert!(r.iter().sum::<f64>().abs() < 1e-8);
+        for j in 0..p {
+            let d: f64 = (0..n).map(|i| r[i] * x[i * p + j]).sum();
+            assert!(d.abs() < 1e-8, "col {j}: {d}");
+        }
+    }
+
+    #[test]
+    fn ols_rejects_rank_deficient_design() {
+        let n = 50;
+        let x: Vec<f64> = (0..n).flat_map(|i| [i as f64, 2.0 * i as f64]).collect();
+        let y: Vec<f64> = (0..n).map(|i| i as f64).collect();
+        assert!(fit_ols(&x, n, 2, &y).is_err());
+        assert!(fit_ols(&x[..4], 2, 2, &y[..2]).is_err());
+    }
+
+    /// v5.1 path: linear location model, comp/struct sum to the total and a pure
+    /// covariate shift lands in composition.
+    #[test]
+    fn v5_1_pure_composition_shift() {
+        let mut rng = SplitMix64::new(7);
+        let (n, p) = (4000, 2);
+        let mk = |rng: &mut SplitMix64, shift: f64| {
+            let x: Vec<f64> = (0..n * p)
+                .map(|k| {
+                    let z = normal(rng);
+                    if k % p == 0 {
+                        shift + z * (1.0 + shift)
+                    } else {
+                        z
+                    }
+                })
+                .collect();
+            let y: Vec<f64> = (0..n)
+                .map(|i| 1.0 + 2.0 * x[i * p] - x[i * p + 1] + 0.5 * normal(rng))
+                .collect();
+            (x, y)
+        };
+        let (xa, ya) = mk(&mut rng, 0.0);
+        let (xb, yb) = mk(&mut rng, 0.5);
+        let cfg = ExplainV5Config {
+            mean_model: LocationModel::Ols,
+            ..Default::default()
+        };
+        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &cfg).unwrap();
+        for j in 0..2 {
+            let tot = rep.bb.lmom[j] - rep.aa.lmom[j];
+            assert!((rep.lsplit_comp[j] + rep.lsplit_struct[j] - tot).abs() < 1e-10);
+            assert!(
+                rep.lsplit_comp[j].abs() > 5.0 * rep.lsplit_struct[j].abs(),
+                "{j}: {:?} {:?}",
+                rep.lsplit_comp,
+                rep.lsplit_struct
+            );
+        }
+        // default stays v5 (booster) and differs from the OLS path
+        let rep0 = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &ExplainV5Config::default()).unwrap();
+        assert!(rep0.lsplit_comp != rep.lsplit_comp);
     }
 }
