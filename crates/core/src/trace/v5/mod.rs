@@ -18,7 +18,9 @@
 pub mod explain;
 pub mod mixture;
 
-pub use explain::{explain_v5, ExplainV5Config, ExplainV5Report, Hybrid};
+pub use explain::{
+    explain_v5, fit_ols, predict_ols, ExplainV5Config, ExplainV5Report, Hybrid, LocationModel,
+};
 pub use mixture::{
     lmoments_from_cdf_grid, mixture_cdf_location, mixture_cdf_quantile_rows, quantile_from_cdf,
     support_grid, MixtureLawV5,

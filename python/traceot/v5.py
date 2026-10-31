@@ -24,7 +24,17 @@ def _f64(a, ndim):
     return a
 
 
-def explain_v5(x_a, y_a, x_b, y_b, *, n_y: int = 256, k_lmoments: int = 4, n_quad: int = 64):
+def explain_v5(
+    x_a,
+    y_a,
+    x_b,
+    y_b,
+    *,
+    n_y: int = 256,
+    k_lmoments: int = 4,
+    n_quad: int = 64,
+    mean_model: str = "booster",
+):
     """Split the A→B change in each L-moment into composition and response pieces.
 
     Fits a location + empirical-residual conditional per period, builds the four
@@ -34,10 +44,24 @@ def explain_v5(x_a, y_a, x_b, y_b, *, n_y: int = 256, k_lmoments: int = 4, n_qua
     Returns a dict with ``lsplit_comp``, ``lsplit_struct`` (length ``k_lmoments``),
     per-hybrid dicts ``aa/ab/ba/bb`` (``q_mix``, ``q_bary``, ``lmom``, ``lmom_bary``,
     ``mixing_residual``), the ``u_nodes`` / ``y_grid`` used, and timings.
+
+    ``mean_model="booster"`` is v5; ``"ols"`` is TRACE_V5_1 (per-period least squares
+    on an intercept plus all columns, no tuning). See :func:`explain_v5_1`.
     """
     xa, xb = _f64(x_a, 2), _f64(x_b, 2)
     ya, yb = _f64(y_a, 1), _f64(y_b, 1)
-    return _core.explain_v5_py(xa, ya, xb, yb, n_y=n_y, k_lmoments=k_lmoments, n_quad=n_quad)
+    if mean_model not in ("booster", "ols"):
+        raise ValueError("mean_model must be 'booster' or 'ols'")
+    return _core.explain_v5_py(
+        xa, ya, xb, yb, n_y=n_y, k_lmoments=k_lmoments, n_quad=n_quad, mean_model=mean_model
+    )
+
+
+def explain_v5_1(x_a, y_a, x_b, y_b, *, n_y: int = 256, k_lmoments: int = 4, n_quad: int = 64):
+    """TRACE_V5_1 (PREREG_V5_1 §2): :func:`explain_v5` with an OLS location model."""
+    return explain_v5(
+        x_a, y_a, x_b, y_b, n_y=n_y, k_lmoments=k_lmoments, n_quad=n_quad, mean_model="ols"
+    )
 
 
 def mixture_cdf_location(mu, resid, y_grid):

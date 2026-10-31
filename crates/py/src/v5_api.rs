@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use traceot_core::trace::{
     explain_v5, mixture_cdf_location, mixture_cdf_quantile_rows, quantile_from_cdf,
-    ExplainV5Config, Hybrid,
+    ExplainV5Config, Hybrid, LocationModel,
 };
 use traceot_core::TraceError;
 
@@ -35,7 +35,7 @@ fn hybrid_dict<'py>(py: Python<'py>, h: &Hybrid) -> PyResult<Bound<'py, PyDict>>
 }
 
 #[pyfunction]
-#[pyo3(signature = (x_a, y_a, x_b, y_b, *, n_y=256usize, k_lmoments=4usize, n_quad=64usize))]
+#[pyo3(signature = (x_a, y_a, x_b, y_b, *, n_y=256usize, k_lmoments=4usize, n_quad=64usize, mean_model="booster"))]
 #[allow(clippy::too_many_arguments)]
 fn explain_v5_py<'py>(
     py: Python<'py>,
@@ -46,7 +46,17 @@ fn explain_v5_py<'py>(
     n_y: usize,
     k_lmoments: usize,
     n_quad: usize,
+    mean_model: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
+    let mean_model = match mean_model {
+        "booster" => LocationModel::Booster,
+        "ols" => LocationModel::Ols,
+        _ => {
+            return Err(PyValueError::new_err(
+                "mean_model must be 'booster' or 'ols'",
+            ))
+        }
+    };
     let (na, pa) = x_a.as_array().dim();
     let (nb, pb) = x_b.as_array().dim();
     if pa != pb {
@@ -56,6 +66,7 @@ fn explain_v5_py<'py>(
         n_y,
         k_lmoments,
         n_quad,
+        mean_model,
         ..ExplainV5Config::default()
     };
     let (xa, ya, xb, yb) = (contig2(&x_a)?, contig(&y_a)?, contig2(&x_b)?, contig(&y_b)?);
