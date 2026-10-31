@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.1 gate — results in plain language</title>
+<meta name="description" content="The frozen TRACE v5.1 gate: a straight-line location model inside the v5 mixture. All four cells BEST; role check passes.">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+  .pending{ color: #e0a050; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_prereg.html">V5.1 pre-reg</a> ·
+  <a href="v5_gate1.html">V5 first gate</a> ·
+  <a href="nightly.html">Nightly</a>
+</p>
+
+<h1>TRACE v5.1 gate: fixing the mean model was enough</h1>
+<p><span class="status" style="background:#18392c;color:#8fe0bf">PASS</span> &nbsp; <span class="muted">2026-10-31 ET · prereg <code>b33f507</code> · implementation merge <code>665939b</code></span></p>
+
+<div class="callout good">
+<strong>Short version.</strong> We swapped one piece of v5, the model for the average outcome,
+from a binned booster to a plain straight-line (least-squares) fit. Nothing else changed and
+nothing was tuned. On fresh seeds, v5.1 beat the best rival in all four cells, and it put the
+change in the right bucket every time. The gate passes.
+</div>
+
+<h2>What was tested</h2>
+<p>When an outcome's distribution changes between two periods, TRACE splits the change into
+two parts: <em>composition</em> (the inputs moved) and <em>response</em> (the way the outcome reacts to
+the inputs changed). In the two test scenarios, all of the planted change is composition: the
+skew of the outcome changes (<code>skew_comp</code>) or the tail weight changes (<code>tail_comp</code>), only because the inputs shifted.</p>
+<p>v5 failed its first gate. A diagnosis suggested the culprit was the mean model, not the
+mixture idea itself. v5.1 tests exactly that, and only that: fit the mean with ordinary least
+squares (an intercept plus every input) in each period, keep everything else the same.</p>
+
+<h2>The rules, fixed in advance</h2>
+<ul>
+  <li>Four cells: both scenarios at n = 2,000 (50 seeds, 9700–9749, 5 inputs) and at n = 20,000 (20 seeds, 9800–9819, 20 inputs). None of these seeds had been used before.</li>
+  <li>For each seed, compare v5.1's error with the better of the two rivals (DFL reweighting and CFM) on the same data. Call the difference <em>d</em>; negative means v5.1 did better.</li>
+  <li><strong>BEST</strong> if the 95% upper bound on the average <em>d</em> is below zero. <strong>Non-inferior</strong> if it is below a small margin δ (10% of the planted effect). Two ways of computing the bound (a t-interval and a bootstrap) both had to agree; the larger was used.</li>
+  <li><strong>Role check:</strong> the composition piece must be larger than the response piece, and swapping the two must not reduce the error.</li>
+  <li>Any failed cell, any failed role check, or any cell unfinished within 30 minutes would shelve the v5 line.</li>
+</ul>
+
+<h2>Results</h2>
+<table>
+<tr><th>cell</th><th>n</th><th>seeds</th><th>error v5.1</th><th>error DFL</th><th>error CFM</th><th>mean d</th><th>upper bound</th><th>δ</th><th>verdict</th><th>|comp|</th><th>|resp|</th><th>role</th></tr>
+<tr><td>skew_comp</td><td>2,000</td><td>50</td><td>0.00835</td><td>0.0779</td><td>0.0231</td><td>−0.0148</td><td>−0.0121</td><td>0.0040</td><td class="pass">BEST</td><td>0.0379</td><td>0.0018</td><td class="pass">PASS</td></tr>
+<tr><td>tail_comp</td><td>2,000</td><td>50</td><td>0.00557</td><td>0.0135</td><td>0.0114</td><td>−0.0038</td><td>−0.0023</td><td>0.00046</td><td class="pass">BEST</td><td>0.0045</td><td>0.0018</td><td class="pass">PASS</td></tr>
+<tr><td>skew_comp</td><td>20,000</td><td>20</td><td>0.00288</td><td>0.0811</td><td>0.0111</td><td>−0.0083</td><td>−0.0064</td><td>0.0040</td><td class="pass">BEST</td><td>0.0410</td><td>0.0008</td><td class="pass">PASS</td></tr>
+<tr><td>tail_comp</td><td>20,000</td><td>20</td><td>0.00193</td><td>0.0092</td><td>0.0051</td><td>−0.0030</td><td>−0.0019</td><td>0.00046</td><td class="pass">BEST</td><td>0.0039</td><td>0.0007</td><td class="pass">PASS</td></tr>
+</table>
+<p class="muted">Upper bound = the larger of the t and bootstrap bounds. All four stay significant after the Holm correction across four tests. The whole run (140 tasks, 8 workers) took 15 seconds against a 30-minute cap. Full table: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>.</p>
+
+<h2>How to read this</h2>
+<p>Errors shrink from n = 2,000 to n = 20,000, as an estimator that is on target should.
+CFM was the stronger rival in every cell, and v5.1 roughly halved its error. In v5, <code>tail_comp</code>
+had the roles backwards. With the straight-line mean, the composition piece is now about 2.5
+to 5 times the response piece.</p>
+
+<div class="callout warn">
+<strong>What this does not show.</strong> The test data has a straight-line mean, so a
+straight-line fit is the right shape by construction. The pass shows the v5 mixture works
+<em>once the mean model is right</em>. It says nothing yet about curved (non-linear) means,
+structure-only cells, coverage, real-data benchmarks, or speed. Those need their own
+pre-registered tests.
+</div>
+
+<h2>How to use it</h2>
+<p><code>traceot.explain_v5_1(x_a, y_a, x_b, y_b)</code>, or <code>traceot.explain_v5(..., mean_model="ols")</code>. The default <code>explain_v5</code> is unchanged.</p>
+</body>
+</html>
