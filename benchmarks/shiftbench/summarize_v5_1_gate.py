@@ -222,7 +222,7 @@ def main():
         "",
         "## Notes and deviations",
         "",
-        "1. **Implementation.** `TRACE_V5_1` = `explain_v5(..., mean_model=\"ols\")`",
+        '1. **Implementation.** `TRACE_V5_1` = `explain_v5(..., mean_model="ols")`',
         "   (PR #29). Only the location fit changed; grid, quadrature, hybrids, L-moments and",
         "   the Shapley split are as at `3d695bc`. Gate seeds were first run after the merge.",
         "2. **t-interval.** PREREG_V4 §5 specifies a t-interval; the earlier v4/v5 scorers",
