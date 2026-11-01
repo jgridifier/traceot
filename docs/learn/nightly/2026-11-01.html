@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-01 · traceot</title>
+<meta name="description" content="Nighttime applied refresher: where TRACE stands, what failed, how method changes translate into reading a shift report.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1d1f;
+    --bg: #f7f4ef;
+    --muted: #5b5b60;
+    --rule: #ddd5c8;
+    --accent: #1b6ca8;
+    --note: #ebe6dc;
+    --ok: #2f7d4a;
+    --bad: #a33b2b;
+    --warn: #8a6d1d;
+    --card: #fffdf8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e9e9ec;
+      --bg: #141416;
+      --muted: #a3a3aa;
+      --rule: #333;
+      --accent: #6fb3e6;
+      --note: #1d2229;
+      --ok: #6cbc86;
+      --bad: #e08a7a;
+      --warn: #d4b45a;
+      --card: #1a1a1e;
+    }
+    svg.sketch { background: #fff; border-radius: 6px; }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 1rem 0 .35rem; }
+  h2 {
+    font-size: 1.22rem;
+    margin: 2rem 0 .55rem;
+    padding-top: .7rem;
+    border-top: 1px solid var(--rule);
+  }
+  h3 { font-size: 1.02rem; margin: 1.25rem 0 .35rem; }
+  p, li { max-width: 42rem; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); margin-top: 0; }
+  .status {
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #664d03;
+  }
+  @media (prefers-color-scheme: dark) {
+    .status { background: #3a3218; color: #e6d48a; }
+  }
+  .takeaway {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: .85rem 1rem;
+    border-radius: 6px;
+    margin: 1rem 0 1.4rem;
+  }
+  .note {
+    background: var(--note);
+    border-left: 4px solid var(--accent);
+    padding: .6rem .9rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+  }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1rem 0; }
+  table {
+    border-collapse: collapse;
+    font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    min-width: 28rem;
+  }
+  th, td {
+    border-bottom: 1px solid var(--rule);
+    padding: .4rem .5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { font-weight: 600; }
+  .fail { color: var(--bad); font-weight: 600; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .pending { color: var(--warn); font-weight: 600; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .88em;
+  }
+  nav.toc ol { margin: .2rem 0 0 1.1rem; padding: 0; }
+  nav.toc li { margin: .15rem 0; }
+  figure { margin: 1.1rem 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { color: var(--muted); font-size: .9rem; margin-top: .35rem; }
+  ul.check { list-style: none; padding-left: 0; }
+  ul.check li {
+    position: relative;
+    padding-left: 1.4rem;
+    margin: .55rem 0;
+  }
+  ul.check li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+  }
+  footer {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  footer a { color: var(--accent); }
+  .meta { font-size: .9rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<p>
+  <a href="../../index.html">Learn home</a> ·
+  <a href="../research_board.html">Research board</a> ·
+  <a href="../v5_1_gate.html">V5.1 gate</a> ·
+  <a href="../v5_1_prereg.html">V5.1 pre-reg</a> ·
+  <a href="../explaining_shifts.html">Explaining a shift</a> ·
+  <span class="status">nightly · 2026-11-01 evening ET</span>
+</p>
+
+<h1>TRACE nightly</h1>
+<p class="lede">A short applied refresher for after work: what changed in the method today, and what that means when you actually explain a distribution shift between two periods.</p>
+<p class="meta">Today’s snapshot: <a href="2026-11-01.html">2026-11-01</a> (previous: <a href="2026-10-31.html">2026-10-31</a>) · main <code>402ab14</code> · V5 first gate <strong>FAIL</strong> (closed) · V5.1 gate <strong>PASS</strong>, 4/4 cells BEST (<a href="../v5_1_gate.html">v5_1_gate</a>)</p>
+
+<nav class="toc" aria-label="Contents">
+<ol>
+  <li><a href="#takeaway">Tonight’s takeaway</a></li>
+  <li><a href="#changelog">What changed since last nightly</a></li>
+  <li><a href="#job">The practical job (refresher)</a></li>
+  <li><a href="#vignette">Worked vignette: two seasons of club race times</a></li>
+  <li><a href="#read">How to read a TRACE output tomorrow</a></li>
+  <li><a href="#scoreboard">Scoreboard</a></li>
+  <li><a href="#paper">One paper / idea for tonight</a></li>
+  <li><a href="#tomorrow">Tomorrow’s build step</a></li>
+</ol>
+</nav>
+
+<h2 id="takeaway">1. Tonight’s takeaway</h2>
+<div class="takeaway">
+<p><strong>Material change: the V5.1 gate passed.</strong> Swapping only v5’s mean model for a plain per-period least-squares fit made TRACE beat the best rival in all four pre-registered cells on fresh seeds, with the change landing in the right bucket every time. The honest limit: the test data has a straight-line mean by construction, so this proves the mixture machinery works when the mean model is the right shape, not that it survives curved means.</p>
+</div>
+
+<h2 id="changelog">2. What changed since last nightly</h2>
+<ul>
+  <li><strong>Code:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/29">#29</a> merged (<code>665939b</code>). It adds a least-squares location model to the Rust core (closed-form Householder QR, intercept plus every column, no tuning) and exposes it as <code>traceot.explain_v5_1(...)</code> or <code>explain_v5(..., mean_model="ols")</code>. The default <code>explain_v5</code> is unchanged.</li>
+  <li><strong>Results:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/30">#30</a> merged (main now <code>402ab14</code>). The frozen four-cell gate ran once on seeds 9700–9749 and 9800–9819: <span class="pass">PASS</span>, all cells BEST, all role checks PASS, 140/140 tasks in 15.0 s against a 1800 s cap. Write-up in <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>.</li>
+  <li><strong>Design:</strong> one disclosed scorer deviation. The pre-registration says t-interval, and earlier scorers used a normal quantile; this scorer uses Student t, which is wider, so it can only make a cell harder to pass. No tuning, and the older seeds 9500–9549 / 9600–9619 remain untouched.</li>
+  <li><strong>Since the gate:</strong> nothing else. No open pull requests and no new runs today (Sunday).</li>
+</ul>
+
+<h2 id="job">3. The practical job (refresher)</h2>
+<p>Two periods, A and B. Each is a table of units (rows), features (columns), and one outcome whose distribution moved. TRACE’s job is a readable budget of <em>why</em>:</p>
+<ul>
+  <li><strong>Mix (composition):</strong> the kinds of units showing up changed.</li>
+  <li><strong>Response (structure):</strong> the same kinds of units now produce different outcomes.</li>
+  <li><strong>Entry / exit:</strong> units that arrived or left, kept on their own line when IDs are known.</li>
+  <li><strong>Noise:</strong> bands and a no-shift test say whether any of the above is bigger than sampling wobble.</li>
+</ul>
+<p>V5 builds the split from hybrid distributions: one period’s inputs pushed through the other period’s conditional outcome model. The V5.1 result says the hybrids are only as good as the mean model underneath them. When that model has the right shape, the split is sharp; when it doesn’t (the v5 booster), the error shows up as mix being misread as response.</p>
+
+<h2 id="vignette">4. Worked vignette: two seasons of club race times</h2>
+<p class="note">Illustrative only: no TRACE run behind this story, and no numbers.</p>
+<p>A running club compares 10K finish times across two seasons on the same course. The second season’s times have a longer slow tail. Two stories could explain it. Maybe the club recruited many newer runners with low weekly mileage (a <strong>mix</strong> change). Or maybe the course got a new hill, so everyone ran slower for the same fitness (a <strong>response</strong> change). Members who raced both seasons can be linked; first-timers and people who stopped racing go on the <strong>entry / exit</strong> lines.</p>
+<p>Suppose finish time falls roughly in a straight line as weekly mileage rises, across the range both seasons cover. That is the V5.1 situation: a least-squares mean is the right shape, so “second-season runners on first-season conditions” is a fair question, and the split between new runners and the new hill is trustworthy.</p>
+<p>Now suppose the relationship bends, with big gains from the first extra miles and almost none after a high base. A straight line would then over-predict how slow the new low-mileage runners are, and it would blame the slow tail on mix when part of it is the hill, or the other way round. The bend is exactly what V5.1 has not been tested on.</p>
+<p class="note"><strong>Practical rule:</strong> before trusting the split, plot the outcome against the main inputs in each period. If it looks close to straight over the shared range, the V5.1 result applies. If it clearly curves, treat the mix/response ratio as provisional until a curved-mean gate exists.</p>
+
+<h2 id="read">5. How to read a TRACE output tomorrow</h2>
+<ul class="check">
+  <li><strong>Budget exactness</strong> is bookkeeping health (pieces sum to the total). It still passes. It says nothing about accuracy.</li>
+  <li><strong>Check which mean model ran.</strong> <code>explain_v5_1</code> (least squares) is the version with a passed gate. The default <code>explain_v5</code> (booster) is the one that failed its gate.</li>
+  <li><strong>Role sizes.</strong> In the gate, the composition piece came out about 2.5 to 5 times the response piece when all planted change was composition. If a report shows two pieces of similar size, read that as genuinely mixed, or as a sign the mean model may be the wrong shape.</li>
+  <li><strong>Sample size.</strong> Errors fell from n = 2000 to n = 20 000 in every cell (for example 0.00835 to 0.00288 on <code>skew_comp</code>), which is what an on-target estimator should do. Small samples still give noisier splits.</li>
+  <li><strong>Overlap still matters.</strong> Last night’s point stands: where one period has inputs the other never saw, the split leans on how the mean model extends, and a straight line extends forever. TRACE does not print an overlap share yet.</li>
+</ul>
+
+<h2 id="scoreboard">6. Scoreboard</h2>
+<p>Scored rows only; failures stay failures. New today: the four V5.1 rows.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Claim</th><th>Bar</th><th>Result</th><th>Verdict</th></tr></thead>
+  <tbody>
+    <tr><td>H5.1b algebraic exactness (v3)</td><td>gap ≤ 1e-8 every rep</td><td>0/3500 misses</td><td class="pass">PASS</td></tr>
+    <tr><td>H6 rank stability (v3)</td><td>beat best rival</td><td>bootstrap ~0.50 vs ~0.77</td><td class="fail">FAIL</td></tr>
+    <tr><td>H8b band coverage (v3)</td><td>pooled ≥0.90, cells ≥0.85</td><td>pooled 0.815</td><td class="fail">FAIL</td></tr>
+    <tr><td>v4 H7 shape, 10 cells</td><td>BEST or non-inferior vs CFM/DFL</td><td>0/10</td><td class="fail">FAIL</td></tr>
+    <tr><td>v4 speed vs CFM</td><td>≥5× at 1e5 and 1e6</td><td>1.02× / 2.94×</td><td class="fail">FAIL</td></tr>
+    <tr><td>V5 gate 1, <code>skew_comp</code> n=2000</td><td>upper 95% of paired d &lt; δ = 0.004025</td><td>err 0.02699 vs CFM 0.02218; upper 0.00711</td><td class="fail">FAIL</td></tr>
+    <tr><td>V5 gate 1, <code>tail_comp</code> n=2000</td><td>upper 95% &lt; δ = 0.000459; role check</td><td>err 0.009708 vs CFM 0.0106; upper 0.001644; role check failed</td><td class="fail">FAIL</td></tr>
+    <tr><td>V5 gate 1, n=20 000 cells</td><td>same bars</td><td>seeds held back, not run</td><td class="pending">INCOMPLETE</td></tr>
+    <tr><td>V5.1 <code>skew_comp</code> n=2000, p=5</td><td>upper 95% &lt; 0 for BEST; role check</td><td>err 0.008351 vs CFM 0.0231; upper −0.01206</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 <code>tail_comp</code> n=2000, p=5</td><td>same</td><td>err 0.005568 vs CFM 0.01138; upper −0.002339</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 <code>skew_comp</code> n=20 000, p=20</td><td>same</td><td>err 0.002875 vs CFM 0.01113; upper −0.006373</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 <code>tail_comp</code> n=20 000, p=20</td><td>same</td><td>err 0.001933 vs CFM 0.005063; upper −0.001949</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 on curved means, structure-only cells, coverage, real data, speed</td><td>not yet pre-registered</td><td>not run</td><td class="pending">OPEN</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="meta">Upper bounds shown are the larger of the t and bootstrap bounds. All four V5.1 cells stay significant after Holm across the four tests. Full numbers in <code>benchmarks/results/v5_1_gate_summary.json</code>.</p>
+
+<h2 id="paper">7. One paper / idea for tonight</h2>
+<p><strong>Chernozhukov, V., Fernández-Val, I., &amp; Melly, B. (2013).</strong> <em>Inference on counterfactual distributions.</em> Econometrica 81(6), 2205–2268. <a href="https://doi.org/10.3982/ECTA10582">doi:10.3982/ECTA10582</a>.</p>
+<p>This is the CFM rival that V5.1 just beat. It builds “period B inputs under period A’s outcome rule” by fitting a conditional distribution model in each period (distribution regression or quantile regression), then integrating it over the other period’s inputs, with bootstrap bands for the whole counterfactual curve. It is the cleanest statement of the hybrid-distribution idea TRACE also uses.</p>
+<p>The reason it is worth an evening: CFM’s conditional model is typically linear in the inputs at each threshold or quantile, so on a straight-line simulator it is also the right shape. V5.1 beating it there points to TRACE’s mixture and L-moment budget doing real work, not just a better-matched mean. Whether that edge survives curved means is the open question, for CFM and TRACE alike.</p>
+
+<h2 id="tomorrow">8. Tomorrow’s build step</h2>
+<p>Write the next pre-registration before touching code: a curved-mean gate. The simulator gets a non-linear mean, the candidate location models are fixed in advance (least squares on raw inputs as the V5.1 baseline, plus one transparent curved option such as least squares on a fixed spline basis, closed-form in the Rust core with no tuning), rivals DFL and CFM are re-run paired, and new seed blocks are frozen. Bars and the role check stay as in PREREG_V4 §5. Structure-only cells and band coverage are added to the same pre-registration so the next gate answers more than one question. Nothing is run until the file is merged.</p>
+
+<footer>
+  <p>Dated <strong>2026-11-01 (evening)</strong>, America/New_York (EST). Content written against main <code>402ab14</code>. Material change since 2026-10-31: V5.1 implementation merged and its gate passed.</p>
+  <p>
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a> ·
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1.md</a> ·
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_GATE1_RESULTS.md">V5_GATE1_RESULTS.md</a> ·
+    <a href="../v5_1_gate.html">v5_1_gate.html</a> ·
+    <a href="../v5_gate1.html">v5_gate1.html</a> ·
+    <a href="../research_board.html">research_board.html</a>
+  </p>
+  <p>Rules that stay: Rust core / thin Python; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>

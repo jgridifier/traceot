@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-10-31 · traceot</title>
+<title>TRACE nightly · 2026-11-01 · traceot</title>
 <meta name="description" content="Nighttime applied refresher: where TRACE stands, what failed, how method changes translate into reading a shift report.">
 <style>
   :root {
@@ -137,22 +137,22 @@
 <p>
   <a href="../index.html">Learn home</a> ·
   <a href="research_board.html">Research board</a> ·
-  <a href="v5_gate1.html">V5 gate 1</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
   <a href="v5_1_prereg.html">V5.1 pre-reg</a> ·
   <a href="explaining_shifts.html">Explaining a shift</a> ·
-  <span class="status">nightly · 2026-10-31 evening ET</span>
+  <span class="status">nightly · 2026-11-01 evening ET</span>
 </p>
 
 <h1>TRACE nightly</h1>
 <p class="lede">A short applied refresher for after work: what changed in the method today, and what that means when you actually explain a distribution shift between two periods.</p>
-<p class="meta">Today’s snapshot: <a href="nightly/2026-10-31.html">2026-10-31</a> (previous: <a href="nightly/2026-10-30.html">2026-10-30</a>) · main <code>dbc0127</code> · V5 first gate <strong>FAIL</strong> (closed) · V5.1 <strong>PRE-REGISTERED</strong>, gate still not run (<a href="v5_1_prereg.html">v5_1_prereg</a>)</p>
+<p class="meta">Today’s snapshot: <a href="nightly/2026-11-01.html">2026-11-01</a> (previous: <a href="nightly/2026-10-31.html">2026-10-31</a>) · main <code>402ab14</code> · V5 first gate <strong>FAIL</strong> (closed) · V5.1 gate <strong>PASS</strong>, 4/4 cells BEST (<a href="v5_1_gate.html">v5_1_gate</a>)</p>
 
 <nav class="toc" aria-label="Contents">
 <ol>
   <li><a href="#takeaway">Tonight’s takeaway</a></li>
   <li><a href="#changelog">What changed since last nightly</a></li>
   <li><a href="#job">The practical job (refresher)</a></li>
-  <li><a href="#vignette">Worked vignette: two summers of tomato plots</a></li>
+  <li><a href="#vignette">Worked vignette: two seasons of club race times</a></li>
   <li><a href="#read">How to read a TRACE output tomorrow</a></li>
   <li><a href="#scoreboard">Scoreboard</a></li>
   <li><a href="#paper">One paper / idea for tonight</a></li>
@@ -162,13 +162,15 @@
 
 <h2 id="takeaway">1. Tonight’s takeaway</h2>
 <div class="takeaway">
-<p><strong>No method change today.</strong> Nothing new merged since last night’s page, and the V5.1 gate has not been run, so every verdict below is unchanged. Tonight’s applied point builds on yesterday’s failure: before trusting any mix-versus-response split, check how much the two periods’ inputs actually overlap, because the split is only identified where they do.</p>
+<p><strong>Material change: the V5.1 gate passed.</strong> Swapping only v5’s mean model for a plain per-period least-squares fit made TRACE beat the best rival in all four pre-registered cells on fresh seeds, with the change landing in the right bucket every time. The honest limit: the test data has a straight-line mean by construction, so this proves the mixture machinery works when the mean model is the right shape, not that it survives curved means.</p>
 </div>
 
 <h2 id="changelog">2. What changed since last nightly</h2>
 <ul>
-  <li><strong>Code and results:</strong> none. The only commit on main since the 2026-10-30 page is that page’s own merge (PR <a href="https://github.com/jgridifier/traceot/pull/27">#27</a>, main now <code>dbc0127</code>). No open pull requests, no new branches, no new gate runs.</li>
-  <li><strong>Design:</strong> no amendments. <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1.md</a> stands as frozen: ordinary least squares mean model only, fresh seeds 9700–9749 (n = 2000) and 9800–9819 (n = 20 000).</li>
+  <li><strong>Code:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/29">#29</a> merged (<code>665939b</code>). It adds a least-squares location model to the Rust core (closed-form Householder QR, intercept plus every column, no tuning) and exposes it as <code>traceot.explain_v5_1(...)</code> or <code>explain_v5(..., mean_model="ols")</code>. The default <code>explain_v5</code> is unchanged.</li>
+  <li><strong>Results:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/30">#30</a> merged (main now <code>402ab14</code>). The frozen four-cell gate ran once on seeds 9700–9749 and 9800–9819: <span class="pass">PASS</span>, all cells BEST, all role checks PASS, 140/140 tasks in 15.0 s against a 1800 s cap. Write-up in <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>.</li>
+  <li><strong>Design:</strong> one disclosed scorer deviation. The pre-registration says t-interval, and earlier scorers used a normal quantile; this scorer uses Student t, which is wider, so it can only make a cell harder to pass. No tuning, and the older seeds 9500–9549 / 9600–9619 remain untouched.</li>
+  <li><strong>Since the gate:</strong> nothing else. No open pull requests and no new runs today (Sunday).</li>
 </ul>
 
 <h2 id="job">3. The practical job (refresher)</h2>
@@ -179,24 +181,26 @@
   <li><strong>Entry / exit:</strong> units that arrived or left, kept on their own line when IDs are known.</li>
   <li><strong>Noise:</strong> bands and a no-shift test say whether any of the above is bigger than sampling wobble.</li>
 </ul>
-<p>V5 builds the split from hybrid distributions: one period’s inputs pushed through the other period’s conditional outcome model. Where one period has inputs the other never saw, that hybrid is an extrapolation, not a measurement.</p>
+<p>V5 builds the split from hybrid distributions: one period’s inputs pushed through the other period’s conditional outcome model. The V5.1 result says the hybrids are only as good as the mean model underneath them. When that model has the right shape, the split is sharp; when it doesn’t (the v5 booster), the error shows up as mix being misread as response.</p>
 
-<h2 id="vignette">4. Worked vignette: two summers of tomato plots</h2>
+<h2 id="vignette">4. Worked vignette: two seasons of club race times</h2>
 <p class="note">Illustrative only: no TRACE run behind this story, and no numbers.</p>
-<p>A community garden compares tomato yield per plot across two summers. The second summer, the garden opened a new sunny strip, so some plots got far more daily sun than any plot had the year before (a <strong>mix</strong> change). The second summer was also drier overall (a <strong>response</strong> change). Plots worked by the same gardeners both years can be linked; new and abandoned plots go on the <strong>entry / exit</strong> lines.</p>
-<p>The question “second-summer plots under first-summer conditions” asks the first summer’s model what a very sunny plot would have yielded. The first summer has no very sunny plots, so the answer comes entirely from how that model extends past its data. A flat extension says extra sun does nothing; a straight line says it helps a lot. The two choices give very different mix/response budgets from the same gardens.</p>
-<p class="note"><strong>Practical rule:</strong> split the report in two mentally. For units whose inputs sit inside both periods’ range, the mix/response split is data-driven. For units outside the overlap, the split reflects a modelling assumption, and it should be shown as a separate, clearly labelled share rather than blended in.</p>
+<p>A running club compares 10K finish times across two seasons on the same course. The second season’s times have a longer slow tail. Two stories could explain it. Maybe the club recruited many newer runners with low weekly mileage (a <strong>mix</strong> change). Or maybe the course got a new hill, so everyone ran slower for the same fitness (a <strong>response</strong> change). Members who raced both seasons can be linked; first-timers and people who stopped racing go on the <strong>entry / exit</strong> lines.</p>
+<p>Suppose finish time falls roughly in a straight line as weekly mileage rises, across the range both seasons cover. That is the V5.1 situation: a least-squares mean is the right shape, so “second-season runners on first-season conditions” is a fair question, and the split between new runners and the new hill is trustworthy.</p>
+<p>Now suppose the relationship bends, with big gains from the first extra miles and almost none after a high base. A straight line would then over-predict how slow the new low-mileage runners are, and it would blame the slow tail on mix when part of it is the hill, or the other way round. The bend is exactly what V5.1 has not been tested on.</p>
+<p class="note"><strong>Practical rule:</strong> before trusting the split, plot the outcome against the main inputs in each period. If it looks close to straight over the shared range, the V5.1 result applies. If it clearly curves, treat the mix/response ratio as provisional until a curved-mean gate exists.</p>
 
 <h2 id="read">5. How to read a TRACE output tomorrow</h2>
 <ul class="check">
   <li><strong>Budget exactness</strong> is bookkeeping health (pieces sum to the total). It still passes. It says nothing about accuracy.</li>
-  <li><strong>Look for the overlap share.</strong> Ask what fraction of each period’s units fall outside the other period’s input range. If it is large, the mix/response ratio is mostly the mean model’s extrapolation. (TRACE does not yet print this; see the build note below.)</li>
-  <li><strong>Mean model first.</strong> Yesterday’s diagnosis put most of v5’s error on the mean model (0.01807 of 0.02699 on <code>skew_comp</code>, 0.00475 of 0.00971 on <code>tail_comp</code>). Nothing new today changes that.</li>
-  <li><strong>Exploratory isn’t a result.</strong> The least-squares variant looked good on spent seeds, but the simulator’s mean is linear by construction. Only the V5.1 gate on fresh seeds can move the scoreboard.</li>
+  <li><strong>Check which mean model ran.</strong> <code>explain_v5_1</code> (least squares) is the version with a passed gate. The default <code>explain_v5</code> (booster) is the one that failed its gate.</li>
+  <li><strong>Role sizes.</strong> In the gate, the composition piece came out about 2.5 to 5 times the response piece when all planted change was composition. If a report shows two pieces of similar size, read that as genuinely mixed, or as a sign the mean model may be the wrong shape.</li>
+  <li><strong>Sample size.</strong> Errors fell from n = 2000 to n = 20 000 in every cell (for example 0.00835 to 0.00288 on <code>skew_comp</code>), which is what an on-target estimator should do. Small samples still give noisier splits.</li>
+  <li><strong>Overlap still matters.</strong> Last night’s point stands: where one period has inputs the other never saw, the split leans on how the mean model extends, and a straight line extends forever. TRACE does not print an overlap share yet.</li>
 </ul>
 
 <h2 id="scoreboard">6. Scoreboard</h2>
-<p>Unchanged from 2026-10-30. Scored rows only; failures stay failures.</p>
+<p>Scored rows only; failures stay failures. New today: the four V5.1 rows.</p>
 <div class="scroll">
 <table>
   <thead><tr><th>Claim</th><th>Bar</th><th>Result</th><th>Verdict</th></tr></thead>
@@ -209,27 +213,32 @@
     <tr><td>V5 gate 1, <code>skew_comp</code> n=2000</td><td>upper 95% of paired d &lt; δ = 0.004025</td><td>err 0.02699 vs CFM 0.02218; upper 0.00711</td><td class="fail">FAIL</td></tr>
     <tr><td>V5 gate 1, <code>tail_comp</code> n=2000</td><td>upper 95% &lt; δ = 0.000459; role check</td><td>err 0.009708 vs CFM 0.0106; upper 0.001644; role check failed</td><td class="fail">FAIL</td></tr>
     <tr><td>V5 gate 1, n=20 000 cells</td><td>same bars</td><td>seeds held back, not run</td><td class="pending">INCOMPLETE</td></tr>
-    <tr><td>V5.1 gate (4 cells, OLS mean)</td><td>PREREG_V4 §5 bars, unchanged</td><td>not run</td><td class="pending">PRE-REGISTERED</td></tr>
+    <tr><td>V5.1 <code>skew_comp</code> n=2000, p=5</td><td>upper 95% &lt; 0 for BEST; role check</td><td>err 0.008351 vs CFM 0.0231; upper −0.01206</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 <code>tail_comp</code> n=2000, p=5</td><td>same</td><td>err 0.005568 vs CFM 0.01138; upper −0.002339</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 <code>skew_comp</code> n=20 000, p=20</td><td>same</td><td>err 0.002875 vs CFM 0.01113; upper −0.006373</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 <code>tail_comp</code> n=20 000, p=20</td><td>same</td><td>err 0.001933 vs CFM 0.005063; upper −0.001949</td><td class="pass">BEST</td></tr>
+    <tr><td>V5.1 on curved means, structure-only cells, coverage, real data, speed</td><td>not yet pre-registered</td><td>not run</td><td class="pending">OPEN</td></tr>
   </tbody>
 </table>
 </div>
+<p class="meta">Upper bounds shown are the larger of the t and bootstrap bounds. All four V5.1 cells stay significant after Holm across the four tests. Full numbers in <code>benchmarks/results/v5_1_gate_summary.json</code>.</p>
 
 <h2 id="paper">7. One paper / idea for tonight</h2>
-<p><strong>Crump, R. K., Hotz, V. J., Imbens, G. W., &amp; Mitnik, O. A. (2009).</strong> <em>Dealing with limited overlap in estimation of average treatment effects.</em> Biometrika 96(1), 187–199. <a href="https://doi.org/10.1093/biomet/asn055">doi:10.1093/biomet/asn055</a>.</p>
-<p>The setting is two groups whose covariates only partly overlap. Where one group has units the other lacks, any comparison leans on extrapolation and the estimate’s variance blows up. Their practical answer is to estimate on a trimmed region where both groups are well represented, and they give a simple rule for choosing it from the estimated probability of belonging to one group.</p>
-<p>Mapped onto TRACE, the two groups are the two periods. A period-membership score per unit would tell a reader which share of the budget sits in well-overlapped territory and which share is extrapolated, which is the vignette’s practical rule in formal terms. It is a candidate diagnostic for after V5.1, not part of the frozen gate.</p>
+<p><strong>Chernozhukov, V., Fernández-Val, I., &amp; Melly, B. (2013).</strong> <em>Inference on counterfactual distributions.</em> Econometrica 81(6), 2205–2268. <a href="https://doi.org/10.3982/ECTA10582">doi:10.3982/ECTA10582</a>.</p>
+<p>This is the CFM rival that V5.1 just beat. It builds “period B inputs under period A’s outcome rule” by fitting a conditional distribution model in each period (distribution regression or quantile regression), then integrating it over the other period’s inputs, with bootstrap bands for the whole counterfactual curve. It is the cleanest statement of the hybrid-distribution idea TRACE also uses.</p>
+<p>The reason it is worth an evening: CFM’s conditional model is typically linear in the inputs at each threshold or quantile, so on a straight-line simulator it is also the right shape. V5.1 beating it there points to TRACE’s mixture and L-moment budget doing real work, not just a better-matched mean. Whether that edge survives curved means is the open question, for CFM and TRACE alike.</p>
 
 <h2 id="tomorrow">8. Tomorrow’s build step</h2>
-<p>Unchanged, because it has not happened yet: implement the V5.1 switch exactly as frozen, a closed-form least-squares location fit per period in the Rust core (intercept plus all columns, no penalty, no tuning), exposed through a thin Python flag on <code>explain_v5</code>, with everything else unchanged. Merge it, record the SHA in the header of <code>V5_1_GATE_RESULTS.md</code>, then run the four cells on seeds 9700–9749 and 9800–9819 under the 30-minute cap on 8 cores. If any cell fails accuracy, fails the role check, or is incomplete, write <code>PARK_V5.md</code> and stop the v5 line. The overlap-share diagnostic waits until after that verdict so the gate stays clean.</p>
+<p>Write the next pre-registration before touching code: a curved-mean gate. The simulator gets a non-linear mean, the candidate location models are fixed in advance (least squares on raw inputs as the V5.1 baseline, plus one transparent curved option such as least squares on a fixed spline basis, closed-form in the Rust core with no tuning), rivals DFL and CFM are re-run paired, and new seed blocks are frozen. Bars and the role check stay as in PREREG_V4 §5. Structure-only cells and band coverage are added to the same pre-registration so the next gate answers more than one question. Nothing is run until the file is merged.</p>
 
 <footer>
-  <p>Dated <strong>2026-10-31 (evening)</strong>, America/New_York (EDT). Content written against main <code>dbc0127</code>. No method change since 2026-10-30.</p>
+  <p>Dated <strong>2026-11-01 (evening)</strong>, America/New_York (EST). Content written against main <code>402ab14</code>. Material change since 2026-10-31: V5.1 implementation merged and its gate passed.</p>
   <p>
-    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_GATE1_RESULTS.md">V5_GATE1_RESULTS.md</a> ·
-    <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/V5_DIAGNOSIS.md">V5_DIAGNOSIS.md</a> ·
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a> ·
     <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1.md</a> ·
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_GATE1_RESULTS.md">V5_GATE1_RESULTS.md</a> ·
+    <a href="v5_1_gate.html">v5_1_gate.html</a> ·
     <a href="v5_gate1.html">v5_gate1.html</a> ·
-    <a href="v5_1_prereg.html">v5_1_prereg.html</a> ·
     <a href="research_board.html">research_board.html</a>
   </p>
   <p>Rules that stay: Rust core / thin Python; no neural nets.</p>
