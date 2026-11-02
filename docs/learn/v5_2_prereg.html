@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.2 pre-registration — curved means</title>
+<meta name="description" content="Plain-language guide to the frozen TRACE v5.2 test: does the method still split a shift correctly when the mean is curved?">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+  .pending{ color: #e0a050; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_1_prereg.html">V5.1 pre-reg</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2.md">Full pre-registration</a>
+</p>
+
+<h1>TRACE v5.2: does it still work when the mean is curved?</h1>
+<p><span class="status">PRE-REGISTERED</span> &nbsp; <span class="muted">2026-11-02 ET · nothing run yet</span></p>
+
+<div class="callout good">
+<strong>Where we are.</strong> v5.1 (the v5 mixture with a straight-line mean fit) <span class="pass">PASSED</span>
+all four of its cells on fresh seeds. But the test data had a straight-line mean by design, so a
+straight-line fit was the right tool by construction. That PASS says nothing about curved means.
+</div>
+
+<h2>The question</h2>
+<p>Real outcomes rarely depend on inputs along a straight line. If the true average outcome bends
+(say it grows with the square of one input), does TRACE still split a change between
+<em>“the inputs changed”</em> (composition) and <em>“the response changed”</em> (structure) correctly?</p>
+
+<h2>The one hypothesis</h2>
+<div class="callout">
+Swap v5.1's straight-line mean for a <strong>fixed additive spline</strong>: each input gets a flexible
+curve built from 5 knots at fixed positions (the 5%, 27.5%, 50%, 72.5% and 95% points of that input),
+fitted by plain least squares. Everything else stays exactly as in v5.1. The claim: this beats or ties
+the best rival in <strong>every</strong> test cell below, and never blames the wrong cause.
+</div>
+<p><strong>Why splines?</strong> There is nothing to tune: the knot count and positions follow a published
+default rule (Harrell, <em>Regression Modeling Strategies</em>). Additive splines are the classic way to
+handle smooth curves without needing huge data (Stone 1985; Hastie &amp; Tibshirani 1990). And with the
+curvy parts removed they reduce exactly to v5.1. We did <em>not</em> pick the older binned booster,
+because that is what made v5 fail.</p>
+
+<h2>The test data</h2>
+<p>Same simulator as before, plus a bend in the mean:
+$\mu(X) = 1 + X^\top\beta + \kappa\,\big[(X_1^2-1)/\sqrt2 + \sqrt2\sin X_3\big]$.
+The bend strength $\kappa$ is fixed in advance at <strong>0</strong> (straight line, a control),
+<strong>0.5</strong> and <strong>1.0</strong>.</p>
+
+<table>
+<tr><th>Group</th><th>What changes A→B</th><th>Bend κ</th><th>Sizes</th><th>Cells</th></tr>
+<tr><td>Curved composition</td><td>an input's distribution changes shape (skew or heavy tail)</td><td>0.5, 1.0</td><td>2,000 and 20,000 rows</td><td>8</td></tr>
+<tr><td>Straight-line control</td><td>same, no bend</td><td>0</td><td>both</td><td>4</td></tr>
+<tr><td>Structure only</td><td>inputs identical; only the noise shape changes</td><td>1.0</td><td>both</td><td>4</td></tr>
+</table>
+<p>The structure-only cells catch <strong>false blame</strong>: the true composition piece there is exactly
+zero, so TRACE must not report a meaningful one.</p>
+
+<h2>How it is graded</h2>
+<ul>
+<li>Same bars as v4/v5.1: per cell, the error gap to the best rival (DFL or CFM) must have a 95% upper bound below 0 (BEST) or below 10% of the planted effect (NON-INFERIOR); a t-interval and a bootstrap must agree.</li>
+<li>Role check: the bigger estimated piece must be the true dominant cause, and swapping the two does not help.</li>
+<li>Holm correction across all 16 cells.</li>
+<li>No uncertainty bands exist yet, so coverage is not graded.</li>
+<li>Time cap: 30 minutes on 8 cores for all 560 runs.</li>
+</ul>
+
+<h2>Seeds</h2>
+<p>Brand new: <code>10100–10149</code> (2,000 rows) and <code>10200–10219</code> (20,000 rows). A repo-wide search shows
+they appear nowhere before this page. Old seeds are off-limits: 9500–9549 are spent (we looked at them to
+choose v5.1), 9700–9819 were used by the v5.1 gate, and <strong>9600–9619 stay sealed</strong> as the final
+holdout for the eventual full claim.</p>
+
+<div class="callout bad">
+<strong>Kill rule.</strong> If any single cell fails, times out, or blames the wrong cause, the curved-mean claim
+is parked. v5.1's straight-line claim stays as it is. No re-tuning, no new seeds, no re-runs.
+</div>
+
+<h2>Honest limits</h2>
+<ul>
+<li>The bend is smooth and additive, so splines are nearly the right tool here too; interactions and jumps are not tested.</li>
+<li>A natural spline goes straight past its outer knots while $X_1^2$ keeps curving; when inputs shift into a long tail this may cost accuracy. That is part of the test.</li>
+<li>Extra coefficients add noise, which matters most in the small straight-line control cells.</li>
+<li>Simulated data only.</li>
+</ul>
+</body>
+</html>
