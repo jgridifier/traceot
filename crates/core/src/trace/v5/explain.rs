@@ -24,6 +24,7 @@ use crate::trace::v4::FitL2Config;
 use super::mixture::{
     lmoments_from_cdf_grid, mixture_cdf_location, quantile_from_cdf, support_grid,
 };
+use super::spline::SplineBasis;
 
 /// Location model for `μ_t`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -34,6 +35,10 @@ pub enum LocationModel {
     /// TRACE_V5_1 (PREREG_V5_1 §2): per-period OLS on an intercept plus all `p`
     /// columns. Closed form, no tunable parameters.
     Ols,
+    /// TRACE_V5_2 (PREREG_V5_2 §2): per-period OLS on a fixed additive restricted
+    /// cubic spline basis (5 pooled-quantile knots per column, no cross terms, no
+    /// penalty), solved by pivoted QR. See [`super::spline`].
+    Spline,
 }
 
 /// Per-period OLS location fit: coefficients `[β0, β1..βp]`.
@@ -174,6 +179,10 @@ pub struct ExplainV5Report {
     pub seconds_fit: f64,
     pub seconds_mixture: f64,
     pub seconds_total: f64,
+    /// `Spline` only: design columns dropped by the pivoted-QR rank rule, per period
+    /// (indices into intercept + 4p). Empty for the other location models.
+    pub dropped_cols_a: Vec<usize>,
+    pub dropped_cols_b: Vec<usize>,
 }
 
 fn check(x: &[f64], n: usize, p: usize, y: &[f64], who: &str) -> Result<()> {
@@ -210,6 +219,7 @@ pub fn explain_v5(
         return Err(TraceError::InvalidArgument("bad ExplainV5Config".into()));
     }
     let t0 = Instant::now();
+    let (mut dropped_cols_a, mut dropped_cols_b) = (Vec::new(), Vec::new());
     let (mu_aa, mu_ab, mu_ba, mu_bb) = match cfg.mean_model {
         LocationModel::Booster => {
             let m_a = fit_mean(x_a, n_a, p, y_a, &cfg.mean)?;
@@ -229,6 +239,19 @@ pub fn explain_v5(
                 predict_ols(&b_b, x_a, n_a),
                 predict_ols(&b_a, x_b, n_b),
                 predict_ols(&b_b, x_b, n_b),
+            )
+        }
+        LocationModel::Spline => {
+            let basis = SplineBasis::from_pooled(x_a, n_a, x_b, n_b, p);
+            let f_a = basis.fit(x_a, n_a, y_a)?;
+            let f_b = basis.fit(x_b, n_b, y_b)?;
+            dropped_cols_a.clone_from(&f_a.dropped);
+            dropped_cols_b.clone_from(&f_b.dropped);
+            (
+                basis.predict(&f_a, x_a, n_a),
+                basis.predict(&f_b, x_a, n_a),
+                basis.predict(&f_a, x_b, n_b),
+                basis.predict(&f_b, x_b, n_b),
             )
         }
     };
@@ -339,6 +362,8 @@ pub fn explain_v5(
         seconds_fit,
         seconds_mixture,
         seconds_total: t0.elapsed().as_secs_f64(),
+        dropped_cols_a,
+        dropped_cols_b,
     })
 }
 
@@ -600,5 +625,52 @@ mod tests {
         // default stays v5 (booster) and differs from the OLS path
         let rep0 = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &ExplainV5Config::default()).unwrap();
         assert!(rep0.lsplit_comp != rep.lsplit_comp);
+    }
+
+    /// v5.2 path: curved additive mean, pure covariate shift lands in composition and
+    /// the split is exact.
+    #[test]
+    fn v5_2_spline_curved_composition_shift() {
+        let mut rng = SplitMix64::new(71);
+        let (n, p) = (4000, 2);
+        let mk = |rng: &mut SplitMix64, shift: f64| {
+            let x: Vec<f64> = (0..n * p)
+                .map(|k| {
+                    let z = normal(rng);
+                    if k % p == 0 {
+                        shift + z * (1.0 + shift)
+                    } else {
+                        z
+                    }
+                })
+                .collect();
+            let y: Vec<f64> = (0..n)
+                .map(|i| {
+                    let (a, b) = (x[i * p], x[i * p + 1]);
+                    1.0 + a + 0.7 * a * a - b + b.sin() + 0.5 * normal(rng)
+                })
+                .collect();
+            (x, y)
+        };
+        let (xa, ya) = mk(&mut rng, 0.0);
+        let (xb, yb) = mk(&mut rng, 0.5);
+        let cfg = ExplainV5Config {
+            mean_model: LocationModel::Spline,
+            ..Default::default()
+        };
+        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &cfg).unwrap();
+        assert!(rep.dropped_cols_a.is_empty() && rep.dropped_cols_b.is_empty());
+        for j in 0..3 {
+            let tot = rep.bb.lmom[j] - rep.aa.lmom[j];
+            assert!((rep.lsplit_comp[j] + rep.lsplit_struct[j] - tot).abs() < 1e-10);
+        }
+        for j in 0..2 {
+            assert!(
+                rep.lsplit_comp[j].abs() > 3.0 * rep.lsplit_struct[j].abs(),
+                "{j}: {:?} {:?}",
+                rep.lsplit_comp,
+                rep.lsplit_struct
+            );
+        }
     }
 }

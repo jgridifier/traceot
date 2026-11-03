@@ -47,11 +47,14 @@ def explain_v5(
 
     ``mean_model="booster"`` is v5; ``"ols"`` is TRACE_V5_1 (per-period least squares
     on an intercept plus all columns, no tuning). See :func:`explain_v5_1`.
+    ``"spline"`` is TRACE_V5_2 (per-period least squares on a fixed additive restricted
+    cubic spline basis, 5 pooled-quantile knots per column; columns dropped by the
+    pivoted-QR rank rule are reported in ``dropped_cols_a`` / ``dropped_cols_b``).
     """
     xa, xb = _f64(x_a, 2), _f64(x_b, 2)
     ya, yb = _f64(y_a, 1), _f64(y_b, 1)
-    if mean_model not in ("booster", "ols"):
-        raise ValueError("mean_model must be 'booster' or 'ols'")
+    if mean_model not in ("booster", "ols", "spline"):
+        raise ValueError("mean_model must be 'booster', 'ols' or 'spline'")
     return _core.explain_v5_py(
         xa, ya, xb, yb, n_y=n_y, k_lmoments=k_lmoments, n_quad=n_quad, mean_model=mean_model
     )
@@ -78,3 +81,10 @@ def mixture_cdf_rows(u_nodes, q_rows, y_grid, weights=None):
 def mixture_quantile(y_grid, f_grid, u):
     """Left-inverse of a tabulated CDF (linear between grid points)."""
     return _core.quantile_from_cdf_py(_f64(y_grid, 1), _f64(f_grid, 1), _f64(u, 1))
+
+
+def explain_v5_2(x_a, y_a, x_b, y_b, *, n_y: int = 256, k_lmoments: int = 4, n_quad: int = 64):
+    """TRACE_V5_2 (PREREG_V5_2 §2): :func:`explain_v5` with the additive spline location model."""
+    return explain_v5(
+        x_a, y_a, x_b, y_b, n_y=n_y, k_lmoments=k_lmoments, n_quad=n_quad, mean_model="spline"
+    )

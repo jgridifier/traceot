@@ -1,6 +1,7 @@
 """TRACE v5 mixture counterfactual: thin-binding smoke tests and DFL toy check."""
 
 import numpy as np
+import pytest
 
 import traceot
 
@@ -74,5 +75,32 @@ def test_explain_v5_1_ols_location():
     assert abs(r["lsplit_struct"][0]) < 0.05
     import pytest
 
+    with pytest.raises(ValueError):
+        traceot.explain_v5(xa, ya, xb, yb, mean_model="tree")
+
+
+def test_explain_v5_2_spline_location():
+    import numpy as np
+
+    import traceot
+
+    rng = np.random.default_rng(31)
+    n = 3000
+    xa = rng.standard_normal((n, 3))
+    xb = rng.standard_normal((n, 3))
+    xb[:, 0] = 0.4 + 1.3 * xb[:, 0]
+
+    def f(x):
+        return 1 + x[:, 0] + 0.5 * x[:, 0] ** 2 + np.sin(x[:, 2])
+
+    ya = f(xa) + 0.5 * rng.standard_normal(n)
+    yb = f(xb) + 0.5 * rng.standard_normal(n)
+    r = traceot.explain_v5_2(xa, ya, xb, yb)
+    tot = np.subtract(r["bb"]["lmom"], r["aa"]["lmom"])
+    np.testing.assert_allclose(np.add(r["lsplit_comp"], r["lsplit_struct"]), tot, atol=1e-10)
+    assert r["dropped_cols_a"] == [] and r["dropped_cols_b"] == []
+    assert abs(r["lsplit_comp"][0]) > 3 * abs(r["lsplit_struct"][0])
+    r1 = traceot.explain_v5(xa, ya, xb, yb, mean_model="spline")
+    assert r1["lsplit_comp"] == r["lsplit_comp"]
     with pytest.raises(ValueError):
         traceot.explain_v5(xa, ya, xb, yb, mean_model="tree")
