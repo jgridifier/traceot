@@ -51,9 +51,10 @@ fn explain_v5_py<'py>(
     let mean_model = match mean_model {
         "booster" => LocationModel::Booster,
         "ols" => LocationModel::Ols,
+        "spline" => LocationModel::Spline,
         _ => {
             return Err(PyValueError::new_err(
-                "mean_model must be 'booster' or 'ols'",
+                "mean_model must be 'booster', 'ols' or 'spline'",
             ))
         }
     };
@@ -85,6 +86,8 @@ fn explain_v5_py<'py>(
     d.set_item("seconds_fit", rep.seconds_fit)?;
     d.set_item("seconds_mixture", rep.seconds_mixture)?;
     d.set_item("seconds_total", rep.seconds_total)?;
+    d.set_item("dropped_cols_a", rep.dropped_cols_a.clone())?;
+    d.set_item("dropped_cols_b", rep.dropped_cols_b.clone())?;
     Ok(d)
 }
 
