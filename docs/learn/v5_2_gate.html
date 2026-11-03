@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.2 gate — curved means: FAIL</title>
+<meta name="description" content="Plain-language result of the TRACE v5.2 curved-mean gate: FAIL, claim parked, V5.1 linear claim unchanged.">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+  .pending{ color: #e0a050; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_2_prereg.html">V5.2 pre-reg</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_GATE_RESULTS.md">Full results</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">Park note</a>
+</p>
+
+<h1>TRACE v5.2 gate: curved means — <span class="fail">FAIL</span></h1>
+<p><span class="status">PARKED</span> &nbsp; <span class="muted">run 2026-11-03 ET · one pass · 62 s of a 30-minute cap</span></p>
+
+<div class="callout bad">
+<strong>Short version.</strong> We swapped v5.1's straight-line mean fit for a fixed, tuning-free
+curve fit (a natural cubic spline per input, 5 knots) and tested it on data whose mean really is
+curved. It did not clear the frozen bar. The curved-mean claim is parked. The v5.1 result on
+straight-line means is untouched.
+</div>
+
+<h2>What was tested</h2>
+<p>Sixteen cells, fixed in advance: curved composition shifts (two shapes, two curvature levels,
+two sizes), straight-line controls, and "structure only" cells where the inputs do not move at all
+and only the noise shape changes. In every cell the method had to be as accurate as the best rival
+(DFL or CFM) within a 10% margin, give the bigger share to the right piece, and, in the
+structure-only cells, not invent a composition effect.</p>
+
+<h2>Results</h2>
+<table>
+<tr><th>#</th><th>family</th><th>scenario</th><th>κ</th><th>n</th><th>error v5.2</th><th>best rival error</th><th>accuracy</th><th>role</th><th>false attribution</th></tr>
+<tr><td>1</td><td>curved</td><td><code>skew_comp</code></td><td>0.5</td><td>2000</td><td>0.0507</td><td>0.0594</td><td class='pass'>BEST</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>2</td><td>curved</td><td><code>tail_comp</code></td><td>0.5</td><td>2000</td><td>0.00803</td><td>0.0123</td><td class='fail'>FAIL</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>3</td><td>curved</td><td><code>skew_comp</code></td><td>1</td><td>2000</td><td>—</td><td>—</td><td class='fail'>INCOMPLETE</td><td class="fail">INCOMPLETE</td><td class="">—</td></tr><tr><td>4</td><td>curved</td><td><code>tail_comp</code></td><td>1</td><td>2000</td><td>0.0115</td><td>0.0149</td><td class='fail'>FAIL</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>5</td><td>curved</td><td><code>skew_comp</code></td><td>0.5</td><td>20000</td><td>0.0463</td><td>0.0481</td><td class='pass'>NON-INFERIOR</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>6</td><td>curved</td><td><code>tail_comp</code></td><td>0.5</td><td>20000</td><td>0.00275</td><td>0.00375</td><td class='fail'>FAIL</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>7</td><td>curved</td><td><code>skew_comp</code></td><td>1</td><td>20000</td><td>—</td><td>—</td><td class='fail'>INCOMPLETE</td><td class="fail">INCOMPLETE</td><td class="">—</td></tr><tr><td>8</td><td>curved</td><td><code>tail_comp</code></td><td>1</td><td>20000</td><td>0.00351</td><td>0.00521</td><td class='fail'>FAIL</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>9</td><td>control</td><td><code>skew_comp</code></td><td>0</td><td>2000</td><td>0.0122</td><td>0.0189</td><td class='pass'>BEST</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>10</td><td>control</td><td><code>tail_comp</code></td><td>0</td><td>2000</td><td>0.00577</td><td>0.00925</td><td class='pass'>BEST</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>11</td><td>control</td><td><code>skew_comp</code></td><td>0</td><td>20000</td><td>0.00409</td><td>0.0123</td><td class='pass'>BEST</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>12</td><td>control</td><td><code>tail_comp</code></td><td>0</td><td>20000</td><td>0.00142</td><td>0.00491</td><td class='pass'>BEST</td><td class="pass">PASS</td><td class="">—</td></tr><tr><td>13</td><td>struct</td><td><code>skew_struct</code></td><td>1</td><td>2000</td><td>0.0195</td><td>0.023</td><td class='fail'>FAIL</td><td class="pass">PASS</td><td class="fail">FAIL</td></tr><tr><td>14</td><td>struct</td><td><code>tail_struct</code></td><td>1</td><td>2000</td><td>0.0125</td><td>0.0128</td><td class='fail'>FAIL</td><td class="fail">FAIL</td><td class="fail">FAIL</td></tr><tr><td>15</td><td>struct</td><td><code>skew_struct</code></td><td>1</td><td>20000</td><td>0.00643</td><td>0.00695</td><td class='pass'>NON-INFERIOR</td><td class="pass">PASS</td><td class="fail">FAIL</td></tr><tr><td>16</td><td>struct</td><td><code>tail_struct</code></td><td>1</td><td>20000</td><td>0.00375</td><td>0.00387</td><td class='fail'>FAIL</td><td class="pass">PASS</td><td class="fail">FAIL</td></tr>
+</table>
+<p class="muted">Errors are mean absolute error on the graded L-moment versus the oracle truth. Verdicts are after
+Holm correction across all 16 cells. Numbers, bounds and p values: the full results file.</p>
+
+<h2>What went wrong</h2>
+<ul>
+<li><strong>Two cells could not be built.</strong> For the skewed input at full curvature, the curve alone
+already spreads period B wider than period A, so no noise level makes the spreads match as the design
+requires. Those cells count as incomplete, which alone fails the gate.</li>
+<li><strong>Tail cells.</strong> The tail effects are tiny, so the 10% margin is tiny; the spline's extra
+coefficients add enough noise that the bound could not get under it (or not after correcting for 16 tests).</li>
+<li><strong>Structure-only cells.</strong> When nothing about the inputs changed, v5.2 still reported a
+composition piece larger than the margin, in all four cells. That is exactly the leak this test was
+designed to catch.</li>
+<li>The straight-line controls all came out <span class="pass">BEST</span>, so the spline does no harm when the
+mean is straight; the failures are specific to curvature and to the structure-only check.</li>
+</ul>
+
+<h2>What this means</h2>
+<div class="callout">
+<ul>
+<li>No claim about curved means. The spline option stays in the code with no validated claim.</li>
+<li>v5.1's claim for straight-line means stands exactly as before.</li>
+<li>The seeds used here are now spent; the final holdout (9600–9619) is still sealed.</li>
+</ul>
+</div>
+<p class="muted">Freeze <code>df5aff8</code> · implementation <code>ff0a8c6</code>.</p>
+</body>
+</html>
