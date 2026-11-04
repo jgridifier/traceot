@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-03 · traceot</title>
+<title>TRACE nightly · 2026-11-04 · traceot</title>
 <meta name="description" content="Nighttime applied refresher: where TRACE stands, what failed, how method changes translate into reading a shift report.">
 <style>
   :root {
@@ -133,120 +133,50 @@
 </style>
 </head>
 <body>
-<body>
 <main>
 <p>
   <a href="../index.html">Learn home</a> ·
   <a href="research_board.html">Research board</a> ·
-  <a href="v5_2_gate.html">V5.2 gate</a> ·
   <a href="v5_1_gate.html">V5.1 gate</a> ·
-  <a href="explaining_shifts.html">Explaining a shift</a> ·
-  <span class="status">nightly · 2026-11-03 evening ET</span>
+  <a href="v5_2_gate.html">V5.2 gate</a> ·
+  <span class="status">nightly · 2026-11-04 evening ET</span>
 </p>
 
 <h1>TRACE nightly</h1>
-<p class="lede">A short applied refresher for after work: what changed in the method today, and what that means when you actually explain a distribution shift between two periods.</p>
-<p class="meta">Today’s snapshot: <a href="nightly/2026-11-03.html">2026-11-03</a> (previous: <a href="nightly/2026-11-02.html">2026-11-02</a>) · main <code>38709f8</code> · V5.1 gate <strong>PASS</strong> on straight-line means · V5.2 curved-mean gate <strong>FAIL, claim parked</strong> (<a href="v5_2_gate.html">v5_2_gate</a>)</p>
+<p class="meta">Snapshot <a href="nightly/2026-11-04.html">2026-11-04</a> (previous: <a href="nightly/2026-11-03.html">2026-11-03</a>) · main <code>fd6c795</code> · a docs-only day: no code, no runs, no new numbers.</p>
 
-<nav class="toc" aria-label="Contents">
-<ol>
-  <li><a href="#takeaway">Tonight’s takeaway</a></li>
-  <li><a href="#changelog">What changed since last nightly</a></li>
-  <li><a href="#job">The practical job (refresher)</a></li>
-  <li><a href="#vignette">Worked vignette: two years of a city 10K</a></li>
-  <li><a href="#read">How to read a TRACE output tomorrow</a></li>
-  <li><a href="#scoreboard">Scoreboard</a></li>
-  <li><a href="#paper">One paper / idea for tonight</a></li>
-  <li><a href="#tomorrow">Tomorrow’s build step</a></li>
+<h2 id="new">New since last nightly</h2>
+<ul>
+  <li><strong>Decision note merged:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/37">#37</a> adds <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>. It recommends shipping V5.1 (a working paper plus a usable application) on the passed V5.1 gate alone, carrying the frozen limitation verbatim: the gate simulator’s mean is linear, so the PASS “does not show robustness to non-linear means.”</li>
+  <li><strong>Holdout question settled by the text, not by a run:</strong> the note quotes <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1</a> §3 and §6. Seeds 9600–9619 belong to the closed V5 gate, are not reused, and the V5.1 gate seeds were the test. So a “sealed-holdout confirmation” of V5.1 isn’t on the table at all; running it would be a deviation, not a confirmation. Those seeds were not touched.</li>
+  <li><strong>Options weighed:</strong> a fresh follow-up gate (B) was not chosen now because it would be designed after seeing the V5.2 failure; it can be pre-registered later on new seeds if reviewers ask. Discarding the result (C) was rejected.</li>
+  <li><strong>Waiting on you:</strong> one yes/no. “Do you approve shipping TraceOT V5.1 (working paper + application) on the passed V5.1 gate alone, with seeds 9600–9619 kept sealed and no holdout confirmation run?”</li>
+</ul>
+
+<h2 id="practice">What it means in practice</h2>
+<p>If you say yes, the stable path becomes <code>explain_v5(..., mean_model="ols")</code> in the Rust core with the thin Python wrapper, plus one worked synthetic example. Its output would state the straight-line-mean assumption and print a residual-versus-fit check as a warning only, with no claim that the check gates anything. The paper would report the existing four-cell table as is and keep every failure (V4, V5 gate 1, V5.2) in the history.</p>
+
+<h2 id="notdone">Not done today</h2>
+<p>Last night’s proposed step, a pre-registration for bands on V5.1, wasn’t drafted. The decision note took its place.</p>
+
+<h2 id="tomorrow">Tomorrow’s concrete step</h2>
+<p>If you approve, open the working-paper skeleton from the note’s outline (problem, method, pre-registration history with failures, the existing results table, limitations) as docs only, with no new numbers. If you don’t answer or say no, draft the V5.1 bands pre-registration on fresh, never-used seeds instead, design only.</p>
+
+<h2 id="archive">All nightly snapshots</h2>
+<ol reversed>
+  <li><a href="nightly/2026-11-04.html">2026-11-04</a> (this one)</li>
+  <li><a href="nightly/2026-11-03.html">2026-11-03</a></li>
+  <li><a href="nightly/2026-11-02.html">2026-11-02</a></li>
+  <li><a href="nightly/2026-11-01.html">2026-11-01</a></li>
+  <li><a href="nightly/2026-10-31.html">2026-10-31</a></li>
+  <li><a href="nightly/2026-10-30.html">2026-10-30</a></li>
+  <li><a href="nightly/2026-10-29.html">2026-10-29</a></li>
+  <li><a href="nightly/2026-10-27.html">2026-10-27</a></li>
+  <li><a href="nightly/2026-10-26.html">2026-10-26</a></li>
 </ol>
-</nav>
-
-<h2 id="takeaway">1. Tonight’s takeaway</h2>
-<div class="takeaway">
-<p><strong>The curved-mean test failed, and the claim is parked.</strong> Swapping V5.1’s straight-line mean for a fixed spline did not hold up: it lost or tied too weakly on every heavy-tail cell, two cells could not even be built, and on all four cells where only the response changed it still invented a composition piece bigger than the margin. TRACE’s only validated claim remains V5.1 on straight-line means, and a composition piece on a curved problem should be read as possibly a fitting artifact.</p>
-</div>
-
-<h2 id="changelog">2. What changed since last nightly</h2>
-<ul>
-  <li><strong>Code:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/34">#34</a> merged (<code>ff0a8c6</code>). It adds <code>mean_model="spline"</code> to <code>explain_v5</code> (restricted cubic spline, 5 fixed quantile knots, least squares by pivoted QR), the curved simulator, and the truth file. No column was dropped by the QR rule in any task.</li>
-  <li><strong>Results:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/35">#35</a> merged (main now <code>38709f8</code>): <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_GATE_RESULTS.md">V5_2_GATE_RESULTS.md</a> and <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a>. One pass, 490 of 560 tasks, 61.7 s on 8 workers (cap 1800 s). No tuning, no re-runs.</li>
-  <li><strong>Verdict: FAIL.</strong> Seven cells fail accuracy after Holm (all four curved <code>tail_comp</code> cells and three of the four structure-only cells), cell 14 fails the role check, all four structure-only cells fail the false-attribution check, and cells 3 and 7 are INCOMPLETE.</li>
-  <li><strong>Why 3 and 7 are incomplete:</strong> for <code>skew_comp</code> at κ = 1 the period-B mean alone is already wider (in λ₂) than all of period A, so the simulator’s noise calibration has no solution. Per the pre-registration these cells were not redesigned.</li>
-  <li><strong>What passed:</strong> all four straight-line control cells (κ = 0) are BEST, and curved <code>skew_comp</code> at κ = 0.5 is BEST at n = 2000 and non-inferior at n = 20 000.</li>
-  <li><strong>What stays:</strong> V5.1’s straight-line claim, unchanged. The spline option stays in the library with no validated claim. Seeds 10100–10149 and 10200–10219 are spent; 9600–9619 stay sealed.</li>
-</ul>
-
-<h2 id="job">3. The practical job (refresher)</h2>
-<p>Two periods, A and B. Each is a table of units (rows), features (columns), and one outcome whose distribution moved. TRACE’s job is a readable budget of <em>why</em>:</p>
-<ul>
-  <li><strong>Mix (composition):</strong> the kinds of units showing up changed.</li>
-  <li><strong>Response (structure):</strong> the same kinds of units now produce different outcomes.</li>
-  <li><strong>Entry / exit:</strong> units that arrived or left, kept on their own line when IDs are known.</li>
-  <li><strong>Noise:</strong> bands and a no-shift test say whether any of the above is bigger than sampling wobble. The v5.x line does not print bands yet, so read its splits as point estimates.</li>
-</ul>
-<p>Today’s failure is about the second bullet bleeding into the first. When only the response changed, the right composition piece is zero. The spline version still reported one, above the margin, at both sample sizes. That is the error that matters most in practice, because it tells you the population changed when it didn’t.</p>
-
-<h2 id="vignette">4. Worked vignette: two years of a city 10K</h2>
-<p class="note">Illustrative only: no TRACE run behind this story, and no numbers.</p>
-<p>A city 10K publishes finish times and runner ages for two years. The second year’s slow tail is fatter. Either more beginners signed up (a <strong>mix</strong> change), or race day was hot and everyone slowed at the same fitness (a <strong>response</strong> change). People who ran only one of the two years go on the <strong>entry / exit</strong> lines.</p>
-<p>Suppose the truth is a pure hot day: the field was the same kind of people, just slower. A good explainer reports nearly all response and close to zero mix. What today’s gate says is that, when finish time curves against age and the change lives in the tails, the spline version can still hand a visible slice to mix. You would walk away thinking the race attracted more beginners, which is the wrong lesson for the organizers.</p>
-<p class="note"><strong>Practical rule:</strong> before believing a mix piece, ask whether the inputs actually moved. Compare the age distribution between years directly. If it barely changed but TRACE reports a sizeable mix piece on a curved, heavy-tailed outcome, treat that piece as suspect.</p>
-
-<h2 id="read">5. How to read a TRACE output tomorrow</h2>
-<ul class="check">
-  <li><strong>Budget exactness</strong> is bookkeeping health (pieces sum to the total). It says nothing about accuracy.</li>
-  <li><strong>Check which mean model ran.</strong> <code>explain_v5_1</code> (least squares) is the only v5.x version with a passed gate, and only on straight-line means. <code>mean_model="spline"</code> now exists but carries no validated claim. The default booster failed its gate.</li>
-  <li><strong>A composition piece is not always real.</strong> This is no longer a worry; it is measured. On structure-only problems with curved means, the spline version reported false composition above the margin in all four cells.</li>
-  <li><strong>Heavy tails are the weak spot.</strong> Every curved <code>tail_comp</code> cell failed. If the shift is mostly in the extremes, lean on the rivals (DFL, CFM) as a cross-check.</li>
-  <li><strong>Overlap.</strong> Inputs one period never saw make the split lean on extrapolation. TRACE still does not print an overlap share.</li>
-</ul>
-
-<h2 id="scoreboard">6. Scoreboard</h2>
-<p>Scored rows only; failures stay failures. New today: the V5.2 rows.</p>
-<div class="scroll">
-<table>
-  <thead><tr><th>Claim</th><th>Bar</th><th>Result</th><th>Verdict</th></tr></thead>
-  <tbody>
-    <tr><td>H5.1b algebraic exactness (v3)</td><td>gap ≤ 1e-8 every rep</td><td>0/3500 misses</td><td class="pass">PASS</td></tr>
-    <tr><td>H6 rank stability (v3)</td><td>beat best rival</td><td>bootstrap ~0.50 vs ~0.77</td><td class="fail">FAIL</td></tr>
-    <tr><td>H8b band coverage (v3)</td><td>pooled ≥0.90, cells ≥0.85</td><td>pooled 0.815</td><td class="fail">FAIL</td></tr>
-    <tr><td>v4 H7 shape, 10 cells</td><td>BEST or non-inferior vs CFM/DFL</td><td>0/10</td><td class="fail">FAIL</td></tr>
-    <tr><td>v4 speed vs CFM</td><td>≥5× at 1e5 and 1e6</td><td>1.02× / 2.94×</td><td class="fail">FAIL</td></tr>
-    <tr><td>V5 gate 1 (booster), n=2000 cells</td><td>upper 95% of paired d &lt; δ; role check</td><td>both cells failed</td><td class="fail">FAIL</td></tr>
-    <tr><td>V5.1 four cells (straight-line means)</td><td>upper 95% &lt; 0 for BEST; role check</td><td>all four BEST (e.g. <code>skew_comp</code> n=2000: err 0.008351 vs CFM 0.0231)</td><td class="pass">BEST</td></tr>
-    <tr><td>V5.2 controls κ=0 (cells 9–12)</td><td>BEST or non-inferior after Holm</td><td>all four BEST (e.g. cell 11: err 0.004091 vs CFM 0.01234)</td><td class="pass">BEST</td></tr>
-    <tr><td>V5.2 curved <code>skew_comp</code> κ=0.5 (cells 1, 5)</td><td>same</td><td>cell 1 err 0.05065 vs CFM 0.05939; cell 5 err 0.0463 vs 0.04811</td><td class="pass">BEST / NON-INF</td></tr>
-    <tr><td>V5.2 curved <code>tail_comp</code> (cells 2, 4, 6, 8)</td><td>same</td><td>none survives Holm; cell 4 fails on the CI bound itself</td><td class="fail">FAIL</td></tr>
-    <tr><td>V5.2 <code>skew_comp</code> κ=1 (cells 3, 7)</td><td>calibration must be feasible</td><td>no solution; not run</td><td class="pending">INCOMPLETE</td></tr>
-    <tr><td>V5.2 structure-only accuracy (cells 13–16)</td><td>same</td><td>13, 14, 16 FAIL; 15 NON-INF</td><td class="fail">FAIL</td></tr>
-    <tr><td>V5.2 false attribution (cells 13–16)</td><td>upper 95% of mean |ĉ| &lt; δ</td><td>above δ in all four (e.g. cell 13: 0.01386 vs δ 0.003153)</td><td class="fail">FAIL</td></tr>
-    <tr><td>V5.2 overall</td><td>every cell passes</td><td>hypothesis rejected</td><td class="fail">FAIL · PARKED</td></tr>
-    <tr><td>Bands / coverage for v5.x</td><td>pooled ≥0.90, cells ≥0.85 (needs its own pre-reg)</td><td>no intervals exist yet</td><td class="pending">OPEN</td></tr>
-    <tr><td>Interactions, kinks, real data, speed</td><td>not yet pre-registered</td><td>not run</td><td class="pending">OPEN</td></tr>
-  </tbody>
-</table>
-</div>
-<p class="meta">Full numbers in <code>benchmarks/results/v5_2_gate_summary.json</code> and <code>v5_1_gate_summary.json</code>. The V5.1 column inside the V5.2 run is descriptive only and was not gated.</p>
-
-<h2 id="paper">7. One paper / idea for tonight</h2>
-<p><strong>Chernozhukov, V., Fernández-Val, I., &amp; Melly, B. (2013).</strong> <em>Inference on counterfactual distributions.</em> Econometrica 81(6), 2205–2268. <a href="https://doi.org/10.3982/ECTA10582">doi:10.3982/ECTA10582</a>.</p>
-<p>This is the paper behind CFM, the rival TRACE keeps being measured against. Its main contribution is not the point split but honest uncertainty: it shows the whole counterfactual distribution can be estimated with uniform confidence bands that hold across every quantile at once, built by a bootstrap that is valid for the full curve rather than one point at a time.</p>
-<p>Why tonight: after today, the cheapest way to make TRACE more useful is not a fancier mean, it is telling you when a piece is noise. A false composition piece like today’s would be harmless if its band clearly included zero. The open question for us is whether bands on V5.1 can hit the coverage bar that v3’s bands missed (0.815 pooled).</p>
-
-<h2 id="tomorrow">8. Tomorrow’s build step</h2>
-<p>No more curved-mean work under this park: no new knot rule, no re-runs, no seed changes. The proposed next step is to draft a pre-registration for bands on V5.1 (straight-line means only): a fixed bootstrap recipe, the coverage bars already on the scoreboard (pooled ≥ 0.90, every cell ≥ 0.85), a false-alarm check on no-shift cells, and fresh seeds that have never been used. Design only; no code or runs until it is frozen. Rust core with a thin Python switch, as always.</p>
 
 <footer>
-  <p>Dated <strong>2026-11-03 (evening)</strong>, America/New_York (EST). Content written against main <code>38709f8</code>. Material change since 2026-11-02: the V5.2 spline code merged (PR #34) and its gate ran once and FAILED (PR #35); the curved-mean claim is parked.</p>
-  <p>
-    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_GATE_RESULTS.md">V5_2_GATE_RESULTS.md</a> ·
-    <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a> ·
-    <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2.md">PREREG_V5_2.md</a> ·
-    <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a> ·
-    <a href="v5_2_gate.html">v5_2_gate.html</a> ·
-    <a href="research_board.html">research_board.html</a>
-  </p>
-  <p>Rules that stay: Rust core / thin Python; no neural nets.</p>
+  <p>Dated <strong>2026-11-04 (evening)</strong>, America/New_York (EST), written against main <code>fd6c795</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
 </footer>
 </main>
 </body>
