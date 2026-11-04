@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-04 · traceot</title>
+<meta name="description" content="Nighttime applied refresher: where TRACE stands, what failed, how method changes translate into reading a shift report.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1d1f;
+    --bg: #f7f4ef;
+    --muted: #5b5b60;
+    --rule: #ddd5c8;
+    --accent: #1b6ca8;
+    --note: #ebe6dc;
+    --ok: #2f7d4a;
+    --bad: #a33b2b;
+    --warn: #8a6d1d;
+    --card: #fffdf8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e9e9ec;
+      --bg: #141416;
+      --muted: #a3a3aa;
+      --rule: #333;
+      --accent: #6fb3e6;
+      --note: #1d2229;
+      --ok: #6cbc86;
+      --bad: #e08a7a;
+      --warn: #d4b45a;
+      --card: #1a1a1e;
+    }
+    svg.sketch { background: #fff; border-radius: 6px; }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 1rem 0 .35rem; }
+  h2 {
+    font-size: 1.22rem;
+    margin: 2rem 0 .55rem;
+    padding-top: .7rem;
+    border-top: 1px solid var(--rule);
+  }
+  h3 { font-size: 1.02rem; margin: 1.25rem 0 .35rem; }
+  p, li { max-width: 42rem; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); margin-top: 0; }
+  .status {
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #664d03;
+  }
+  @media (prefers-color-scheme: dark) {
+    .status { background: #3a3218; color: #e6d48a; }
+  }
+  .takeaway {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: .85rem 1rem;
+    border-radius: 6px;
+    margin: 1rem 0 1.4rem;
+  }
+  .note {
+    background: var(--note);
+    border-left: 4px solid var(--accent);
+    padding: .6rem .9rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+  }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1rem 0; }
+  table {
+    border-collapse: collapse;
+    font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    min-width: 28rem;
+  }
+  th, td {
+    border-bottom: 1px solid var(--rule);
+    padding: .4rem .5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { font-weight: 600; }
+  .fail { color: var(--bad); font-weight: 600; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .pending { color: var(--warn); font-weight: 600; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .88em;
+  }
+  nav.toc ol { margin: .2rem 0 0 1.1rem; padding: 0; }
+  nav.toc li { margin: .15rem 0; }
+  figure { margin: 1.1rem 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { color: var(--muted); font-size: .9rem; margin-top: .35rem; }
+  ul.check { list-style: none; padding-left: 0; }
+  ul.check li {
+    position: relative;
+    padding-left: 1.4rem;
+    margin: .55rem 0;
+  }
+  ul.check li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+  }
+  footer {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  footer a { color: var(--accent); }
+  .meta { font-size: .9rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<p>
+  <a href="../../index.html">Learn home</a> ·
+  <a href="../research_board.html">Research board</a> ·
+  <a href="../v5_1_gate.html">V5.1 gate</a> ·
+  <a href="../v5_2_gate.html">V5.2 gate</a> ·
+  <span class="status">nightly · 2026-11-04 evening ET</span>
+</p>
+
+<h1>TRACE nightly</h1>
+<p class="meta">Snapshot <a href="2026-11-04.html">2026-11-04</a> (previous: <a href="2026-11-03.html">2026-11-03</a>) · main <code>fd6c795</code> · a docs-only day: no code, no runs, no new numbers.</p>
+
+<h2 id="new">New since last nightly</h2>
+<ul>
+  <li><strong>Decision note merged:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/37">#37</a> adds <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>. It recommends shipping V5.1 (a working paper plus a usable application) on the passed V5.1 gate alone, carrying the frozen limitation verbatim: the gate simulator’s mean is linear, so the PASS “does not show robustness to non-linear means.”</li>
+  <li><strong>Holdout question settled by the text, not by a run:</strong> the note quotes <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1</a> §3 and §6. Seeds 9600–9619 belong to the closed V5 gate, are not reused, and the V5.1 gate seeds were the test. So a “sealed-holdout confirmation” of V5.1 isn’t on the table at all; running it would be a deviation, not a confirmation. Those seeds were not touched.</li>
+  <li><strong>Options weighed:</strong> a fresh follow-up gate (B) was not chosen now because it would be designed after seeing the V5.2 failure; it can be pre-registered later on new seeds if reviewers ask. Discarding the result (C) was rejected.</li>
+  <li><strong>Waiting on you:</strong> one yes/no. “Do you approve shipping TraceOT V5.1 (working paper + application) on the passed V5.1 gate alone, with seeds 9600–9619 kept sealed and no holdout confirmation run?”</li>
+</ul>
+
+<h2 id="practice">What it means in practice</h2>
+<p>If you say yes, the stable path becomes <code>explain_v5(..., mean_model="ols")</code> in the Rust core with the thin Python wrapper, plus one worked synthetic example. Its output would state the straight-line-mean assumption and print a residual-versus-fit check as a warning only, with no claim that the check gates anything. The paper would report the existing four-cell table as is and keep every failure (V4, V5 gate 1, V5.2) in the history.</p>
+
+<h2 id="notdone">Not done today</h2>
+<p>Last night’s proposed step, a pre-registration for bands on V5.1, wasn’t drafted. The decision note took its place.</p>
+
+<h2 id="tomorrow">Tomorrow’s concrete step</h2>
+<p>If you approve, open the working-paper skeleton from the note’s outline (problem, method, pre-registration history with failures, the existing results table, limitations) as docs only, with no new numbers. If you don’t answer or say no, draft the V5.1 bands pre-registration on fresh, never-used seeds instead, design only.</p>
+
+<h2 id="archive">All nightly snapshots</h2>
+<ol reversed>
+  <li><a href="2026-11-04.html">2026-11-04</a> (this one)</li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+
+<footer>
+  <p>Dated <strong>2026-11-04 (evening)</strong>, America/New_York (EST), written against main <code>fd6c795</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>
