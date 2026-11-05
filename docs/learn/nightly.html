@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-04 · traceot</title>
-<meta name="description" content="Nighttime applied refresher: where TRACE stands, what failed, how method changes translate into reading a shift report.">
+<title>TRACE nightly · 2026-11-05 · traceot</title>
+<meta name="description" content="No material TRACE change since 2026-11-04; still blocked on the V5.1 ship yes/no.">
 <style>
+
   :root {
     color-scheme: light dark;
     --fg: #1d1d1f;
@@ -32,7 +33,6 @@
       --warn: #d4b45a;
       --card: #1a1a1e;
     }
-    svg.sketch { background: #fff; border-radius: 6px; }
   }
   html { -webkit-text-size-adjust: 100%; }
   body {
@@ -51,7 +51,6 @@
     padding-top: .7rem;
     border-top: 1px solid var(--rule);
   }
-  h3 { font-size: 1.02rem; margin: 1.25rem 0 .35rem; }
   p, li { max-width: 42rem; }
   a { color: var(--accent); }
   .lede { color: var(--muted); margin-top: 0; }
@@ -67,14 +66,6 @@
   @media (prefers-color-scheme: dark) {
     .status { background: #3a3218; color: #e6d48a; }
   }
-  .takeaway {
-    background: var(--card);
-    border: 1px solid var(--rule);
-    border-left: 4px solid var(--accent);
-    padding: .85rem 1rem;
-    border-radius: 6px;
-    margin: 1rem 0 1.4rem;
-  }
   .note {
     background: var(--note);
     border-left: 4px solid var(--accent);
@@ -82,44 +73,9 @@
     border-radius: 4px;
     margin: 1rem 0;
   }
-  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1rem 0; }
-  table {
-    border-collapse: collapse;
-    font-size: .9rem;
-    font-variant-numeric: tabular-nums;
-    width: 100%;
-    min-width: 28rem;
-  }
-  th, td {
-    border-bottom: 1px solid var(--rule);
-    padding: .4rem .5rem;
-    text-align: left;
-    vertical-align: top;
-  }
-  th { font-weight: 600; }
-  .fail { color: var(--bad); font-weight: 600; }
-  .pass { color: var(--ok); font-weight: 600; }
-  .pending { color: var(--warn); font-weight: 600; }
   code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: .88em;
-  }
-  nav.toc ol { margin: .2rem 0 0 1.1rem; padding: 0; }
-  nav.toc li { margin: .15rem 0; }
-  figure { margin: 1.1rem 0; }
-  figure svg { width: 100%; height: auto; display: block; }
-  figcaption { color: var(--muted); font-size: .9rem; margin-top: .35rem; }
-  ul.check { list-style: none; padding-left: 0; }
-  ul.check li {
-    position: relative;
-    padding-left: 1.4rem;
-    margin: .55rem 0;
-  }
-  ul.check li::before {
-    content: "☐";
-    position: absolute;
-    left: 0;
-    color: var(--muted);
   }
   footer {
     color: var(--muted);
@@ -128,8 +84,8 @@
     border-top: 1px solid var(--rule);
     padding-top: 1rem;
   }
-  footer a { color: var(--accent); }
   .meta { font-size: .9rem; color: var(--muted); }
+
 </style>
 </head>
 <body>
@@ -139,32 +95,26 @@
   <a href="research_board.html">Research board</a> ·
   <a href="v5_1_gate.html">V5.1 gate</a> ·
   <a href="v5_2_gate.html">V5.2 gate</a> ·
-  <span class="status">nightly · 2026-11-04 evening ET</span>
+  <span class="status">nightly · 2026-11-05 evening ET</span>
 </p>
 
 <h1>TRACE nightly</h1>
-<p class="meta">Snapshot <a href="nightly/2026-11-04.html">2026-11-04</a> (previous: <a href="nightly/2026-11-03.html">2026-11-03</a>) · main <code>fd6c795</code> · a docs-only day: no code, no runs, no new numbers.</p>
+<p class="meta">Snapshot <a href="nightly/2026-11-05.html">2026-11-05</a> (previous: <a href="nightly/2026-11-04.html">2026-11-04</a>) · main <code>2e060fe</code> · no material change.</p>
 
-<h2 id="new">New since last nightly</h2>
-<ul>
-  <li><strong>Decision note merged:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/37">#37</a> adds <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>. It recommends shipping V5.1 (a working paper plus a usable application) on the passed V5.1 gate alone, carrying the frozen limitation verbatim: the gate simulator’s mean is linear, so the PASS “does not show robustness to non-linear means.”</li>
-  <li><strong>Holdout question settled by the text, not by a run:</strong> the note quotes <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1</a> §3 and §6. Seeds 9600–9619 belong to the closed V5 gate, are not reused, and the V5.1 gate seeds were the test. So a “sealed-holdout confirmation” of V5.1 isn’t on the table at all; running it would be a deviation, not a confirmation. Those seeds were not touched.</li>
-  <li><strong>Options weighed:</strong> a fresh follow-up gate (B) was not chosen now because it would be designed after seeing the V5.2 failure; it can be pre-registered later on new seeds if reviewers ask. Discarding the result (C) was rejected.</li>
-  <li><strong>Waiting on you:</strong> one yes/no. “Do you approve shipping TraceOT V5.1 (working paper + application) on the passed V5.1 gate alone, with seeds 9600–9619 kept sealed and no holdout confirmation run?”</li>
-</ul>
+<div class="note">
+<p><strong>No material change</strong> since <a href="nightly/2026-11-04.html">2026-11-04</a>. Main only advanced by merging that nightly (PR <a href="https://github.com/jgridifier/traceot/pull/38">#38</a>). No new results, no design amendments, no open PRs, and no research commits after the decision note.</p>
+</div>
 
-<h2 id="practice">What it means in practice</h2>
-<p>If you say yes, the stable path becomes <code>explain_v5(..., mean_model="ols")</code> in the Rust core with the thin Python wrapper, plus one worked synthetic example. Its output would state the straight-line-mean assumption and print a residual-versus-fit check as a warning only, with no claim that the check gates anything. The paper would report the existing four-cell table as is and keep every failure (V4, V5 gate 1, V5.2) in the history.</p>
-
-<h2 id="notdone">Not done today</h2>
-<p>Last night’s proposed step, a pre-registration for bands on V5.1, wasn’t drafted. The decision note took its place.</p>
+<h2 id="blocker">Blocker</h2>
+<p>Still waiting on one yes/no from Jared on <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>: ship TraceOT V5.1 (working paper + application) on the passed V5.1 gate alone, with seeds 9600–9619 kept sealed and no holdout confirmation run.</p>
 
 <h2 id="tomorrow">Tomorrow’s concrete step</h2>
-<p>If you approve, open the working-paper skeleton from the note’s outline (problem, method, pre-registration history with failures, the existing results table, limitations) as docs only, with no new numbers. If you don’t answer or say no, draft the V5.1 bands pre-registration on fresh, never-used seeds instead, design only.</p>
+<p>Unchanged from last night: if yes, open the working-paper skeleton as docs only (no new numbers). If no answer or no, draft the V5.1 bands pre-registration on fresh, never-used seeds — design only.</p>
 
 <h2 id="archive">All nightly snapshots</h2>
 <ol reversed>
-  <li><a href="nightly/2026-11-04.html">2026-11-04</a> (this one)</li>
+  <li><a href="nightly/2026-11-05.html">2026-11-05</a> (this one)</li>
+  <li><a href="nightly/2026-11-04.html">2026-11-04</a></li>
   <li><a href="nightly/2026-11-03.html">2026-11-03</a></li>
   <li><a href="nightly/2026-11-02.html">2026-11-02</a></li>
   <li><a href="nightly/2026-11-01.html">2026-11-01</a></li>
@@ -176,7 +126,7 @@
 </ol>
 
 <footer>
-  <p>Dated <strong>2026-11-04 (evening)</strong>, America/New_York (EST), written against main <code>fd6c795</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+  <p>Dated <strong>2026-11-05 (evening)</strong>, America/New_York (EST), written against main <code>2e060fe</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
 </footer>
 </main>
 </body>
