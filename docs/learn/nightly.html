@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-05 · traceot</title>
-<meta name="description" content="No material TRACE change since 2026-11-04; still blocked on the V5.1 ship yes/no.">
+<title>TRACE nightly · 2026-11-06 · traceot</title>
+<meta name="description" content="Jared approved shipping TraceOT V5.1: docs-only working-paper skeleton + application page; sealed holdout untouched; drafting not started yet.">
 <style>
 
   :root {
@@ -60,15 +60,15 @@
     font-weight: 600;
     padding: .15rem .55rem;
     border-radius: 999px;
-    background: #fff3cd;
-    color: #664d03;
+    background: #d8f0e0;
+    color: #1e5c34;
   }
   @media (prefers-color-scheme: dark) {
-    .status { background: #3a3218; color: #e6d48a; }
+    .status { background: #1e3326; color: #9fd4b0; }
   }
   .note {
     background: var(--note);
-    border-left: 4px solid var(--accent);
+    border-left: 4px solid var(--ok);
     padding: .6rem .9rem;
     border-radius: 4px;
     margin: 1rem 0;
@@ -95,25 +95,26 @@
   <a href="research_board.html">Research board</a> ·
   <a href="v5_1_gate.html">V5.1 gate</a> ·
   <a href="v5_2_gate.html">V5.2 gate</a> ·
-  <span class="status">nightly · 2026-11-05 evening ET</span>
+  <span class="status">nightly · 2026-11-06 evening ET</span>
 </p>
 
 <h1>TRACE nightly</h1>
-<p class="meta">Snapshot <a href="nightly/2026-11-05.html">2026-11-05</a> (previous: <a href="nightly/2026-11-04.html">2026-11-04</a>) · main <code>2e060fe</code> · no material change.</p>
+<p class="meta">Snapshot <a href="nightly/2026-11-06.html">2026-11-06</a> (previous: <a href="nightly/2026-11-05.html">2026-11-05</a>) · main <code>235b563</code> · approval news.</p>
 
+<h2 id="new">New since last nightly</h2>
 <div class="note">
-<p><strong>No material change</strong> since <a href="nightly/2026-11-04.html">2026-11-04</a>. Main only advanced by merging that nightly (PR <a href="https://github.com/jgridifier/traceot/pull/38">#38</a>). No new results, no design amendments, no open PRs, and no research commits after the decision note.</p>
+<p><strong>V5.1 ship approved.</strong> On 2026-11-05 Jared cleared yesterday’s blocker in his own words: “Yes, ship V5.1: open the working-paper skeleton and app on the passed V5.1 gate, sealed holdout untouched.” Scope is docs-only — working-paper skeleton plus application page on the passed <a href="v5_1_gate.html">V5.1 gate</a>; no new numbers; seeds 9600–9619 stay sealed; no holdout run. The decision note remains <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>. Confidence bands on fresh seeds stay a later, separate pre-registration.</p>
 </div>
 
-<h2 id="blocker">Blocker</h2>
-<p>Still waiting on one yes/no from Jared on <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>: ship TraceOT V5.1 (working paper + application) on the passed V5.1 gate alone, with seeds 9600–9619 kept sealed and no holdout confirmation run.</p>
+<p>Main has not moved since the 2026-11-05 nightly merge (PR <a href="https://github.com/jgridifier/traceot/pull/39">#39</a>). The working-paper skeleton and application page are <strong>not in the tree yet</strong> — approval cleared the gate; drafting has not started.</p>
 
 <h2 id="tomorrow">Tomorrow’s concrete step</h2>
-<p>Unchanged from last night: if yes, open the working-paper skeleton as docs only (no new numbers). If no answer or no, draft the V5.1 bands pre-registration on fresh, never-used seeds — design only.</p>
+<p>Open the TraceOT V5.1 working-paper skeleton and application page as docs only (no new numbers; sealed holdout untouched).</p>
 
 <h2 id="archive">All nightly snapshots</h2>
 <ol reversed>
-  <li><a href="nightly/2026-11-05.html">2026-11-05</a> (this one)</li>
+  <li><a href="nightly/2026-11-06.html">2026-11-06</a> (this one)</li>
+  <li><a href="nightly/2026-11-05.html">2026-11-05</a></li>
   <li><a href="nightly/2026-11-04.html">2026-11-04</a></li>
   <li><a href="nightly/2026-11-03.html">2026-11-03</a></li>
   <li><a href="nightly/2026-11-02.html">2026-11-02</a></li>
@@ -126,7 +127,7 @@
 </ol>
 
 <footer>
-  <p>Dated <strong>2026-11-05 (evening)</strong>, America/New_York (EST), written against main <code>2e060fe</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+  <p>Dated <strong>2026-11-06 (evening)</strong>, America/New_York (EST), written against main <code>235b563</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
 </footer>
 </main>
 </body>
