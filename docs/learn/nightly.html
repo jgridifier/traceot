@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-06 · traceot</title>
-<meta name="description" content="Jared approved shipping TraceOT V5.1: docs-only working-paper skeleton + application page; sealed holdout untouched; drafting not started yet.">
+<title>TRACE nightly · 2026-11-07 · traceot</title>
+<meta name="description" content="No material TRACE change since 2026-11-06; V5.1 working-paper skeleton + application page drafting still not started.">
 <style>
 
   :root {
@@ -60,15 +60,15 @@
     font-weight: 600;
     padding: .15rem .55rem;
     border-radius: 999px;
-    background: #d8f0e0;
-    color: #1e5c34;
+    background: #fff3cd;
+    color: #664d03;
   }
   @media (prefers-color-scheme: dark) {
-    .status { background: #1e3326; color: #9fd4b0; }
+    .status { background: #3a3218; color: #e6d48a; }
   }
   .note {
     background: var(--note);
-    border-left: 4px solid var(--ok);
+    border-left: 4px solid var(--warn);
     padding: .6rem .9rem;
     border-radius: 4px;
     margin: 1rem 0;
@@ -95,25 +95,27 @@
   <a href="research_board.html">Research board</a> ·
   <a href="v5_1_gate.html">V5.1 gate</a> ·
   <a href="v5_2_gate.html">V5.2 gate</a> ·
-  <span class="status">nightly · 2026-11-06 evening ET</span>
+  <span class="status">nightly · 2026-11-07 evening ET</span>
 </p>
 
 <h1>TRACE nightly</h1>
-<p class="meta">Snapshot <a href="nightly/2026-11-06.html">2026-11-06</a> (previous: <a href="nightly/2026-11-05.html">2026-11-05</a>) · main <code>235b563</code> · approval news.</p>
+<p class="meta">Snapshot <a href="nightly/2026-11-07.html">2026-11-07</a> (previous: <a href="nightly/2026-11-06.html">2026-11-06</a>) · main <code>e86ab10</code> · no material change.</p>
 
-<h2 id="new">New since last nightly</h2>
+<h2 id="new">No material change since last nightly</h2>
 <div class="note">
-<p><strong>V5.1 ship approved.</strong> On 2026-11-05 Jared cleared yesterday’s blocker in his own words: “Yes, ship V5.1: open the working-paper skeleton and app on the passed V5.1 gate, sealed holdout untouched.” Scope is docs-only — working-paper skeleton plus application page on the passed <a href="v5_1_gate.html">V5.1 gate</a>; no new numbers; seeds 9600–9619 stay sealed; no holdout run. The decision note remains <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>. Confidence bands on fresh seeds stay a later, separate pre-registration.</p>
+<p><strong>No material change.</strong> Main only advanced by merging yesterday’s nightly (PR <a href="https://github.com/jgridifier/traceot/pull/40">#40</a>). No new results, no design amendments, and no working-paper or application-page text landed in the tree.</p>
 </div>
 
-<p>Main has not moved since the 2026-11-05 nightly merge (PR <a href="https://github.com/jgridifier/traceot/pull/39">#39</a>). The working-paper skeleton and application page are <strong>not in the tree yet</strong> — approval cleared the gate; drafting has not started.</p>
+<h2 id="blocker">Blocker</h2>
+<p>V5.1 working-paper skeleton + application page drafting has not started (approval stands; sealed holdout untouched). Decision note: <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a>; gate: <a href="v5_1_gate.html">V5.1 gate</a>.</p>
 
 <h2 id="tomorrow">Tomorrow’s concrete step</h2>
 <p>Open the TraceOT V5.1 working-paper skeleton and application page as docs only (no new numbers; sealed holdout untouched).</p>
 
 <h2 id="archive">All nightly snapshots</h2>
 <ol reversed>
-  <li><a href="nightly/2026-11-06.html">2026-11-06</a> (this one)</li>
+  <li><a href="nightly/2026-11-07.html">2026-11-07</a> (this one)</li>
+  <li><a href="nightly/2026-11-06.html">2026-11-06</a></li>
   <li><a href="nightly/2026-11-05.html">2026-11-05</a></li>
   <li><a href="nightly/2026-11-04.html">2026-11-04</a></li>
   <li><a href="nightly/2026-11-03.html">2026-11-03</a></li>
@@ -127,7 +129,7 @@
 </ol>
 
 <footer>
-  <p>Dated <strong>2026-11-06 (evening)</strong>, America/New_York (EST), written against main <code>235b563</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+  <p>Dated <strong>2026-11-07 (evening)</strong>, America/New_York (EST), written against main <code>e86ab10</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
 </footer>
 </main>
 </body>
