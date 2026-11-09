@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-09 · traceot</title>
+<meta name="description" content="V5.1 shipped: working-paper skeleton and application page are live, and explain_v5 now defaults to the V5.1 location model.">
+<style>
+
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1d1f;
+    --bg: #f7f4ef;
+    --muted: #5b5b60;
+    --rule: #ddd5c8;
+    --accent: #1b6ca8;
+    --note: #ebe6dc;
+    --ok: #2f7d4a;
+    --bad: #a33b2b;
+    --warn: #8a6d1d;
+    --card: #fffdf8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e9e9ec;
+      --bg: #141416;
+      --muted: #a3a3aa;
+      --rule: #333;
+      --accent: #6fb3e6;
+      --note: #1d2229;
+      --ok: #6cbc86;
+      --bad: #e08a7a;
+      --warn: #d4b45a;
+      --card: #1a1a1e;
+    }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 1rem 0 .35rem; }
+  h2 {
+    font-size: 1.22rem;
+    margin: 2rem 0 .55rem;
+    padding-top: .7rem;
+    border-top: 1px solid var(--rule);
+  }
+  p, li { max-width: 42rem; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); margin-top: 0; }
+  .status {
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #664d03;
+  }
+  @media (prefers-color-scheme: dark) {
+    .status { background: #3a3218; color: #e6d48a; }
+  }
+  .note {
+    background: var(--note);
+    border-left: 4px solid var(--warn);
+    padding: .6rem .9rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .88em;
+  }
+  footer {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  .meta { font-size: .9rem; color: var(--muted); }
+
+</style>
+</head>
+<body>
+<main>
+<p>
+  <a href="../../index.html">Learn home</a> ·
+  <a href="../research_board.html">Research board</a> ·
+  <a href="../v5_1_paper.html">V5.1 paper</a> ·
+  <a href="../v5_1_app.html">V5.1 app</a> ·
+  <span class="status">nightly · 2026-11-09 evening ET</span>
+</p>
+
+<h1>TRACE nightly</h1>
+<p class="meta">Snapshot <a href="2026-11-09.html">2026-11-09</a> (previous: <a href="2026-11-08.html">2026-11-08</a>) · main <code>611a647</code> · V5.1 shipped.</p>
+
+<h2 id="new">New since last nightly</h2>
+<ul>
+  <li><strong>V5.1 shipped as docs</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/43">#43</a>, merged this morning). This is the approved ship: a working-paper skeleton at <a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/V5_1_working_paper.md"><code>docs/paper/V5_1_working_paper.md</code></a> with a Pages version, <a href="../v5_1_paper.html">V5.1 paper</a>, and an <a href="../v5_1_app.html">application page</a> showing how to call it from Python and Rust. The home page has a new “Shipped: V5.1” section. The skeleton keeps the failure history (v4 fail, v5 first-gate fail, v5.1 pass, v5.2 parked) and quotes the gate table as-is. No new numbers, no runs.</li>
+  <li><strong>V5.1 is now the library default</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/44">#44</a>). <code>explain_v5</code> uses the per-period least-squares location model by default in both the Rust core (<code>LocationModel::Ols</code>) and the thin Python binding (<code>mean_model="ols"</code>). The older booster stays available by name, and the V5 gate scripts and the benchmark pin it so they still reproduce V5. New tests check the default matches <code>explain_v5_1</code>. CI passed on both merges and Pages rebuilt.</li>
+</ul>
+<p><strong>What it means in practice:</strong> anyone calling <code>explain_v5</code> without arguments now gets the gated V5.1 method rather than the parked V5 one. The caveat telling callers to ask for V5.1 by name has been removed from the paper and app pages.</p>
+
+<h2 id="drafting">Paper drafting status</h2>
+<p>The skeleton is in, but most prose is still marked TODO: the abstract, §1 (problem and related work), the full write-up of the Shapley split and budget identity in §2, the lessons from each pre-registration step, the simulator description, and the §5 discussion with a per-cell figure built only from the existing result files. The sealed seeds 9600–9619 remain untouched and no holdout was run.</p>
+
+<h2 id="tomorrow">Tomorrow’s concrete step</h2>
+<p>Write §1 (problem, notation, and the relation to DiNardo–Fortin–Lemieux 1996 reweighting) and the full §2 Shapley split with its budget identity, replacing those TODO markers. Docs only, no new numbers.</p>
+
+<h2 id="archive">All nightly snapshots</h2>
+<ol reversed>
+  <li><a href="2026-11-09.html">2026-11-09</a> (this one)</li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+
+<footer>
+  <p>Dated <strong>2026-11-09 (evening)</strong>, America/New_York (EST), written against main <code>611a647</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>
