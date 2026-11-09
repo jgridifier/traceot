@@ -47,11 +47,38 @@ def test_explain_v5_budget_is_exact():
     xb = rng.standard_normal((3000, 3)) + [0.5, 0, 0]
     ya = xa[:, 0] + rng.standard_normal(3000)
     yb = xb[:, 0] + 1.3 * rng.standard_normal(3000)
-    r = traceot.explain_v5(xa, ya, xb, yb)
+    r = traceot.explain_v5(xa, ya, xb, yb, mean_model="booster")
     tot = np.array(r["bb"]["lmom"]) - np.array(r["aa"]["lmom"])
     np.testing.assert_allclose(np.add(r["lsplit_comp"], r["lsplit_struct"]), tot, atol=1e-12)
     assert r["lsplit_comp"][0] > 0.3  # mean moved through x0's shift
     assert r["lsplit_struct"][1] > 0.05  # wider noise moves λ2 through the response
+
+
+def test_explain_v5_default_is_v5_1_ols():
+    """Default location model is TRACE_V5_1 (OLS); booster stays selectable by name."""
+    import inspect
+
+    from traceot import v5 as v5mod
+
+    assert inspect.signature(v5mod.explain_v5).parameters["mean_model"].default == "ols"
+    rng = np.random.default_rng(5)
+    n, p = 2000, 3
+    xa = rng.normal(size=(n, p))
+    xb = rng.normal(size=(n, p)) + np.array([0.4, 0.0, 0.0])
+    ya = 0.2 + xa @ np.array([1.0, 0.5, -1.0]) + rng.standard_normal(n)
+    yb = 0.2 + xb @ np.array([1.0, 0.5, -1.0]) + rng.standard_normal(n)
+    r0 = traceot.explain_v5(xa, ya, xb, yb)
+    r1 = traceot.explain_v5_1(xa, ya, xb, yb)
+    assert r0["lsplit_comp"] == r1["lsplit_comp"]
+    assert r0["lsplit_struct"] == r1["lsplit_struct"]
+    assert r0["bb"]["lmom"] == r1["bb"]["lmom"] and r0["aa"]["lmom"] == r1["aa"]["lmom"]
+    # binding default (bypassing the Python wrapper) is OLS too
+    from traceot import _core
+
+    c0 = _core.explain_v5_py(xa, ya, xb, yb)
+    assert c0["lsplit_comp"] == r1["lsplit_comp"]
+    rb = traceot.explain_v5(xa, ya, xb, yb, mean_model="booster")
+    assert rb["lsplit_comp"] != r1["lsplit_comp"]
 
 
 def test_explain_v5_1_ols_location():

@@ -86,7 +86,7 @@ def task(a):
     XA0, yA, XB0, yB = s.sample(N, rng)
     XA, XB = centred(XA0, XB0)
     off = XA0[0] - XA[0]
-    r5 = traceot.explain_v5(XA, yA, XB, yB)
+    r5 = traceot.explain_v5(XA, yA, XB, yB, mean_model="booster")
     lo = min(yA.min(), yB.min()) - 1.0
     hi = max(yA.max(), yB.max()) + 1.0
     grid = np.linspace(lo - 3, hi + 3, 256)

@@ -33,7 +33,7 @@ def explain_v5(
     n_y: int = 256,
     k_lmoments: int = 4,
     n_quad: int = 64,
-    mean_model: str = "booster",
+    mean_model: str = "ols",
 ):
     """Split the A→B change in each L-moment into composition and response pieces.
 
@@ -45,8 +45,9 @@ def explain_v5(
     per-hybrid dicts ``aa/ab/ba/bb`` (``q_mix``, ``q_bary``, ``lmom``, ``lmom_bary``,
     ``mixing_residual``), the ``u_nodes`` / ``y_grid`` used, and timings.
 
-    ``mean_model="booster"`` is v5; ``"ols"`` is TRACE_V5_1 (per-period least squares
-    on an intercept plus all columns, no tuning). See :func:`explain_v5_1`.
+    ``mean_model="ols"`` (the default) is TRACE_V5_1 (per-period least squares on an
+    intercept plus all columns, no tuning); see :func:`explain_v5_1`. ``"booster"`` is
+    v5 (binned mean booster) and stays selectable by name.
     ``"spline"`` is TRACE_V5_2 (per-period least squares on a fixed additive restricted
     cubic spline basis, 5 pooled-quantile knots per column; columns dropped by the
     pivoted-QR rank rule are reported in ``dropped_cols_a`` / ``dropped_cols_b``).
