@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using TRACE v5.1 — application</title>
+<meta name="description" content="How to call the shipped TRACE v5.1 explainer from Python and Rust. Linear-mean only.">
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: light dark; --fg:#1d1d1f; --bg:#fdfdfc; --muted:#5b5b60; --rule:#ddd; --accent:#1b6ca8; --code:#f2f2f4; --box:#f4f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e9e9ec; --bg:#141416; --muted:#a3a3aa; --rule:#333; --accent:#6fb3e6; --code:#1f1f24; --box:#1a1f29; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size:1.0625rem; line-height:1.6; }
+  main { max-width:42rem; margin:0 auto; padding:1.25rem 1rem 4rem; transition:max-width .2s; }
+  body.wide main { max-width:88rem; }
+  h1 { font-size:1.7rem; line-height:1.25; margin:.6rem 0 .3rem; }
+  h2 { font-size:1.2rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:.8rem; }
+  a { color:var(--accent); }
+  code { background:var(--code); padding:1px 5px; border-radius:3px; font-size:.9em; }
+  pre { background:var(--code); padding:.8rem 1rem; border-radius:6px; overflow-x:auto; font-size:.88em; line-height:1.45; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; font-size:.85em; margin:1rem 0; }
+  td, th { border:1px solid var(--rule); padding:4px 8px; vertical-align:top; white-space:nowrap; }
+  th { text-align:left; }
+  blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:3px solid var(--accent); background:var(--box); }
+  .banner { padding:.8rem 1rem; border-radius:6px; background:#d9f2e6; color:#0b4d2c; margin:1rem 0; }
+  @media (prefers-color-scheme: dark) { .banner { background:#123a28; color:#a8e6c6; } }
+  .warn { padding:.8rem 1rem; border-left:4px solid #d08a1c; background:var(--box); margin:1rem 0; }
+  .todo { color:#b35c00; font-weight:600; }
+  .muted { color:var(--muted); font-size:.93em; }
+  .nav { font-size:.92em; }
+  #wbtn { float:right; font-size:.8rem; padding:.2rem .6rem; border:1px solid var(--rule); background:var(--bg); color:var(--fg); border-radius:4px; cursor:pointer; }
+  li { margin:.3rem 0; }
+</style>
+</head>
+<body>
+<main>
+<button id="wbtn" type="button" onclick="document.body.classList.toggle('wide');this.textContent=document.body.classList.contains('wide')?'Narrow page':'Widen page'">Widen page</button>
+<p class="nav"><a href="../index.html">traceot</a> · <a href="v5_1_paper.html">V5.1 paper</a> · <a href="v5_1_app.html">V5.1 app</a> · <a href="v5_1_gate.html">V5.1 gate</a> · <a href="v5_1_prereg.html">V5.1 pre-reg</a></p>
+<h1>Using TRACE v5.1</h1>
+<p class="muted">Application page · 2026-11-09 ET · paper: <a href="v5_1_paper.html">V5.1 working paper</a> · gate: <a href="v5_1_gate.html">V5.1 gate (PASS)</a></p>
+<div class="banner"><strong>Shipped: TRACE V5.1.</strong> Approved by the owner on 2026-11-05 ET:
+<em>"Yes, ship V5.1: open the working-paper skeleton and app on the passed V5.1 gate, sealed holdout untouched."</em>
+Docs only; every number is quoted from an existing repo file. Indices 9600–9619 stay sealed; no holdout was run.</div>
+<div class="warn"><strong>Linear-mean only.</strong> V5.1 was validated on a simulator whose mean is linear. Verbatim from <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §7</a>:
+<blockquote>The simulator's mean is linear, so a linear location fit is the correct family by
+construction. A PASS shows that v5's mixture object works once the location model is
+right; it does <strong>not</strong> show robustness to non-linear means. That needs its own
+pre-registration.</blockquote>
+If the outcome's mean is clearly curved in the inputs, the split carries no validated claim. The curved-mean follow-up (v5.2) failed and is parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a>).</div>
+
+<h2>What it does</h2>
+<p>Give it two samples, period A and period B, each with inputs <code>x</code> (n × p) and an outcome <code>y</code> (length n). For each of the first four L-moments of <code>y</code> (location, scale, skewness, tail weight), it splits the A→B change into a <em>composition</em> piece (the inputs moved) and a <em>response</em> piece (how <code>y</code> reacts to the inputs changed). The two pieces sum exactly to the total change. All numerics run in the Rust core; Python only checks shapes and forwards.</p>
+
+<h2>Install</h2>
+<pre><code>git clone https://github.com/jgridifier/traceot
+cd traceot
+pip install maturin
+maturin develop --release</code></pre>
+
+<h2>Python</h2>
+<p>Entry point: <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b, *, n_y=256, k_lmoments=4, n_quad=64)</code>, defined in <a href="https://github.com/jgridifier/traceot/blob/main/python/traceot/v5.py">v5.py</a>. It is exactly <code>traceot.explain_v5(..., mean_model="ols")</code>. <strong>Do not rely on the default</strong>: <code>explain_v5</code> without <code>mean_model</code> runs v5 (<code>"booster"</code>), the version that failed its gate.</p>
+<pre><code>import numpy as np
+import traceot
+
+# Synthetic, neutral data: three inputs, a straight-line mean, skewed noise.
+rng = np.random.default_rng(11)
+n, p = 3000, 3
+beta = np.array([1.0, -0.5, 2.0])
+x_a = rng.normal(size=(n, p))
+x_b = rng.normal(size=(n, p)) + np.array([0.5, 0.0, 0.0])  # only input 0 moves
+y_a = 0.3 + x_a @ beta + rng.standard_exponential(n)
+y_b = 0.3 + x_b @ beta + rng.standard_exponential(n)
+
+r = traceot.explain_v5_1(x_a, y_a, x_b, y_b)        # TRACE_V5_1
+# same call, spelled out:
+# r = traceot.explain_v5(x_a, y_a, x_b, y_b, mean_model=&quot;ols&quot;)
+
+comp, resp = r[&quot;lsplit_comp&quot;], r[&quot;lsplit_struct&quot;]   # one entry per L-moment
+total = np.subtract(r[&quot;bb&quot;][&quot;lmom&quot;], r[&quot;aa&quot;][&quot;lmom&quot;])
+for k in range(len(total)):
+    print(f&quot;lambda_{k + 1}: total {total[k]:+.4f} = composition {comp[k]:+.4f} + response {resp[k]:+.4f}&quot;)
+</code></pre>
+<p>This is the setup of the existing test <code>test_explain_v5_1_ols_location</code> in <a href="https://github.com/jgridifier/traceot/blob/main/tests/python/test_v5.py">test_v5.py</a>. That test asserts the budget is exact to 1e-10, the composition piece of λ<sub>1</sub> is within 0.1 of 0.5 (the planted mean shift: 0.5 × coefficient 1.0 on input 0), and the response piece of λ<sub>1</sub> is below 0.05 in absolute value. No other output values are claimed here; run it to see yours.</p>
+
+<h3>What comes back</h3>
+<ul>
+<li><code>lsplit_comp</code>, <code>lsplit_struct</code>: lists of length <code>k_lmoments</code>, composition and response pieces for λ<sub>1</sub>…λ<sub>k</sub>.</li>
+<li><code>aa</code>, <code>ab</code>, <code>ba</code>, <code>bb</code>: the four hybrids [covariates, conditional], each a dict with <code>q_mix</code>, <code>q_bary</code>, <code>lmom</code>, <code>lmom_bary</code>, <code>mixing_residual</code>.</li>
+<li><code>u_nodes</code>, <code>y_grid</code>: the quadrature nodes and support grid used.</li>
+<li><code>seconds_fit</code>, <code>seconds_mixture</code>, <code>seconds_total</code>; <code>dropped_cols_a</code>/<code>dropped_cols_b</code> (empty for the OLS path).</li>
+</ul>
+<p class="muted">In the gate the inputs were centred on the average of the two period means before the call (<code>centred</code> in <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/shiftbench/run_synthetic.py">run_synthetic.py</a>, used by <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/shiftbench/run_v5_1_gate.py">run_v5_1_gate.py</a>). Do the same to match the validated setup.</p>
+
+<h2>Rust</h2>
+<p>Entry point: <code>traceot_core::trace::explain_v5</code> with <code>ExplainV5Config { mean_model: LocationModel::Ols, .. }</code>, defined in <a href="https://github.com/jgridifier/traceot/blob/main/crates/core/src/trace/v5/explain.rs">explain.rs</a>. Returns an <code>ExplainV5Report</code> with the same fields as the Python dict.</p>
+<pre><code>use traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel};
+
+// x_a: n_a x p row-major, y_a: length n_a (same for period B).
+fn split(x_a: &amp;[f64], n_a: usize, y_a: &amp;[f64],
+         x_b: &amp;[f64], n_b: usize, y_b: &amp;[f64], p: usize)
+         -&gt; Result&lt;(), traceot_core::TraceError&gt; {
+    let cfg = ExplainV5Config {
+        mean_model: LocationModel::Ols, // TRACE_V5_1; the default is Booster (v5)
+        ..ExplainV5Config::default()    // n_y = 256, k_lmoments = 4, n_quad = 64
+    };
+    let rep = explain_v5(x_a, n_a, y_a, x_b, n_b, y_b, p, &amp;cfg)?;
+    for k in 0..cfg.k_lmoments {
+        let total = rep.bb.lmom[k] - rep.aa.lmom[k];
+        println!(&quot;lambda_{}: total {total:+.4} = comp {:+.4} + resp {:+.4}&quot;,
+                 k + 1, rep.lsplit_comp[k], rep.lsplit_struct[k]);
+    }
+    Ok(())
+}
+</code></pre>
+
+<h2>Before you trust a split</h2>
+<ul>
+<li>Check the linear-mean assumption yourself (for example, plot residuals against fitted values per period). The library does not do this yet; a report-only check is an open item, with no gating claim.</li>
+<li>Only the pure-composition cells (<code>skew_comp</code>, <code>tail_comp</code>) were tested. Structure cells, coverage, ShiftBench, speed and per-feature shares are out of scope (PREREG_V5_1 §6).</li>
+<li>Results in the gate: <a href="v5_1_gate.html">V5.1 gate page</a> and <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>.</li>
+</ul>
+
+</main>
+</body>
+</html>
