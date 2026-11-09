@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE v5.1 — working paper (skeleton)</title>
+<meta name="description" content="TRACE v5.1 working paper skeleton: shipped on the passed, pre-registered v5.1 gate. Linear-mean simulator only.">
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: light dark; --fg:#1d1d1f; --bg:#fdfdfc; --muted:#5b5b60; --rule:#ddd; --accent:#1b6ca8; --code:#f2f2f4; --box:#f4f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e9e9ec; --bg:#141416; --muted:#a3a3aa; --rule:#333; --accent:#6fb3e6; --code:#1f1f24; --box:#1a1f29; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size:1.0625rem; line-height:1.6; }
+  main { max-width:42rem; margin:0 auto; padding:1.25rem 1rem 4rem; transition:max-width .2s; }
+  body.wide main { max-width:88rem; }
+  h1 { font-size:1.7rem; line-height:1.25; margin:.6rem 0 .3rem; }
+  h2 { font-size:1.2rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:.8rem; }
+  a { color:var(--accent); }
+  code { background:var(--code); padding:1px 5px; border-radius:3px; font-size:.9em; }
+  pre { background:var(--code); padding:.8rem 1rem; border-radius:6px; overflow-x:auto; font-size:.88em; line-height:1.45; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; font-size:.85em; margin:1rem 0; }
+  td, th { border:1px solid var(--rule); padding:4px 8px; vertical-align:top; white-space:nowrap; }
+  th { text-align:left; }
+  blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:3px solid var(--accent); background:var(--box); }
+  .banner { padding:.8rem 1rem; border-radius:6px; background:#d9f2e6; color:#0b4d2c; margin:1rem 0; }
+  @media (prefers-color-scheme: dark) { .banner { background:#123a28; color:#a8e6c6; } }
+  .warn { padding:.8rem 1rem; border-left:4px solid #d08a1c; background:var(--box); margin:1rem 0; }
+  .todo { color:#b35c00; font-weight:600; }
+  .muted { color:var(--muted); font-size:.93em; }
+  .nav { font-size:.92em; }
+  #wbtn { float:right; font-size:.8rem; padding:.2rem .6rem; border:1px solid var(--rule); background:var(--bg); color:var(--fg); border-radius:4px; cursor:pointer; }
+  li { margin:.3rem 0; }
+</style>
+</head>
+<body>
+<main>
+<button id="wbtn" type="button" onclick="document.body.classList.toggle('wide');this.textContent=document.body.classList.contains('wide')?'Narrow page':'Widen page'">Widen page</button>
+<p class="nav"><a href="../index.html">traceot</a> · <a href="v5_1_paper.html">V5.1 paper</a> · <a href="v5_1_app.html">V5.1 app</a> · <a href="v5_1_gate.html">V5.1 gate</a> · <a href="v5_1_prereg.html">V5.1 pre-reg</a></p>
+<h1>TRACE v5.1: splitting a change in distribution shape into composition and response</h1>
+<p class="muted">Working paper, skeleton · opened 2026-11-09 ET · source <a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/V5_1_working_paper.md">V5_1_working_paper.md</a> · decision <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a> (PR #37)</p>
+<div class="banner"><strong>Shipped: TRACE V5.1.</strong> Approved by the owner on 2026-11-05 ET:
+<em>"Yes, ship V5.1: open the working-paper skeleton and app on the passed V5.1 gate, sealed holdout untouched."</em>
+Docs only; every number is quoted from an existing repo file. Indices 9600–9619 stay sealed; no holdout was run.</div>
+<p class="muted">Sections marked <span class="todo">TODO</span> are not written yet.</p>
+
+<h2>Abstract</h2>
+<p>When the distribution of an outcome changes between two periods A and B, part of the change comes from the inputs moving (<em>composition</em>) and part from the way the outcome responds to the inputs (<em>response</em>, also called structure). TRACE v5.1 splits the change in each L-moment of the outcome into these two pieces. It builds the four mixture counterfactual laws \(F_{[s,t]}(y)=E_{x\sim F_s}F_t(y\mid x)\) for \(s,t\in\{A,B\}\), with each period's conditional law given by an ordinary-least-squares location fit plus that period's empirical residual law, and takes the two-player Shapley split of the L-moment change. The fit is closed form and has no tunable parameters (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §2</a>). In a frozen, pre-registered gate on fresh seeds, v5.1 was <strong>BEST</strong> against the better of two paired rivals (DFL reweighting and CFM) in all four pure-composition cells and passed the role check in all four (<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>). The simulator's mean is linear, so this result says nothing about non-linear means; a follow-up that tried curved means was pre-registered, run once, and parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a>).</p>
+<p><span class="todo">TODO:</span> final abstract wording once §1 and §6 are written.</p>
+
+<h2>1. Problem</h2>
+<p>Decomposing a distribution shift's shape change (L-moments) into composition vs structure via a four-hybrid mixture and a two-player Shapley split (decision plan outline). For a gentle introduction see <a href="explaining_shifts.html">Explaining a shift</a>.</p>
+<p><span class="todo">TODO:</span> motivation, notation, relation to DFL (1996) reweighting and the counterfactual distributions of Chernozhukov, Fernández-Val and Melly (2013), and why L-moments.</p>
+
+<h2>2. Method (TRACE_V5_1)</h2>
+<p>Quoted from the frozen method, <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §2</a>:</p>
+<ul>
+<li>Per period \(t\in\{A,B\}\): \(\hat\mu_t(x)=\hat\beta_{0,t}+x^\top\hat\beta_t\), the least-squares fit of \(y\) on an intercept and all \(p\) columns of \(x\) (no penalty, no feature selection, no transforms). Residuals \(r_t=y-\hat\mu_t(x)\); residual law = empirical law of \(r_t\).</li>
+<li>Unchanged from v5 @ <code>3d695bc</code>: four hybrids \([A,A],[A,B],[B,A],[B,B]\) via <code>mixture_cdf_location</code>, 256-point support grid, <code>n_quad = 64</code>, exact L-moments of the gridded law, two-player Shapley split.</li>
+<li>Implemented in the Rust core with a thin Python switch (no neural nets). The fit is closed form; there are <strong>no tunable parameters</strong>.</li>
+</ul>
+<p>Implementation: <code>TRACE_V5_1</code> = <code>explain_v5(..., mean_model="ols")</code> (PR #29), merge SHA <code>665939bd4aa78ffc7474b91d482d18ac0191d595</code>. Code: <a href="https://github.com/jgridifier/traceot/blob/main/crates/core/src/trace/v5/explain.rs">explain.rs</a>, <a href="https://github.com/jgridifier/traceot/blob/main/python/traceot/v5.py">v5.py</a>.</p>
+<p><span class="todo">TODO:</span> the Shapley split in full, the budget identity, grid and quadrature details.</p>
+
+<h2>3. Pre-registration history (failures kept)</h2>
+<table>
+<tr><th>step</th><th>freeze</th><th>verdict</th><th>record</th></tr>
+<tr><td>v4</td><td><code>d50732f</code></td><td>Overall accuracy <strong>FAIL</strong>; coverage <strong>INCOMPLETE</strong></td><td><a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V4_RESULTS.md">V4_RESULTS.md</a></td></tr>
+<tr><td>v5 first gate (binned mean booster)</td><td><code>bce021e</code></td><td><strong>FAIL</strong> (n = 20 000 cells INCOMPLETE); kill rule applies, gate closed</td><td><a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_GATE1_RESULTS.md">V5_GATE1_RESULTS.md</a> · <a href="v5_gate1.html">page</a></td></tr>
+<tr><td>v5 diagnosis</td><td>—</td><td><strong>EXPLORATORY</strong>, no claim; spent dev seeds 9500–9549 only</td><td><a href="https://github.com/jgridifier/traceot/blob/main/docs/research/V5_DIAGNOSIS.md">V5_DIAGNOSIS.md</a></td></tr>
+<tr><td><strong>v5.1</strong> (OLS location fit)</td><td><code>b33f507</code></td><td><strong>PASS</strong>: all four cells BEST, all role checks PASS</td><td><a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a> · <a href="v5_1_gate.html">page</a></td></tr>
+<tr><td>v5.2 (curved means, spline)</td><td><code>df5aff8</code></td><td><strong>FAIL</strong>: curved-mean claim parked</td><td><a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a> · <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_GATE_RESULTS.md">V5_2_GATE_RESULTS.md</a> · <a href="v5_2_gate.html">page</a></td></tr>
+</table>
+<ul>
+<li>v5 park: "its kill rule stands and the v5 first gate is closed" (PREREG_V5_1 header). There is no separate <code>PARK_V5.md</code>; the record is V5_GATE1_RESULTS.md.</li>
+<li>v5.2 park: "V5.1's linear-mean claim stands exactly as stated in V5_1_GATE_RESULTS.md. This failure neither strengthens nor weakens it." (PARK_V5_2.md)</li>
+<li>Holdout: "9600–9619 belong to the closed PREREG_V5 gate; they stay sealed and are not reused" (§3); "There is no separate holdout in this freeze; the gate seeds above are the test." (§6)</li>
+</ul>
+<p><span class="todo">TODO:</span> a paragraph per step on what was learned.</p>
+
+<h2>4. Gate design</h2>
+<p>As frozen in PREREG_V5_1 §3–§5: <code>skew_comp</code>, <code>tail_comp</code> at n = 2000 (p = 5, indices 9700–9749, 50 reps) and n = 20 000 (p = 20, indices 9800–9819, 20 reps); paired d = err<sub>v5.1</sub> − err<sub>best rival</sub>; BEST if the one-sided 95% upper bound is below 0, NON-INFERIOR if below δ = 0.10 × planted magnitude; role check; Holm across the four tests; 30-minute wall cap on 8 cores.</p>
+<p><span class="todo">TODO:</span> the simulator families and truth file in prose.</p>
+
+<h2>5. Results</h2>
+<p>Quoted as is from <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>: prereg <code>b33f507</code>, gate verdict <strong>PASS</strong>, wall time 15.0 s on 8 workers (cap 1800 s), 140/140 tasks finished.</p>
+<table>
+<tr><th>cell</th><th>n</th><th>p</th><th>reps</th><th>err v5.1</th><th>err DFL</th><th>err CFM</th><th>mean d</th><th>upper t</th><th>upper boot</th><th>δ</th><th>verdict</th><th>|ĉ|</th><th>|ŝ|</th><th>role</th><th>p NI (Holm)</th><th>p BEST (Holm)</th></tr>
+<tr><td>skew_comp</td><td>2000</td><td>5</td><td>50</td><td>0.008351</td><td>0.07792</td><td>0.0231</td><td>-0.01475</td><td>-0.01206</td><td>-0.01218</td><td>0.004025</td><td><strong>BEST</strong></td><td>0.0379</td><td>0.001774</td><td><strong>PASS</strong></td><td>4.21e-16 (1.68e-15)</td><td>1.51e-12 (6.05e-12)</td></tr>
+<tr><td>tail_comp</td><td>2000</td><td>5</td><td>50</td><td>0.005568</td><td>0.01348</td><td>0.01138</td><td>-0.003761</td><td>-0.002339</td><td>-0.00237</td><td>0.0004586</td><td><strong>BEST</strong></td><td>0.004493</td><td>0.001809</td><td><strong>PASS</strong></td><td>4.23e-06 (8.47e-06)</td><td>2.62e-05 (5.23e-05)</td></tr>
+<tr><td>skew_comp</td><td>20000</td><td>20</td><td>20</td><td>0.002875</td><td>0.08113</td><td>0.01113</td><td>-0.00825</td><td>-0.006373</td><td>-0.006447</td><td>0.004025</td><td><strong>BEST</strong></td><td>0.04097</td><td>0.0007853</td><td><strong>PASS</strong></td><td>3.5e-10 (1.05e-09)</td><td>1.77e-07 (5.32e-07)</td></tr>
+<tr><td>tail_comp</td><td>20000</td><td>20</td><td>20</td><td>0.001933</td><td>0.009159</td><td>0.005063</td><td>-0.002988</td><td>-0.001949</td><td>-0.002048</td><td>0.0004586</td><td><strong>BEST</strong></td><td>0.003909</td><td>0.0007253</td><td><strong>PASS</strong></td><td>7.98e-06 (8.47e-06)</td><td>4.26e-05 (5.23e-05)</td></tr>
+</table>
+<p class="muted">Truth (Shapley, graded channel): skew_comp λ3: comp 0.04011, struct -0.0001375; tail_comp λ4: comp 0.004298, struct 0.000288. p values are unadjusted with Holm (across the completed cells) in brackets. Full numbers: <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/v5_1_gate_summary.json">v5_1_gate_summary.json</a>; per-replication records: <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/v5_1_gate_shape.jsonl">v5_1_gate_shape.jsonl</a>.</p>
+<p><span class="todo">TODO:</span> figure of paired d per cell (from the existing jsonl only); discussion.</p>
+
+<h2>6. Limitations</h2>
+<p>Verbatim from <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §7</a> (Known limitation, stated in advance):</p>
+<blockquote>The simulator's mean is linear, so a linear location fit is the correct family by
+construction. A PASS shows that v5's mixture object works once the location model is
+right; it does <strong>not</strong> show robustness to non-linear means. That needs its own
+pre-registration.</blockquote>
+<p>Out of scope, verbatim from PREREG_V5_1 §6:</p>
+<blockquote>Out of scope (not run under this SHA): <code>skew_struct</code>, <code>tail_struct</code>, <code>shape_mixed</code>,
+coverage, ShiftBench, speed, per-feature shares, non-linear-mean scenarios.</blockquote>
+<p>The one attempt to go past the linear-mean limit (v5.2) failed and is parked. The <code>mean_model="spline"</code> option stays in the library and "carries no validated claim" (PARK_V5_2.md).</p>
+
+<h2>7. Software</h2>
+<p>Rust core <code>traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel}</code> with <code>LocationModel::Ols</code>; thin Python binding <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b)</code>, identical to <code>traceot.explain_v5(..., mean_model="ols")</code>. The library default is still <code>mean_model="booster"</code> (v5), so ask for v5.1 by name. See the <a href="v5_1_app.html">application page</a>.</p>
+
+<h2>8. Open items</h2>
+<ul>
+<li><span class="todo">TODO</span> write §1, the full method in §2, and the discussion in §5.</li>
+<li>Linear-mean check in the application: residual-vs-fit check, report only, no gating claim (decision plan item; not in the library yet).</li>
+<li>Release tag against the gate's implementation merge SHA <code>665939b</code> (not tagged yet).</li>
+<li>Whether the library default should become <code>"ols"</code> (today <code>"booster"</code>); that is a code change, outside this docs-only ship.</li>
+<li>Non-linear means need their own pre-registration on fresh seeds, with a hypothesis not chosen by looking at the v5.2 run.</li>
+<li>Out-of-scope suites (struct cells, coverage, ShiftBench, speed, per-feature shares) each need their own pre-registration before any claim.</li>
+<li>Indices 9600–9619 stay sealed; v5.1's prereg permits no holdout confirmation.</li>
+</ul>
+
+</main>
+</body>
+</html>
