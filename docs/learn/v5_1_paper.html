@@ -106,14 +106,13 @@ coverage, ShiftBench, speed, per-feature shares, non-linear-mean scenarios.</blo
 <p>The one attempt to go past the linear-mean limit (v5.2) failed and is parked. The <code>mean_model="spline"</code> option stays in the library and "carries no validated claim" (PARK_V5_2.md).</p>
 
 <h2>7. Software</h2>
-<p>Rust core <code>traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel}</code> with <code>LocationModel::Ols</code>; thin Python binding <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b)</code>, identical to <code>traceot.explain_v5(..., mean_model="ols")</code>. The library default is still <code>mean_model="booster"</code> (v5), so ask for v5.1 by name. See the <a href="v5_1_app.html">application page</a>.</p>
+<p>Rust core <code>traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel}</code> with <code>LocationModel::Ols</code>; thin Python binding <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b)</code>, identical to <code>traceot.explain_v5(..., mean_model="ols")</code>. Since 2026-11-09 <code>"ols"</code> (v5.1) is the library default, so <code>traceot.explain_v5(x_a, y_a, x_b, y_b)</code> runs v5.1; v5 stays selectable with <code>mean_model="booster"</code>. See the <a href="v5_1_app.html">application page</a>.</p>
 
 <h2>8. Open items</h2>
 <ul>
 <li><span class="todo">TODO</span> write §1, the full method in §2, and the discussion in §5.</li>
 <li>Linear-mean check in the application: residual-vs-fit check, report only, no gating claim (decision plan item; not in the library yet).</li>
 <li>Release tag against the gate's implementation merge SHA <code>665939b</code> (not tagged yet).</li>
-<li>Whether the library default should become <code>"ols"</code> (today <code>"booster"</code>); that is a code change, outside this docs-only ship.</li>
 <li>Non-linear means need their own pre-registration on fresh seeds, with a hypothesis not chosen by looking at the v5.2 run.</li>
 <li>Out-of-scope suites (struct cells, coverage, ShiftBench, speed, per-feature shares) each need their own pre-registration before any claim.</li>
 <li>Indices 9600–9619 stay sealed; v5.1's prereg permits no holdout confirmation.</li>

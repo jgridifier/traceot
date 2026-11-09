@@ -59,7 +59,7 @@ pip install maturin
 maturin develop --release</code></pre>
 
 <h2>Python</h2>
-<p>Entry point: <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b, *, n_y=256, k_lmoments=4, n_quad=64)</code>, defined in <a href="https://github.com/jgridifier/traceot/blob/main/python/traceot/v5.py">v5.py</a>. It is exactly <code>traceot.explain_v5(..., mean_model="ols")</code>. <strong>Do not rely on the default</strong>: <code>explain_v5</code> without <code>mean_model</code> runs v5 (<code>"booster"</code>), the version that failed its gate.</p>
+<p>Entry point: <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b, *, n_y=256, k_lmoments=4, n_quad=64)</code>, defined in <a href="https://github.com/jgridifier/traceot/blob/main/python/traceot/v5.py">v5.py</a>. It is exactly <code>traceot.explain_v5(..., mean_model="ols")</code>. Since 2026-11-09 it is also the default: <code>explain_v5</code> without <code>mean_model</code> runs v5.1 (<code>"ols"</code>). The v5 booster, the version that failed its gate, stays selectable with <code>mean_model="booster"</code>.</p>
 <pre><code>import numpy as np
 import traceot
 
@@ -101,7 +101,7 @@ fn split(x_a: &amp;[f64], n_a: usize, y_a: &amp;[f64],
          x_b: &amp;[f64], n_b: usize, y_b: &amp;[f64], p: usize)
          -&gt; Result&lt;(), traceot_core::TraceError&gt; {
     let cfg = ExplainV5Config {
-        mean_model: LocationModel::Ols, // TRACE_V5_1; the default is Booster (v5)
+        mean_model: LocationModel::Ols, // TRACE_V5_1, also the default
         ..ExplainV5Config::default()    // n_y = 256, k_lmoments = 4, n_quad = 64
     };
     let rep = explain_v5(x_a, n_a, y_a, x_b, n_b, y_b, p, &amp;cfg)?;

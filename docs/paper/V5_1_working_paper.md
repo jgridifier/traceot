@@ -145,8 +145,9 @@ library and "carries no validated claim" (PARK_V5_2.md).
 
 Rust core `traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel}` with
 `LocationModel::Ols`; thin Python binding `traceot.explain_v5_1(x_a, y_a, x_b, y_b)`, the same as
-`traceot.explain_v5(..., mean_model="ols")`. Note the library default is still
-`mean_model="booster"` (v5), so callers must ask for v5.1 by name. Usage:
+`traceot.explain_v5(..., mean_model="ols")`. Since 2026-11-09 `"ols"` (v5.1) is the library
+default, so `traceot.explain_v5(x_a, y_a, x_b, y_b)` runs v5.1; v5 stays selectable with
+`mean_model="booster"`. Usage:
 [v5_1_app.html](../learn/v5_1_app.html).
 
 ## 8. Open items
@@ -156,8 +157,6 @@ Rust core `traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel}` wi
   (decision plan item; not implemented in the library yet).
 * [ ] Release tag against the gate's implementation merge SHA
   `665939bd4aa78ffc7474b91d482d18ac0191d595` (decision plan item; not tagged yet).
-* [ ] Decide whether the library default should become `"ols"`; today it is `"booster"`. A
-  change is a code change, not part of this docs-only ship.
 * [ ] Non-linear means: need their own pre-registration on fresh seeds whose hypothesis is not
   chosen by looking at the v5.2 run (PARK_V5_2.md).
 * [ ] Out-of-scope suites in PREREG_V5_1 §6 (struct cells, coverage, ShiftBench, speed,

@@ -44,7 +44,7 @@ def task(a):
     XA, XB = centred(XA0, XB0)
     seed = seed_of("m", rep)
     t0 = time.perf_counter()
-    r = traceot.explain_v5(XA, yA, XB, yB)
+    r = traceot.explain_v5(XA, yA, XB, yB, mean_model="booster")
     sec = time.perf_counter() - t0
     rivals = {}
     for name, meth in (("DFL", DFL_L()), ("CFM", CFM_L())):

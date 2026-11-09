@@ -1,7 +1,8 @@
 //! End-to-end v5 decomposition on the Eulerian mixture counterfactual.
 //!
-//! Conditional model per period `t`: `Y | x = μ_t(x) + ε`, with `μ_t` the in-repo
-//! binned mean booster (v4 `FitL2Config::default().mean`, unchanged) and `ε` drawn from
+//! Conditional model per period `t`: `Y | x = μ_t(x) + ε`, with `μ_t` set by
+//! [`LocationModel`] (default `Ols` = TRACE_V5_1; `Booster` = v5, the in-repo binned
+//! mean booster, v4 `FitL2Config::default().mean`, unchanged) and `ε` drawn from
 //! the empirical residual law of period `t`. The four hybrids
 //! `F_[s,t](y) = E_{x~F_s} F_t(y | x)` are tabulated on one shared grid (exact pair
 //! counts), inverted, and read out as exact L-moments. Each L-moment change
@@ -29,11 +30,12 @@ use super::spline::SplineBasis;
 /// Location model for `μ_t`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum LocationModel {
-    /// v5: binned mean booster (`ExplainV5Config::mean`).
-    #[default]
+    /// v5: binned mean booster (`ExplainV5Config::mean`). Selectable by name;
+    /// no longer the default.
     Booster,
     /// TRACE_V5_1 (PREREG_V5_1 §2): per-period OLS on an intercept plus all `p`
-    /// columns. Closed form, no tunable parameters.
+    /// columns. Closed form, no tunable parameters. Default (shipped V5.1).
+    #[default]
     Ols,
     /// TRACE_V5_2 (PREREG_V5_2 §2): per-period OLS on a fixed additive restricted
     /// cubic spline basis (5 pooled-quantile knots per column, no cross terms, no
@@ -123,7 +125,7 @@ pub fn predict_ols(beta: &[f64], x: &[f64], n: usize) -> Vec<f64> {
 /// Knobs for [`explain_v5`]. Defaults are the frozen in-repo values.
 #[derive(Clone, Debug)]
 pub struct ExplainV5Config {
-    /// Location model (default [`LocationModel::Booster`] = v5; `Ols` = TRACE_V5_1).
+    /// Location model (default [`LocationModel::Ols`] = TRACE_V5_1; `Booster` = v5).
     pub mean_model: LocationModel,
     /// Mean booster for `μ_t` (default: v4 `FitL2Config::default().mean`).
     pub mean: MeanConfig,
@@ -138,7 +140,7 @@ pub struct ExplainV5Config {
 impl Default for ExplainV5Config {
     fn default() -> Self {
         Self {
-            mean_model: LocationModel::Booster,
+            mean_model: LocationModel::Ols,
             mean: FitL2Config::default().mean,
             n_y: 256,
             k_lmoments: 4,
@@ -475,7 +477,11 @@ mod tests {
         };
         let (xa, ya) = draw(&mut rng, &[0.6, 0.3, 0.1], n);
         let (xb, yb) = draw(&mut rng, &[0.1, 0.3, 0.6], n);
-        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &ExplainV5Config::default()).unwrap();
+        let cfg = ExplainV5Config {
+            mean_model: LocationModel::Booster,
+            ..Default::default()
+        };
+        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &cfg).unwrap();
         // DFL counterfactual λ's: weighted sample L-moments of y_A with w = P_B/P_A.
         let wmap = [0.1 / 0.6, 1.0, 6.0];
         let w: Vec<f64> = xa.iter().map(|&g| wmap[g as usize]).collect();
@@ -530,7 +536,11 @@ mod tests {
         };
         let (xa, ya) = mk(&mut rng, 0.5);
         let (xb, yb) = mk(&mut rng, 0.1);
-        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, 1, &ExplainV5Config::default()).unwrap();
+        let cfg = ExplainV5Config {
+            mean_model: LocationModel::Booster,
+            ..Default::default()
+        };
+        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, 1, &cfg).unwrap();
         assert!(rep.aa.mixing_residual > 0.5, "{}", rep.aa.mixing_residual);
         // barycenter shape channels identical across covariate switches
         for j in 1..4 {
@@ -622,9 +632,19 @@ mod tests {
                 rep.lsplit_struct
             );
         }
-        // default stays v5 (booster) and differs from the OLS path
+        // default is TRACE_V5_1 (OLS) and matches the explicit OLS path exactly
+        assert_eq!(LocationModel::default(), LocationModel::Ols);
+        assert_eq!(ExplainV5Config::default().mean_model, LocationModel::Ols);
         let rep0 = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &ExplainV5Config::default()).unwrap();
-        assert!(rep0.lsplit_comp != rep.lsplit_comp);
+        assert_eq!(rep0.lsplit_comp, rep.lsplit_comp);
+        assert_eq!(rep0.lsplit_struct, rep.lsplit_struct);
+        // booster (v5) stays selectable by name and differs from the OLS path
+        let cfg_b = ExplainV5Config {
+            mean_model: LocationModel::Booster,
+            ..Default::default()
+        };
+        let rep_b = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &cfg_b).unwrap();
+        assert!(rep_b.lsplit_comp != rep.lsplit_comp);
     }
 
     /// v5.2 path: curved additive mean, pure covariate shift lands in composition and

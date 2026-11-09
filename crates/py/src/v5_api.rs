@@ -35,7 +35,7 @@ fn hybrid_dict<'py>(py: Python<'py>, h: &Hybrid) -> PyResult<Bound<'py, PyDict>>
 }
 
 #[pyfunction]
-#[pyo3(signature = (x_a, y_a, x_b, y_b, *, n_y=256usize, k_lmoments=4usize, n_quad=64usize, mean_model="booster"))]
+#[pyo3(signature = (x_a, y_a, x_b, y_b, *, n_y=256usize, k_lmoments=4usize, n_quad=64usize, mean_model="ols"))]
 #[allow(clippy::too_many_arguments)]
 fn explain_v5_py<'py>(
     py: Python<'py>,

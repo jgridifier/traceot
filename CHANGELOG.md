@@ -5,6 +5,9 @@ Status: research, unvalidated.
 
 ## [Unreleased]
 
+### Changed (2026-11-09)
+- `explain_v5` now defaults to the TRACE_V5_1 location model (`mean_model="ols"`, `LocationModel::Ols`, `ExplainV5Config::default()`) in the Rust core and the Python binding. The v5 booster stays selectable with `mean_model="booster"` / `LocationModel::Booster`. Tests and V5 gate scripts that relied on the old default now pass `"booster"` explicitly. No results change; seeds 9600–9619 untouched.
+
 ### Fixed
 - Bandwidth cross-validation now scales `h_j` by the range of the training rows of each fold. The previous version included the held-out fold's covariates in that range. Held-out responses were never used in the fit. See `docs/ADOPT_AUDIT.md`.
 

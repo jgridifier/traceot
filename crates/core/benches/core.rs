@@ -11,7 +11,8 @@ use std::hint::black_box;
 use traceot_core::adopt::{adopt_w2_fit, BackfitConfig};
 use traceot_core::scalable::{binning, histogram, pinball, sketch::QuantileSketch};
 use traceot_core::trace::{
-    explain_v5, fit_trace, mixture_cdf_location, support_grid, ExplainV5Config, TraceConfig,
+    explain_v5, fit_trace, mixture_cdf_location, support_grid, ExplainV5Config, LocationModel,
+    TraceConfig,
 };
 use traceot_core::w2::{pava, quantile_grid, transport_apply};
 use traceot_core::Mat;
@@ -170,7 +171,11 @@ fn bench_v5(c: &mut Criterion) {
         let e = normals(2 * n, 5);
         let ya: Vec<f64> = (0..n).map(|i| xa[i * p] + e[i]).collect();
         let yb: Vec<f64> = (0..n).map(|i| xb[i * p] + 1.2 * e[n + i]).collect();
-        let cfg = ExplainV5Config::default();
+        // pinned to the v5 booster so timings stay comparable with earlier runs
+        let cfg = ExplainV5Config {
+            mean_model: LocationModel::Booster,
+            ..ExplainV5Config::default()
+        };
         g.bench_with_input(BenchmarkId::new("explain_v5_p5", n), &n, |b, _| {
             b.iter(|| explain_v5(&xa, n, &ya, &xb, n, &yb, p, &cfg).unwrap())
         });
