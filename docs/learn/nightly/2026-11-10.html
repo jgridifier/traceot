@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-10 · traceot</title>
+<meta name="description" content="Paper sections 1, 2 and 5 drafted, a report-only linear-mean check added to explain_v5, and a coverage follow-up pre-registered (not approved, not run).">
+<style>
+
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1d1f;
+    --bg: #f7f4ef;
+    --muted: #5b5b60;
+    --rule: #ddd5c8;
+    --accent: #1b6ca8;
+    --note: #ebe6dc;
+    --ok: #2f7d4a;
+    --bad: #a33b2b;
+    --warn: #8a6d1d;
+    --card: #fffdf8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e9e9ec;
+      --bg: #141416;
+      --muted: #a3a3aa;
+      --rule: #333;
+      --accent: #6fb3e6;
+      --note: #1d2229;
+      --ok: #6cbc86;
+      --bad: #e08a7a;
+      --warn: #d4b45a;
+      --card: #1a1a1e;
+    }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 1rem 0 .35rem; }
+  h2 {
+    font-size: 1.22rem;
+    margin: 2rem 0 .55rem;
+    padding-top: .7rem;
+    border-top: 1px solid var(--rule);
+  }
+  p, li { max-width: 42rem; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); margin-top: 0; }
+  .status {
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #664d03;
+  }
+  @media (prefers-color-scheme: dark) {
+    .status { background: #3a3218; color: #e6d48a; }
+  }
+  .note {
+    background: var(--note);
+    border-left: 4px solid var(--warn);
+    padding: .6rem .9rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .88em;
+  }
+  footer {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  .meta { font-size: .9rem; color: var(--muted); }
+
+</style>
+</head>
+<body>
+<main>
+<p>
+  <a href="../../index.html">Learn home</a> ·
+  <a href="../research_board.html">Research board</a> ·
+  <a href="../v5_1_paper.html">V5.1 paper</a> ·
+  <a href="../v5_1_app.html">V5.1 app</a> ·
+  <span class="status">nightly · 2026-11-10 evening ET</span>
+</p>
+
+<h1>TRACE nightly</h1>
+<p class="meta">Snapshot <a href="2026-11-10.html">2026-11-10</a> (previous: <a href="2026-11-09.html">2026-11-09</a>) · main <code>11f41fe</code> · paper drafting under way.</p>
+
+<h2 id="new">New since last nightly</h2>
+<ul>
+  <li><strong>Paper §1, §2 and §5 written</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/47">#47</a>). Yesterday's planned step is done: §1 now states the problem, notation, the relation to DiNardo–Fortin–Lemieux reweighting and to counterfactual-distribution methods, and why the split uses L-moments. §2 has the full two-player Shapley derivation, the budget identity, and the grid and quadrature used to compute it. §5 discusses the result using only the existing gate table. The Pages copies, <a href="../v5_1_paper.html">V5.1 paper</a> and <a href="../v5_1_app.html">V5.1 app</a>, mirror the new text. No new numbers.</li>
+  <li><strong>A report-only linear-mean check in <code>explain_v5</code></strong> (same PR). The report now carries, for each period, the correlation of residuals with the fit, the correlation with the squared centred fit, and mean residual in up to ten equal-count bins. It flags curvature that a straight-line location model would miss, so a user can see when V5.1's linear assumption looks shaky. It is diagnostic only, with no threshold and no claim attached. It sits in the Rust core with a thin Python field (<code>result["linear_mean_check"]</code>), and every other output is bit-for-bit identical to the previous main. Two Rust tests and one Python test were added, and CI passed.</li>
+  <li><strong>Coverage follow-up pre-registered, not approved, not run</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/46">#46</a>). <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md"><code>PREREG_V5_1_COVERAGE.md</code></a> fixes one hypothesis in advance: a 90% percentile bootstrap band (500 resamples) should cover the truth in the <code>skew_comp</code> and <code>tail_comp</code> cells. It uses 400 repetitions per cell on fresh indices 10400–10799, and passes only if each unit covers 344 to 374 times out of 400, with a correction for testing four units. Teaching page: <a href="../v5_1_coverage_prereg.html">coverage pre-registration</a>.</li>
+</ul>
+<details>
+  <summary>Refresher: what a percentile bootstrap band is</summary>
+  <p>Resample the data with replacement many times, recompute the quantity each time, and take the 5th and 95th percentiles of those recomputed values as the band. If the method is honest, that band should contain the true value in about 90% of repeated experiments, which is what the coverage test counts. See Efron and Tibshirani, <em>An Introduction to the Bootstrap</em> (Chapman &amp; Hall, 1993), ch. 13.</p>
+</details>
+<p><strong>What it means in practice:</strong> the paper now has its core argument in prose, and users get a warning signal for non-linear means without any change to the numbers they already get. The coverage run cannot start until you approve it in writing and that approval is committed.</p>
+
+<h2 id="drafting">Still open in the paper</h2>
+<p>The final abstract, the per-step paragraphs of the pre-registration history in §3, the simulator prose in §4, and a §5 figure of paired effect sizes drawn from the existing result files. The release tag against the gate's merge SHA is not made yet. Seeds 9600–9619 remain sealed.</p>
+
+<h2 id="tomorrow">Tomorrow’s concrete step</h2>
+<p>Write §3 (one paragraph per pre-registration step, failures kept) and §4 (the simulator and gate design), replacing those TODO markers. Docs only, no new numbers. The coverage run waits on your approval.</p>
+
+<h2 id="archive">All nightly snapshots</h2>
+<ol reversed>
+  <li><a href="2026-11-10.html">2026-11-10</a> (this one)</li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+
+<footer>
+  <p>Dated <strong>2026-11-10 (evening)</strong>, America/New_York (EST), written against main <code>11f41fe</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>
