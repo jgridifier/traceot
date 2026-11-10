@@ -164,6 +164,77 @@ pub struct Hybrid {
     pub mixing_residual: f64,
 }
 
+/// Report-only residual-vs-fit check of the location model for one period.
+///
+/// **Diagnostic only; carries no claim and gates nothing.** It is computed from the
+/// in-sample fitted means `μ_t(x_i)` and residuals `r_i = y_i - μ_t(x_i)` that
+/// [`explain_v5`] already uses, after every reported number is final, so it never
+/// changes `lsplit_*`, the hybrids, or the grid. A curved or otherwise mis-specified
+/// mean tends to leave residuals that trend with the fit (for an OLS fit with an
+/// intercept the plain correlation with the fit is zero by construction, so look at
+/// the squared term and the binned means); small values do not prove the mean is
+/// linear.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LinearMeanCheck {
+    /// Pearson correlation of residuals with fitted values (0 if either is constant).
+    pub corr_resid_fit: f64,
+    /// Pearson correlation of residuals with the squared centred fitted values
+    /// `(μ_i - mean μ)²` (0 if either is constant). A RESET-style curvature signal.
+    pub corr_resid_fit_sq: f64,
+    /// Mean fitted value in each of `min(10, n)` equal-count bins of the sorted fit.
+    pub bin_fit_mean: Vec<f64>,
+    /// Mean residual in the same bins.
+    pub bin_resid_mean: Vec<f64>,
+    /// `max_k |bin_resid_mean[k]| / sd(r)` (0 if `sd(r) = 0`).
+    pub max_abs_bin_resid_over_sd: f64,
+}
+
+fn pearson(a: &[f64], b: &[f64]) -> f64 {
+    let (ma, mb) = (mean(a), mean(b));
+    let (mut sab, mut saa, mut sbb) = (0.0f64, 0.0f64, 0.0f64);
+    for (x, y) in a.iter().zip(b) {
+        let (da, db) = (x - ma, y - mb);
+        sab += da * db;
+        saa += da * da;
+        sbb += db * db;
+    }
+    if saa <= 0.0 || sbb <= 0.0 {
+        0.0
+    } else {
+        sab / (saa.sqrt() * sbb.sqrt())
+    }
+}
+
+/// Residual-vs-fit check (see [`LinearMeanCheck`]). `fit` and `resid` have equal
+/// length `n >= 1`. Deterministic; ties in `fit` are broken by row index.
+pub fn linear_mean_check(fit: &[f64], resid: &[f64]) -> LinearMeanCheck {
+    let n = fit.len().min(resid.len());
+    let (fit, resid) = (&fit[..n], &resid[..n]);
+    let mf = mean(fit);
+    let fit_sq: Vec<f64> = fit.iter().map(|m| (m - mf) * (m - mf)).collect();
+    let mut idx: Vec<usize> = (0..n).collect();
+    idx.sort_by(|&i, &j| fit[i].total_cmp(&fit[j]).then(i.cmp(&j)));
+    let nb = n.min(10);
+    let (mut bin_fit_mean, mut bin_resid_mean) = (Vec::with_capacity(nb), Vec::with_capacity(nb));
+    for k in 0..nb {
+        let (lo, hi) = (k * n / nb, (k + 1) * n / nb);
+        let rows = &idx[lo..hi];
+        let c = rows.len().max(1) as f64;
+        bin_fit_mean.push(rows.iter().map(|&i| fit[i]).sum::<f64>() / c);
+        bin_resid_mean.push(rows.iter().map(|&i| resid[i]).sum::<f64>() / c);
+    }
+    let mr = mean(resid);
+    let sd = (resid.iter().map(|r| (r - mr) * (r - mr)).sum::<f64>() / n.max(1) as f64).sqrt();
+    let max_abs = bin_resid_mean.iter().fold(0.0f64, |a, v| a.max(v.abs()));
+    LinearMeanCheck {
+        corr_resid_fit: pearson(resid, fit),
+        corr_resid_fit_sq: pearson(resid, &fit_sq),
+        bin_fit_mean,
+        bin_resid_mean,
+        max_abs_bin_resid_over_sd: if sd > 0.0 { max_abs / sd } else { 0.0 },
+    }
+}
+
 /// Report of [`explain_v5`].
 #[derive(Clone, Debug)]
 pub struct ExplainV5Report {
@@ -185,6 +256,11 @@ pub struct ExplainV5Report {
     /// (indices into intercept + 4p). Empty for the other location models.
     pub dropped_cols_a: Vec<usize>,
     pub dropped_cols_b: Vec<usize>,
+    /// Report-only residual-vs-fit check of period A's location fit (own covariates,
+    /// own conditional). Diagnostic only, no claim; see [`LinearMeanCheck`].
+    pub linear_mean_check_a: LinearMeanCheck,
+    /// Same for period B.
+    pub linear_mean_check_b: LinearMeanCheck,
 }
 
 fn check(x: &[f64], n: usize, p: usize, y: &[f64], who: &str) -> Result<()> {
@@ -352,6 +428,9 @@ pub fn explain_v5(
     let lsplit_struct: Vec<f64> = (0..k)
         .map(|j| 0.5 * ((ab.lmom[j] - aa.lmom[j]) + (bb.lmom[j] - ba.lmom[j])))
         .collect();
+    // Report-only diagnostic, computed after every reported number is final.
+    let linear_mean_check_a = linear_mean_check(&mu_aa, &r_a);
+    let linear_mean_check_b = linear_mean_check(&mu_bb, &r_b);
     Ok(ExplainV5Report {
         u_nodes: u,
         y_grid,
@@ -366,6 +445,8 @@ pub fn explain_v5(
         seconds_total: t0.elapsed().as_secs_f64(),
         dropped_cols_a,
         dropped_cols_b,
+        linear_mean_check_a,
+        linear_mean_check_b,
     })
 }
 
@@ -692,5 +773,65 @@ mod tests {
                 rep.lsplit_struct
             );
         }
+    }
+
+    /// Residual-vs-fit check: report-only, deterministic, flags a curved mean that an
+    /// OLS fit misses, and stays near zero when the mean is linear.
+    #[test]
+    fn linear_mean_check_flags_curvature_only() {
+        let mut rng = SplitMix64::new(404);
+        let (n, p) = (4000, 2);
+        let mk = |rng: &mut SplitMix64, curve: f64| {
+            let x: Vec<f64> = (0..n * p).map(|_| normal(rng)).collect();
+            let y: Vec<f64> = (0..n)
+                .map(|i| {
+                    let a = x[i * p];
+                    1.0 + a - 0.5 * x[i * p + 1] + curve * a * a + 0.5 * normal(rng)
+                })
+                .collect();
+            (x, y)
+        };
+        let (xa, ya) = mk(&mut rng, 0.0);
+        let (xb, yb) = mk(&mut rng, 1.0);
+        let rep = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &ExplainV5Config::default()).unwrap();
+        let (ca, cb) = (&rep.linear_mean_check_a, &rep.linear_mean_check_b);
+        assert_eq!(ca.bin_fit_mean.len(), 10);
+        assert_eq!(ca.bin_resid_mean.len(), 10);
+        // OLS with an intercept: residuals are orthogonal to the fit by construction.
+        assert!(ca.corr_resid_fit.abs() < 1e-8, "{ca:?}");
+        assert!(cb.corr_resid_fit.abs() < 1e-8, "{cb:?}");
+        // linear period: no curvature signal; curved period: clear one
+        assert!(ca.corr_resid_fit_sq.abs() < 0.1, "{ca:?}");
+        assert!(ca.max_abs_bin_resid_over_sd < 0.2, "{ca:?}");
+        assert!(cb.corr_resid_fit_sq > 0.3, "{cb:?}");
+        assert!(cb.max_abs_bin_resid_over_sd > 0.5, "{cb:?}");
+        // bins are ordered by fit
+        assert!(ca.bin_fit_mean.windows(2).all(|w| w[0] <= w[1]));
+        // deterministic
+        let rep2 = explain_v5(&xa, n, &ya, &xb, n, &yb, p, &ExplainV5Config::default()).unwrap();
+        assert_eq!(rep2.linear_mean_check_a, rep.linear_mean_check_a);
+        assert_eq!(rep2.linear_mean_check_b, rep.linear_mean_check_b);
+    }
+
+    /// The diagnostic is computed from the same fit and residuals the decomposition
+    /// already uses, so it matches a direct recomputation and never feeds back.
+    #[test]
+    fn linear_mean_check_matches_direct_recompute() {
+        let mut rng = SplitMix64::new(405);
+        let (n, p) = (500, 3);
+        let x: Vec<f64> = (0..n * p).map(|_| normal(&mut rng)).collect();
+        let y: Vec<f64> = (0..n).map(|i| x[i * p] + 0.3 * normal(&mut rng)).collect();
+        let x2: Vec<f64> = x.iter().map(|v| v + 0.2).collect();
+        let y2: Vec<f64> = (0..n).map(|i| x2[i * p] + 0.3 * normal(&mut rng)).collect();
+        let rep = explain_v5(&x, n, &y, &x2, n, &y2, p, &ExplainV5Config::default()).unwrap();
+        let b = fit_ols(&x, n, p, &y).unwrap();
+        let mu = predict_ols(&b, &x, n);
+        let r: Vec<f64> = y.iter().zip(&mu).map(|(a, m)| a - m).collect();
+        assert_eq!(linear_mean_check(&mu, &r), rep.linear_mean_check_a);
+        // tiny and degenerate inputs
+        let c = linear_mean_check(&[1.0, 2.0, 3.0], &[0.0, 0.0, 0.0]);
+        assert_eq!(c.bin_fit_mean, vec![1.0, 2.0, 3.0]);
+        assert_eq!(c.corr_resid_fit, 0.0);
+        assert_eq!(c.max_abs_bin_resid_over_sd, 0.0);
     }
 }

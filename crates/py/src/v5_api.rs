@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use traceot_core::trace::{
     explain_v5, mixture_cdf_location, mixture_cdf_quantile_rows, quantile_from_cdf,
-    ExplainV5Config, Hybrid, LocationModel,
+    ExplainV5Config, Hybrid, LinearMeanCheck, LocationModel,
 };
 use traceot_core::TraceError;
 
@@ -31,6 +31,21 @@ fn hybrid_dict<'py>(py: Python<'py>, h: &Hybrid) -> PyResult<Bound<'py, PyDict>>
     d.set_item("lmom", h.lmom.clone())?;
     d.set_item("lmom_bary", h.lmom_bary.clone())?;
     d.set_item("mixing_residual", h.mixing_residual)?;
+    Ok(d)
+}
+
+/// Report-only residual-vs-fit check (diagnostic only, no claim).
+fn linear_mean_check_dict<'py>(
+    py: Python<'py>,
+    c: &LinearMeanCheck,
+) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("corr_resid_fit", c.corr_resid_fit)?;
+    d.set_item("corr_resid_fit_sq", c.corr_resid_fit_sq)?;
+    d.set_item("bin_fit_mean", c.bin_fit_mean.clone())?;
+    d.set_item("bin_resid_mean", c.bin_resid_mean.clone())?;
+    d.set_item("max_abs_bin_resid_over_sd", c.max_abs_bin_resid_over_sd)?;
+    d.set_item("diagnostic_only", true)?;
     Ok(d)
 }
 
@@ -88,6 +103,10 @@ fn explain_v5_py<'py>(
     d.set_item("seconds_total", rep.seconds_total)?;
     d.set_item("dropped_cols_a", rep.dropped_cols_a.clone())?;
     d.set_item("dropped_cols_b", rep.dropped_cols_b.clone())?;
+    let lmc = PyDict::new(py);
+    lmc.set_item("a", linear_mean_check_dict(py, &rep.linear_mean_check_a)?)?;
+    lmc.set_item("b", linear_mean_check_dict(py, &rep.linear_mean_check_b)?)?;
+    d.set_item("linear_mean_check", lmc)?;
     Ok(d)
 }
 

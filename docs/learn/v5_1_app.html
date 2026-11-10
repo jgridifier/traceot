@@ -89,6 +89,7 @@ for k in range(len(total)):
 <li><code>aa</code>, <code>ab</code>, <code>ba</code>, <code>bb</code>: the four hybrids [covariates, conditional], each a dict with <code>q_mix</code>, <code>q_bary</code>, <code>lmom</code>, <code>lmom_bary</code>, <code>mixing_residual</code>.</li>
 <li><code>u_nodes</code>, <code>y_grid</code>: the quadrature nodes and support grid used.</li>
 <li><code>seconds_fit</code>, <code>seconds_mixture</code>, <code>seconds_total</code>; <code>dropped_cols_a</code>/<code>dropped_cols_b</code> (empty for the OLS path).</li>
+<li><code>linear_mean_check</code>: <code>{"a": …, "b": …}</code>, the report-only residual-vs-fit check per period (<code>corr_resid_fit</code>, <code>corr_resid_fit_sq</code>, <code>bin_fit_mean</code>, <code>bin_resid_mean</code>, <code>max_abs_bin_resid_over_sd</code>, <code>diagnostic_only: True</code>). Diagnostic only, no claim.</li>
 </ul>
 <p class="muted">In the gate the inputs were centred on the average of the two period means before the call (<code>centred</code> in <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/shiftbench/run_synthetic.py">run_synthetic.py</a>, used by <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/shiftbench/run_v5_1_gate.py">run_v5_1_gate.py</a>). Do the same to match the validated setup.</p>
 
@@ -116,7 +117,7 @@ fn split(x_a: &amp;[f64], n_a: usize, y_a: &amp;[f64],
 
 <h2>Before you trust a split</h2>
 <ul>
-<li>Check the linear-mean assumption yourself (for example, plot residuals against fitted values per period). The library does not do this yet; a report-only check is an open item, with no gating claim.</li>
+<li>Check the linear-mean assumption. Since 2026-11-10 the result carries <code>result["linear_mean_check"]["a"]</code> / <code>["b"]</code>: correlation of residuals with the fit (zero by construction for OLS) and with the squared centred fit, and mean residuals in ten equal-count bins of the fit. It is <strong>report-only</strong>: a diagnostic with no validated claim and no threshold, and it changes no other output. A trend in the binned residuals suggests the straight-line mean may not fit, and the validated v5.1 result covers straight-line means only; small values do not prove the mean is linear. Plotting residuals against fitted values yourself is still a good idea.</li>
 <li>Only the pure-composition cells (<code>skew_comp</code>, <code>tail_comp</code>) were tested. Structure cells, coverage, ShiftBench, speed and per-feature shares are out of scope (PREREG_V5_1 §6).</li>
 <li>Results in the gate: <a href="v5_1_gate.html">V5.1 gate page</a> and <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>.</li>
 </ul>

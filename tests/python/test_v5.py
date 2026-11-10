@@ -131,3 +131,51 @@ def test_explain_v5_2_spline_location():
     assert r1["lsplit_comp"] == r["lsplit_comp"]
     with pytest.raises(ValueError):
         traceot.explain_v5(xa, ya, xb, yb, mean_model="tree")
+
+
+def test_explain_v5_linear_mean_check_report_only():
+    """Residual-vs-fit check is report-only: present for every model, flags curvature,
+    and leaves every other returned value unchanged across calls."""
+    import numpy as np
+
+    import traceot
+
+    rng = np.random.default_rng(404)
+    n, p = 3000, 2
+    xa = rng.standard_normal((n, p))
+    xb = rng.standard_normal((n, p))
+    ya = 1 + xa[:, 0] - 0.5 * xa[:, 1] + 0.5 * rng.standard_normal(n)
+    yb = 1 + xb[:, 0] - 0.5 * xb[:, 1] + xb[:, 0] ** 2 + 0.5 * rng.standard_normal(n)
+    r = traceot.explain_v5_1(xa, ya, xb, yb)
+    c = r["linear_mean_check"]
+    assert set(c) == {"a", "b"}
+    keys = {
+        "corr_resid_fit",
+        "corr_resid_fit_sq",
+        "bin_fit_mean",
+        "bin_resid_mean",
+        "max_abs_bin_resid_over_sd",
+        "diagnostic_only",
+    }
+    assert set(c["a"]) == keys and c["a"]["diagnostic_only"] is True
+    assert len(c["a"]["bin_resid_mean"]) == 10
+    assert abs(c["a"]["corr_resid_fit"]) < 1e-8 and abs(c["b"]["corr_resid_fit"]) < 1e-8
+    assert abs(c["a"]["corr_resid_fit_sq"]) < 0.1
+    assert c["b"]["corr_resid_fit_sq"] > 0.3
+    # direct recompute from an OLS fit in numpy matches the core's period-A check
+    da = np.column_stack([np.ones(n), xa])
+    mu = da @ np.linalg.lstsq(da, ya, rcond=None)[0]
+    res = ya - mu
+    np.testing.assert_allclose(
+        c["a"]["corr_resid_fit_sq"], np.corrcoef(res, (mu - mu.mean()) ** 2)[0, 1], atol=1e-9
+    )
+    order = np.argsort(mu, kind="stable")
+    bins = np.array_split(order, 10)
+    np.testing.assert_allclose(c["a"]["bin_resid_mean"], [res[b].mean() for b in bins], atol=1e-9)
+    # every model reports it; decomposition values are unaffected and deterministic
+    for mm in ("ols", "booster", "spline"):
+        r1 = traceot.explain_v5(xa, ya, xb, yb, mean_model=mm)
+        r2 = traceot.explain_v5(xa, ya, xb, yb, mean_model=mm)
+        assert set(r1["linear_mean_check"]) == {"a", "b"}
+        assert r1["lsplit_comp"] == r2["lsplit_comp"]
+        assert r1["linear_mean_check"] == r2["linear_mean_check"]

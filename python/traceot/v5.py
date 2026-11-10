@@ -45,6 +45,13 @@ def explain_v5(
     per-hybrid dicts ``aa/ab/ba/bb`` (``q_mix``, ``q_bary``, ``lmom``, ``lmom_bary``,
     ``mixing_residual``), the ``u_nodes`` / ``y_grid`` used, and timings.
 
+    ``linear_mean_check`` (``{"a": ..., "b": ...}``) is a **report-only** residual-vs-fit
+    check of each period's location fit: ``corr_resid_fit``, ``corr_resid_fit_sq`` (residual
+    vs squared centred fit), ``bin_fit_mean`` / ``bin_resid_mean`` over ``min(10, n)``
+    equal-count bins of the fit, and ``max_abs_bin_resid_over_sd``. It is a diagnostic
+    only: it carries no validated claim, gates nothing, and does not change any other
+    returned value. Small values do not prove the mean is linear.
+
     ``mean_model="ols"`` (the default) is TRACE_V5_1 (per-period least squares on an
     intercept plus all columns, no tuning); see :func:`explain_v5_1`. ``"booster"`` is
     v5 (binned mean booster) and stays selectable by name.

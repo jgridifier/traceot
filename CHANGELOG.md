@@ -5,6 +5,10 @@ Status: research, unvalidated.
 
 ## [Unreleased]
 
+### Added (2026-11-10)
+- Report-only residual-vs-fit check of the location fit in `explain_v5`: `ExplainV5Report::linear_mean_check_a` / `linear_mean_check_b` (`LinearMeanCheck`: correlation of residuals with the fit and with the squared centred fit, mean fit and mean residual in `min(10, n)` equal-count bins of the fit, max |binned residual| / sd) The helper is public as `traceot_core::trace::linear_mean_check`. Python: `result["linear_mean_check"]["a" | "b"]` (with `diagnostic_only: True`). **Diagnostic only:** no validated claim, no threshold, gates nothing. It is computed after every other output and changes no existing value (checked bit-for-bit against `main` on all three location models); V5 gate result files are unchanged. Tests: Rust `linear_mean_check_flags_curvature_only`, `linear_mean_check_matches_direct_recompute`; Python `test_explain_v5_linear_mean_check_report_only`.
+- Working paper `docs/paper/V5_1_working_paper.md`: §1 (problem, notation, relation to DFL and CFM, why L-moments), the full two-player Shapley derivation with the budget identity and grid/quadrature details in §2, and the §5 discussion, written from existing results and code only (no new numbers). Learn pages `v5_1_paper.html` and `v5_1_app.html` updated to match.
+
 ### Changed (2026-11-09)
 - `explain_v5` now defaults to the TRACE_V5_1 location model (`mean_model="ols"`, `LocationModel::Ols`, `ExplainV5Config::default()`) in the Rust core and the Python binding. The v5 booster stays selectable with `mean_model="booster"` / `LocationModel::Booster`. Tests and V5 gate scripts that relied on the old default now pass `"booster"` explicitly. No results change; seeds 9600–9619 untouched.
 
