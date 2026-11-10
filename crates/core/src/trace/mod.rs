@@ -71,7 +71,7 @@ pub use v4::{
     InferConfig, MixingGameConfig, MixingGameResult, MixtureConfig, MixtureLaw, RolePieces,
 };
 pub use v5::{
-    explain_v5, lmoments_from_cdf_grid, mixture_cdf_location, mixture_cdf_quantile_rows,
-    quantile_from_cdf, support_grid, ExplainV5Config, ExplainV5Report, Hybrid, LocationModel,
-    MixtureLawV5,
+    explain_v5, linear_mean_check, lmoments_from_cdf_grid, mixture_cdf_location,
+    mixture_cdf_quantile_rows, quantile_from_cdf, support_grid, ExplainV5Config, ExplainV5Report,
+    Hybrid, LinearMeanCheck, LocationModel, MixtureLawV5,
 };

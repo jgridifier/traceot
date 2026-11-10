@@ -20,7 +20,8 @@ pub mod mixture;
 pub mod spline;
 
 pub use explain::{
-    explain_v5, fit_ols, predict_ols, ExplainV5Config, ExplainV5Report, Hybrid, LocationModel,
+    explain_v5, fit_ols, linear_mean_check, predict_ols, ExplainV5Config, ExplainV5Report, Hybrid,
+    LinearMeanCheck, LocationModel,
 };
 pub use mixture::{
     lmoments_from_cdf_grid, mixture_cdf_location, mixture_cdf_quantile_rows, quantile_from_cdf,

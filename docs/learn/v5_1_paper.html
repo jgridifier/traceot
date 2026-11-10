@@ -42,16 +42,58 @@
 <div class="banner"><strong>Shipped: TRACE V5.1.</strong> Approved by the owner on 2026-11-05 ET:
 <em>"Yes, ship V5.1: open the working-paper skeleton and app on the passed V5.1 gate, sealed holdout untouched."</em>
 Docs only; every number is quoted from an existing repo file. Indices 9600–9619 stay sealed; no holdout was run.</div>
-<p class="muted">Sections marked <span class="todo">TODO</span> are not written yet.</p>
+<p class="muted">Sections marked <span class="todo">TODO</span> are not written yet. §1, §2 and the §5 discussion were filled in on 2026-11-10 from existing results and code only (no new numbers).</p>
 
 <h2>Abstract</h2>
 <p>When the distribution of an outcome changes between two periods A and B, part of the change comes from the inputs moving (<em>composition</em>) and part from the way the outcome responds to the inputs (<em>response</em>, also called structure). TRACE v5.1 splits the change in each L-moment of the outcome into these two pieces. It builds the four mixture counterfactual laws \(F_{[s,t]}(y)=E_{x\sim F_s}F_t(y\mid x)\) for \(s,t\in\{A,B\}\), with each period's conditional law given by an ordinary-least-squares location fit plus that period's empirical residual law, and takes the two-player Shapley split of the L-moment change. The fit is closed form and has no tunable parameters (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §2</a>). In a frozen, pre-registered gate on fresh seeds, v5.1 was <strong>BEST</strong> against the better of two paired rivals (DFL reweighting and CFM) in all four pure-composition cells and passed the role check in all four (<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>). The simulator's mean is linear, so this result says nothing about non-linear means; a follow-up that tried curved means was pre-registered, run once, and parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a>).</p>
 <p><span class="todo">TODO:</span> final abstract wording once §1 and §6 are written.</p>
 
 <h2>1. Problem</h2>
-<p>Decomposing a distribution shift's shape change (L-moments) into composition vs structure via a four-hybrid mixture and a two-player Shapley split (decision plan outline). For a gentle introduction see <a href="explaining_shifts.html">Explaining a shift</a>.</p>
-<p><span class="todo">TODO:</span> motivation, notation, relation to DFL (1996) reweighting and the counterfactual distributions of Chernozhukov, Fernández-Val and Melly (2013), and why L-moments.</p>
-
+<p>Decomposing a distribution shift's shape change (L-moments) into composition vs structure via a
+four-hybrid mixture and a two-player Shapley split
+(<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md, plan outline</a>).</p>
+<p><strong>Motivation.</strong> Two samples are observed, period A and period B, each with inputs
+\(x\in\mathbb R^p\) and a scalar outcome \(y\). The outcome's distribution differs between the
+periods, and the question is <em>why</em>: because the inputs are distributed differently
+(composition), or because the outcome responds to the same inputs differently (response, also
+called structure). For the mean this is the classical two-way split. Here the target is the
+whole <em>shape</em> of the outcome law: its location, scale, skewness and tail weight, each split into
+a composition piece and a response piece that add up exactly to the observed change.</p>
+<p><strong>Notation.</strong> \(F_t(x)\) is the input law and \(F_t(y\mid x)\) the conditional outcome law in
+period \(t\in\{A,B\}\). The mixture counterfactual with inputs from \(s\) and conditional law
+from \(t\) is
+\[
+F_{[s,t]}(y)=E_{x\sim F_s}\,F_t(y\mid x),\qquad Q_{[s,t]}=F_{[s,t]}^{-1}\ \text{(left inverse)}.
+\]
+\(F_{[A,A]}\) and \(F_{[B,B]}\) are the two observed outcome laws; \(F_{[B,A]}\) and
+\(F_{[A,B]}\) are the two counterfactuals ("B's inputs, A's response" and the reverse).
+\(\lambda_r(F)\) is the \(r\)-th L-moment of a law, \(\lambda_r(F)=\int_0^1 Q(u)\,P^*_{r-1}(u)\,du\)
+with \(P^*_{r-1}\) the shifted Legendre polynomial (<code>crates/core/src/trace/v5/mixture.rs</code>,
+<code>lmoments_from_cdf_grid</code>). We write \(\lambda_{[s,t]}=\lambda(F_{[s,t]})\) for the vector of the
+first \(K=4\) L-moments.</p>
+<p><strong>Relation to existing methods.</strong> \(F_{[s,t]}\) is the counterfactual distribution of
+Chernozhukov, Fernández-Val and Melly (2013, <em>Inference on Counterfactual Distributions</em>,
+Econometrica; cited in <code>crates/core/src/trace/v5/mod.rs</code> and
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/REFS.md">REFS.md</a>). Their estimator (CFM, one of the two gate rivals) builds the
+conditional law from distribution regression; v5.1 builds it from a location model plus an
+empirical residual law (§2). The counterfactual \(F_{[B,A]}\) is also what DiNardo, Fortin and
+Lemieux (1996) reweighting estimates: reweight the A sample by \(w(x)=dF_B(x)/dF_A(x)\). The
+repository checks this equivalence on a discrete-input example, in Rust
+(<code>mixture_matches_dfl_reweighting</code> in <code>crates/core/src/trace/v5/explain.rs</code>) and in Python
+(<code>test_mixture_matches_dfl_reweighting</code> in <code>tests/python/test_v5.py</code>), and through the full
+<code>explain_v5</code> path with the booster location model
+(<code>explain_comp_matches_dfl_on_location_model</code>). DFL reweighting is the second
+gate rival. Both rivals are used only to produce L-moment splits on the same data and seeds
+(<code>benchmarks/shiftbench/sb_shape_readout.py</code>); nothing from them is inside v5.1.</p>
+<p><strong>Why L-moments.</strong> L-moments (Hosking 1990, <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/REFS.md">REFS.md</a>) are linear in the
+quantile function, so they are defined for any law with a finite mean, are less sensitive to
+the extreme tail than ordinary moments, and can be computed exactly for the piecewise-linear
+gridded laws used here. Linearity in \(Q\) also means that for a pure location family the shape
+channels (\(\lambda_2\) and up) do not move with the location, which is what lets the mixing
+check in <code>mixing_residual_nonzero_while_barycenter_flat</code> separate a mixture effect from a shift.
+\(\lambda_1\) is the mean, \(\lambda_2\) a scale, and \(\lambda_3\), \(\lambda_4\) carry skewness
+and tail weight; the gate grades \(\lambda_3\) on <code>skew_comp</code> and \(\lambda_4\) on <code>tail_comp</code>
+(§4–5).</p>
 <h2>2. Method (TRACE_V5_1)</h2>
 <p>Quoted from the frozen method, <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §2</a>:</p>
 <ul>
@@ -60,7 +102,60 @@ Docs only; every number is quoted from an existing repo file. Indices 9600–961
 <li>Implemented in the Rust core with a thin Python switch (no neural nets). The fit is closed form; there are <strong>no tunable parameters</strong>.</li>
 </ul>
 <p>Implementation: <code>TRACE_V5_1</code> = <code>explain_v5(..., mean_model="ols")</code> (PR #29), merge SHA <code>665939bd4aa78ffc7474b91d482d18ac0191d595</code>. Code: <a href="https://github.com/jgridifier/traceot/blob/main/crates/core/src/trace/v5/explain.rs">explain.rs</a>, <a href="https://github.com/jgridifier/traceot/blob/main/python/traceot/v5.py">v5.py</a>.</p>
-<p><span class="todo">TODO:</span> the Shapley split in full, the budget identity, grid and quadrature details.</p>
+<p><strong>Shapley split in full.</strong> Treat the change \(\lambda_{[B,B]}-\lambda_{[A,A]}\) (per L-moment)
+as a two-player cooperative game with players <em>c</em> (switch inputs A→B) and <em>s</em> (switch the
+conditional law A→B). The value of a coalition is the L-moment of the hybrid with the switched
+parts taken from B:
+\[
+v(\varnothing)=\lambda_{[A,A]},\quad v(\{c\})=\lambda_{[B,A]},\quad
+v(\{s\})=\lambda_{[A,B]},\quad v(\{c,s\})=\lambda_{[B,B]}.
+\]
+The Shapley value of a player averages its marginal contribution over the two orders in which
+the players can join:
+\[
+\hat c=\tfrac12\big[(\lambda_{[B,A]}-\lambda_{[A,A]})+(\lambda_{[B,B]}-\lambda_{[A,B]})\big],\qquad
+\hat s=\tfrac12\big[(\lambda_{[A,B]}-\lambda_{[A,A]})+(\lambda_{[B,B]}-\lambda_{[B,A]})\big].
+\]
+These are exactly the <code>lsplit_comp</code> and <code>lsplit_struct</code> formulas in
+<code>crates/core/src/trace/v5/explain.rs</code>. Writing the interaction
+\(I=\lambda_{[B,B]}-\lambda_{[B,A]}-\lambda_{[A,B]}+\lambda_{[A,A]}\),
+\[
+\hat c=(\lambda_{[B,A]}-\lambda_{[A,A]})+\tfrac I2,\qquad
+\hat s=(\lambda_{[A,B]}-\lambda_{[A,A]})+\tfrac I2,
+\]
+so the split gives each one-at-a-time effect and shares the interaction equally; it does not
+depend on which switch is applied first (order-free). Adding the two displays,
+\[
+\hat c+\hat s=\lambda_{[B,B]}-\lambda_{[A,A]}\qquad\text{(budget identity)},
+\]
+exactly, for every L-moment. The identity is algebraic, so it holds in floating point up to
+rounding; it is tested in <code>tests/python/test_v5.py</code> (<code>test_explain_v5_budget_is_exact</code>) and in
+the Rust tests <code>mixing_residual_nonzero_while_barycenter_flat</code> (tolerance \(10^{-12}\)) and
+<code>v5_1_pure_composition_shift</code> (\(10^{-10}\)).</p>
+<p><strong>The four hybrids under v5.1.</strong> With \(\hat\mu_t\) the OLS fit of period \(t\) and
+\(r_{t,j}=y_{t,j}-\hat\mu_t(x_{t,j})\) its residuals (\(j=1..n_t\)),
+\[
+\hat F_{[s,t]}(y)=\frac1{n_s n_t}\sum_{i=1}^{n_s}\sum_{j=1}^{n_t}\mathbf 1\{\hat\mu_t(x_{s,i})+r_{t,j}\le y\},
+\]
+i.e. B's (or A's) inputs pushed through period \(t\)'s fitted mean plus period \(t\)'s empirical
+residual law (<code>mixture_cdf_location</code>, exact pair counting, no smoothing or subsampling). For
+\([A,A]\) and \([B,B]\) this is the law of fitted value plus an independently re-drawn own
+residual. Because the OLS fit includes an intercept, a common shift of all inputs changes no
+fitted value, so centring the inputs (as the benchmark harness does) does not change the
+output.</p>
+<p><strong>Grid and quadrature.</strong> One support grid is shared by the four hybrids: \(n_y=256\) evenly
+spaced points on \([\ell,h]\), where \(\ell\) and \(h\) are the smallest and largest value of
+fitted mean plus residual over the four hybrids, so the grid covers every hybrid's support
+(<code>support_grid</code>). \(\hat F_{[s,t]}\) is evaluated exactly at each grid point and treated as
+linear between grid points, with atoms at the two ends for any mass at or beyond them. The
+L-moments of that law are computed exactly: on each linear piece \(Q\) is linear in \(u\), so
+\(\int Q\,P^*_r\) has a polynomial integrand of degree \(r+1\le 4\) for \(K=4\), and the code
+integrates each piece with a 4-point Gauss–Legendre rule, exact to degree 7
+(<code>lmoments_from_cdf_grid</code>). The
+\(n_{\text{quad}}=64\) Gauss–Legendre nodes on \((0,1)\) are used only for the reported quantile
+curves \(Q_{[s,t]}\), the Lagrangian barycenter \(\bar Q_{[s,t]}(u)=\overline{\hat\mu}+Q_{r_t}(u)\),
+and the mixing residual \(\lVert Q_{[s,t]}-\bar Q_{[s,t]}\rVert_{L^2(0,1)}\); they do not enter
+\(\hat c\) or \(\hat s\).</p>
 
 <h2>3. Pre-registration history (failures kept)</h2>
 <table>
@@ -92,7 +187,24 @@ Docs only; every number is quoted from an existing repo file. Indices 9600–961
 <tr><td>tail_comp</td><td>20000</td><td>20</td><td>20</td><td>0.001933</td><td>0.009159</td><td>0.005063</td><td>-0.002988</td><td>-0.001949</td><td>-0.002048</td><td>0.0004586</td><td><strong>BEST</strong></td><td>0.003909</td><td>0.0007253</td><td><strong>PASS</strong></td><td>7.98e-06 (8.47e-06)</td><td>4.26e-05 (5.23e-05)</td></tr>
 </table>
 <p class="muted">Truth (Shapley, graded channel): skew_comp λ3: comp 0.04011, struct -0.0001375; tail_comp λ4: comp 0.004298, struct 0.000288. p values are unadjusted with Holm (across the completed cells) in brackets. Full numbers: <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/v5_1_gate_summary.json">v5_1_gate_summary.json</a>; per-replication records: <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/v5_1_gate_shape.jsonl">v5_1_gate_shape.jsonl</a>.</p>
-<p><span class="todo">TODO:</span> figure of paired d per cell (from the existing jsonl only); discussion.</p>
+<p><strong>Discussion.</strong> All numbers in this paragraph are read from the table above. In every cell the
+v5.1 graded-channel error is below both rivals' (for example 0.008351 against DFL 0.07792 and
+CFM 0.0231 on <code>skew_comp</code> at n = 2000), and the one-sided 95% upper bound of the paired
+difference d is below zero by both the t-interval and the bootstrap, which is the BEST bar. Because each bound is below zero it is also below δ, so NON-INFERIOR holds as well. The CFM rival is the closer of the two in all four cells. From n = 2000 to
+n = 20 000 (with p going from 5 to 20) the v5.1 error falls in both cells (0.008351 → 0.002875 on
+<code>skew_comp</code>, 0.005568 → 0.001933 on <code>tail_comp</code>) while DFL's does not fall on <code>skew_comp</code>
+(0.07792 → 0.08113); this is consistent with the v5.1 location fit being the correct family for
+this simulator (§6) and is not evidence for anything outside it. The role check is clear in each
+cell: mean \(|\hat c|\) is close to the planted composition truth (0.0379 and 0.04097 against
+0.04011 on <code>skew_comp</code>; 0.004493 and 0.003909 against 0.004298 on <code>tail_comp</code>) and well above
+mean \(|\hat s|\). The <code>tail_comp</code> cells sit closer to their bars than <code>skew_comp</code> in absolute
+terms because the planted λ4 effect is roughly an order of magnitude smaller than the λ3 one (δ = 0.0004586 against
+0.004025). Holm-adjusted p values stay below 0.05 in all four cells. Two things the table does
+not show: whether a band around \(\hat c,\hat s\) would have the stated coverage (no band was
+computed; see <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">PREREG_V5_1_COVERAGE.md</a>, not run), and
+anything about non-linear means (§6).</p>
+<p><span class="todo">Not drawn yet:</span> a figure of the paired d per cell from the existing
+<code>benchmarks/results/v5_1_gate_shape.jsonl</code> (no new run needed; open item in §8).</p>
 
 <h2>6. Limitations</h2>
 <p>Verbatim from <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §7</a> (Known limitation, stated in advance):</p>
@@ -108,13 +220,20 @@ coverage, ShiftBench, speed, per-feature shares, non-linear-mean scenarios.</blo
 <h2>7. Software</h2>
 <p>Rust core <code>traceot_core::trace::{explain_v5, ExplainV5Config, LocationModel}</code> with <code>LocationModel::Ols</code>; thin Python binding <code>traceot.explain_v5_1(x_a, y_a, x_b, y_b)</code>, identical to <code>traceot.explain_v5(..., mean_model="ols")</code>. Since 2026-11-09 <code>"ols"</code> (v5.1) is the library default, so <code>traceot.explain_v5(x_a, y_a, x_b, y_b)</code> runs v5.1; v5 stays selectable with <code>mean_model="booster"</code>. See the <a href="v5_1_app.html">application page</a>.</p>
 
+<p>Since 2026-11-10 the report also carries a <strong>report-only</strong> residual-vs-fit check of each
+period's location fit (<code>ExplainV5Report::linear_mean_check_a/_b</code>, Python
+<code>result["linear_mean_check"]["a"/"b"]</code>): correlation of residuals with the fit and with the
+squared centred fit, and mean residuals in ten equal-count bins of the fit. It is a diagnostic
+only. It carries no validated claim, gates nothing, is computed after every other output is
+final, and changes no other returned value. Small values do not show the mean is linear.</p>
+
 <h2>8. Open items</h2>
 <ul>
-<li><span class="todo">TODO</span> write §1, the full method in §2, and the discussion in §5.</li>
-<li>Linear-mean check in the application: residual-vs-fit check, report only, no gating claim (decision plan item; not in the library yet).</li>
+<li>Done 2026-11-10: §1, the full method in §2, and the discussion in §5 (existing results and code only). <span class="todo">TODO</span> final abstract; §3 per-step paragraphs; §4 simulator prose; §5 figure of paired d.</li>
+<li>Done 2026-11-10: linear-mean check in the application — residual-vs-fit check <code>linear_mean_check</code>, report only, no gating claim (§7).</li>
 <li>Release tag against the gate's implementation merge SHA <code>665939b</code> (not tagged yet).</li>
 <li>Non-linear means need their own pre-registration on fresh seeds, with a hypothesis not chosen by looking at the v5.2 run.</li>
-<li>Out-of-scope suites (struct cells, coverage, ShiftBench, speed, per-feature shares) each need their own pre-registration before any claim.</li>
+<li>Out-of-scope suites (struct cells, coverage, ShiftBench, speed, per-feature shares) each need their own pre-registration before any claim. Coverage: <a href="v5_1_coverage_prereg.html">pre-registered</a> (not approved, not run).</li>
 <li>Indices 9600–9619 stay sealed; v5.1's prereg permits no holdout confirmation.</li>
 </ul>
 
