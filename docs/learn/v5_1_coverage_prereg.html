@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.1 coverage pre-registration — does the 90% band hold?</title>
+<meta name="description" content="Plain-language guide to the frozen TRACE v5.1 coverage test: does a 90% bootstrap band around the composition and response pieces cover the truth 90% of the time?">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+  .pending{ color: #e0a050; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_paper.html">V5.1 paper</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_1_prereg.html">V5.1 pre-reg</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">Full pre-registration</a>
+</p>
+
+<h1>TRACE v5.1: does a 90% band really cover 90% of the time?</h1>
+<p><span class="status">PRE-REGISTERED · NOT APPROVED · NOT RUN</span> &nbsp; <span class="muted">2026-11-10 ET · nothing runs until Jared approves</span></p>
+
+<div class="callout good">
+<strong>Where we are.</strong> v5.1 shipped on a passed accuracy gate: its composition / response split
+was the most accurate of the methods compared on the four straight-line-mean test cells. It has
+<strong>no tested uncertainty band</strong>. The v5.1 pre-registration listed “coverage” as out of scope.
+This page is that item, and only that item.
+</div>
+
+<h2>The question</h2>
+<p>If we resample the data and report the middle 90% of the re-computed composition and response pieces,
+does that range contain the true value in about 90 out of 100 fresh datasets? If it does much less
+often, the band is too narrow and would mislead. If it does much more often, it is too wide.</p>
+
+<h2>The one hypothesis</h2>
+<div class="callout">
+On the two straight-line-mean composition cells (<code>skew_comp</code>, <code>tail_comp</code>; 2,000 rows per
+period, 5 inputs), the <strong>90% percentile bootstrap band</strong> around v5.1’s composition piece and
+around its response piece covers the true value at a rate inside a binomial pass interval fixed in advance,
+in <strong>each</strong> of the four (cell × piece) combinations.
+</div>
+<p><strong>Why expect it?</strong> Every step of v5.1 is smooth: a least-squares line per period, the leftover
+noise, a mixture of the two, and exact L-moments. For smooth estimators like this the ordinary bootstrap is
+expected to work. The test checks that expectation. It was chosen from the v5.1 out-of-scope list and that
+reasoning, not from the v5.2 run (v5.2 used curved means and computed no bands).</p>
+
+<h2>The band (fixed now)</h2>
+<ul>
+<li>Point estimate: <code>traceot.explain_v5_1</code> with the shipped defaults; nothing tuned.</li>
+<li>500 bootstrap redraws per dataset: resample rows of period A and of period B separately, with replacement, and refit.</li>
+<li>Band = the 5th to 95th percentile of the 500 refits. No bias correction.</li>
+<li>Graded channel as in the gate: third L-moment (skew) for <code>skew_comp</code>, fourth (tail weight) for <code>tail_comp</code>.</li>
+<li>Truth: the frozen population values already in the repo (2 million draws). If more than 5 of the 500 refits crash, that dataset counts as a miss.</li>
+</ul>
+
+<h2>How it is graded</h2>
+<table>
+<tr><th>Item</th><th>Fixed value</th></tr>
+<tr><td>Datasets per cell</td><td>400 (indices 10400–10799)</td></tr>
+<tr><td>Units graded</td><td>4: two cells × {composition, response}</td></tr>
+<tr><td>Nominal level</td><td>90%</td></tr>
+<tr><td><strong>Pass interval</strong></td><td><strong>344–374 covers out of 400</strong> (86.0%–93.5%), per unit</td></tr>
+<tr><td>Why that interval</td><td>If the band is exactly calibrated, each unit lands inside with probability 0.990; all four together about 0.96</td></tr>
+<tr><td>Gate</td><td>PASS only if all four units are inside. Too few covers <em>or</em> too many both fail.</td></tr>
+<tr><td>Time cap</td><td>60 minutes on 8 cores (expected about 9); unfinished work is never filled in</td></tr>
+</table>
+
+<h2>Seeds</h2>
+<p>Brand new: <code>10400–10799</code>. The pre-registration lists every range already used in the repo
+(0–1999 for early benchmarks and a calibration loop, 1000–1199, 2101–6499, 7007–7012, 7900–8499 for v3,
+9100–9429 for v4, 9500–9549 spent on v5, 9700–9819 for v5.1, 10100–10219 for v5.2, and 81001–84050 for the
+early simulations). The new range overlaps none of them. <strong>9600–9619 stay sealed</strong> and are not touched.</p>
+
+<div class="callout bad">
+<strong>Kill rule.</strong> If any unit falls outside its interval or the run times out, the band claim is parked
+(<code>PARK_V5_1_COVERAGE.md</code>), v5.1 keeps saying “no validated band”, and nothing is re-run, re-seeded or
+re-tuned. The v5.1 accuracy result does not change either way.
+</div>
+
+<h2>Honest limits</h2>
+<ul>
+<li>Two cells, one size (2,000 rows), straight-line means only. Even a PASS says nothing about 20,000 rows, the structure cells, the mixed cell, or curved means.</li>
+<li>The percentile band does not correct bias. If the point estimate is biased, coverage will show it; that is part of the test.</li>
+<li>Simulated data only.</li>
+</ul>
+
+<p class="muted">Order of work: Jared’s approval quoted in the pre-registration → runner merged (runs nothing) → one single pass → results page. No result numbers appear on this page.</p>
+</body>
+</html>
