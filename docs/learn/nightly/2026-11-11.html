@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-11 · traceot</title>
+<meta name="description" content="No material TRACE change since 2026-11-10. Only a style-only theme PR merged; paper §3/§4 drafting not started; coverage study still unapproved.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="../../assets/brief.css">
+</head>
+<body>
+<main>
+<header class="mast">
+  <p class="date">Nightly · 2026-11-11 · America/New_York (EST)</p>
+  <h1>TRACE nightly</h1>
+  <p class="dek">No material change since <a href="2026-11-10.html">2026-11-10</a>.</p>
+  <nav>
+    <a href="../../index.html">Learn home</a> ·
+    <a href="../research_board.html">Research board</a> ·
+    <a href="../v5_1_paper.html">V5.1 paper</a> ·
+    <a href="../v5_1_app.html">V5.1 app</a>
+  </nav>
+</header>
+
+<div class="tldr">
+  <p><strong>Short version:</strong> nothing changed in results, code, decisions or the paper text. The only merge was a style-only theme PR. Yesterday's planned step (paper §3 and §4) has not started. The coverage study is still unapproved and has not been run.</p>
+</div>
+
+<section id="new">
+<div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+<div class="card">
+  <div class="card-top"><span class="tag">Style only</span></div>
+  <p><strong>Shared <code>brief.css</code> theme</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/49">#49</a>, merged 2026-11-10 22:14 EST, CI green). This adds <code>docs/assets/brief.css</code> and <code>THEME.md</code>, and the nightly page and the 2026-11-10 snapshot now link the stylesheet instead of inlining it. Content is unchanged.</p>
+</div>
+<p>Nothing else is new. No new results, failures, decisions or design changes landed, and no PR is open. <code>origin/main</code> is at <code>3612d96</code>. The CI runs for #48 and #49, plus the Pages deploys, all passed.</p>
+</section>
+
+<section id="blocker">
+<div class="sec-head"><span class="n">02</span><h2>Blocker</h2><span class="line"></span></div>
+<div class="card red">
+  <ul>
+    <li><strong>Paper §3/§4 not started.</strong> No branch or PR picked up the step planned on 2026-11-10. The TODO markers are still in <a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/V5_1_working_paper.md"><code>V5_1_working_paper.md</code></a>: the §3 per-step paragraphs, the §4 simulator prose, the final abstract and the §5 paired-effect-size figure.</li>
+    <li><strong>Coverage study waits on your approval.</strong> The <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md"><code>PREREG_V5_1_COVERAGE.md</code></a> header still reads <em>PRE-REGISTERED · NOT APPROVED · NOT RUN</em>. The file has had no commit since the freeze (<code>dfaaf72</code>), and no approval in your own dated words is recorded. No runner exists, and indices 10400–10799 have not been touched.</li>
+  </ul>
+</div>
+<p class="note">Seeds 9600–9619 remain sealed and untouched.</p>
+</section>
+
+<section id="tomorrow">
+<div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>Same as yesterday's plan: write paper §3, one paragraph per pre-registration step with failures kept, and §4, the simulator families, truth file and gate design. That replaces the two TODO markers. Docs only, with no new numbers. The coverage run stays on hold until your approval is committed to the prereg header.</p>
+</section>
+
+<section id="archive">
+<div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<ol reversed>
+  <li><a href="2026-11-11.html">2026-11-11</a> (this one)</li>
+  <li><a href="2026-11-10.html">2026-11-10</a></li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+</section>
+
+<footer>
+  <p>Dated <strong>2026-11-11</strong>, America/New_York (EST), written against main <code>3612d96</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>
