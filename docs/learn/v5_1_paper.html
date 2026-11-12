@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE v5.1 — working paper (skeleton)</title>
-<meta name="description" content="TRACE v5.1 working paper skeleton: shipped on the passed, pre-registered v5.1 gate. Linear-mean simulator only.">
+<title>TRACE v5.1 — working paper</title>
+<meta name="description" content="TRACE v5.1 working paper: shipped on the passed, pre-registered v5.1 gate. Linear-mean simulator only.">
 <script>window.MathJax={tex:{inlineMath:[['\\(','\\)']]}};</script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <style>
@@ -31,6 +31,9 @@
   .nav { font-size:.92em; }
   #wbtn { float:right; font-size:.8rem; padding:.2rem .6rem; border:1px solid var(--rule); background:var(--bg); color:var(--fg); border-radius:4px; cursor:pointer; }
   li { margin:.3rem 0; }
+  figure { margin: 1.5rem 0 1.2rem; }
+  figure img { width: 100%; height: auto; background: #fdfdfc; border: 1px solid var(--rule); border-radius: 4px; }
+  figcaption { font-size: .92em; color: var(--muted); margin-top: .55rem; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -38,16 +41,14 @@
 <button id="wbtn" type="button" onclick="document.body.classList.toggle('wide');this.textContent=document.body.classList.contains('wide')?'Narrow page':'Widen page'">Widen page</button>
 <p class="nav"><a href="../index.html">traceot</a> · <a href="v5_1_paper.html">V5.1 paper</a> · <a href="v5_1_app.html">V5.1 app</a> · <a href="v5_1_gate.html">V5.1 gate</a> · <a href="v5_1_prereg.html">V5.1 pre-reg</a></p>
 <h1>TRACE v5.1: splitting a change in distribution shape into composition and response</h1>
-<p class="muted">Working paper, skeleton · opened 2026-11-09 ET · source <a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/V5_1_working_paper.md">V5_1_working_paper.md</a> · decision <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a> (PR #37)</p>
+<p class="muted">Working paper · opened 2026-11-09 ET · abstract, §3, §4 and the §5 figure filled in 2026-11-12 ET · source <a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/V5_1_working_paper.md">V5_1_working_paper.md</a> · decision <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md">DECISION_2026-11-04.md</a> (PR #37)</p>
 <div class="banner"><strong>Shipped: TRACE V5.1.</strong> Approved by the owner on 2026-11-05 ET:
 <em>"Yes, ship V5.1: open the working-paper skeleton and app on the passed V5.1 gate, sealed holdout untouched."</em>
 Docs only; every number is quoted from an existing repo file. Indices 9600–9619 stay sealed; no holdout was run.</div>
-<p class="muted">Sections marked <span class="todo">TODO</span> are not written yet. §1, §2 and the §5 discussion were filled in on 2026-11-10 from existing results and code only (no new numbers).</p>
+<p class="muted">§1, §2 and the §5 discussion were filled in on 2026-11-10 from existing results and code only. The abstract, §3, §4 and the §5 figure were filled in on 2026-11-12, still from existing results only: the figure is drawn from the committed <code>v5_1_gate_shape.jsonl</code> by a deterministic script that runs no TRACE fit and touches no seed.</p>
 
 <h2>Abstract</h2>
 <p>When the distribution of an outcome changes between two periods A and B, part of the change comes from the inputs moving (<em>composition</em>) and part from the way the outcome responds to the inputs (<em>response</em>, also called structure). TRACE v5.1 splits the change in each L-moment of the outcome into these two pieces. It builds the four mixture counterfactual laws \(F_{[s,t]}(y)=E_{x\sim F_s}F_t(y\mid x)\) for \(s,t\in\{A,B\}\), with each period's conditional law given by an ordinary-least-squares location fit plus that period's empirical residual law, and takes the two-player Shapley split of the L-moment change. The fit is closed form and has no tunable parameters (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §2</a>). In a frozen, pre-registered gate on fresh seeds, v5.1 was <strong>BEST</strong> against the better of two paired rivals (DFL reweighting and CFM) in all four pure-composition cells and passed the role check in all four (<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>). The simulator's mean is linear, so this result says nothing about non-linear means; a follow-up that tried curved means was pre-registered, run once, and parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a>).</p>
-<p><span class="todo">TODO:</span> final abstract wording once §1 and §6 are written.</p>
-
 <h2>1. Problem</h2>
 <p>Decomposing a distribution shift's shape change (L-moments) into composition vs structure via a
 four-hybrid mixture and a two-player Shapley split
@@ -171,11 +172,33 @@ and the mixing residual \(\lVert Q_{[s,t]}-\bar Q_{[s,t]}\rVert_{L^2(0,1)}\); th
 <li>v5.2 park: "V5.1's linear-mean claim stands exactly as stated in V5_1_GATE_RESULTS.md. This failure neither strengthens nor weakens it." (PARK_V5_2.md)</li>
 <li>Holdout: "9600–9619 belong to the closed PREREG_V5 gate; they stay sealed and are not reused" (§3); "There is no separate holdout in this freeze; the gate seeds above are the test." (§6)</li>
 </ul>
-<p><span class="todo">TODO:</span> a paragraph per step on what was learned.</p>
+<p><strong>Earlier scored suites (the v1–v3 accuracy line), all kept.</strong></p>
+<ul>
+<li>TRACE claims, PR #12 — first scored suite: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/TRACE_CLAIMS_RESULTS.md">TRACE_CLAIMS_RESULTS.md</a>, frozen by <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/PREREG_TRACE_CLAIMS.md">PREREG_TRACE_CLAIMS.md</a> as amended by <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/PREREG_TRACE_CLAIMS_AMENDMENT_1.md">Amendment 1</a>.</li>
+<li>TRACE v3: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/TRACE_V3_RESULTS.md">TRACE_V3_RESULTS.md</a>, frozen by <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/PREREG_TRACE_V3.md">PREREG_TRACE_V3.md</a>.</li>
+</ul>
+<p><strong>What was learned at each step.</strong> Every number in this subsection is quoted from the record named in the sentence; no new run.</p>
+<p><strong>TRACE claims (PR #12) and v3.</strong> Both already showed the pattern that later drove v4 and v5. TRACE recovered a structure-only skew change at n = 20 000 (H7 <code>skew_struct</code> recovery <strong>PASS</strong> in both records) but not composition-driven shape changes: H7 recovery was 0.000 on every <code>skew_comp</code>, <code>tail_comp</code> and <code>shape_mixed</code> cell in both records, and H7 overall was <strong>FAIL</strong> (1 of 10 recovery cells). Against rivals, TRACE did not win on the composition cells (0 of 5 rival tests in both records; in PR #12, on <code>skew_comp</code> at n = 20 000, the paired difference vs CFM was 0.071). Coverage of TRACE's bands also failed (H8(b) pooled 0.807 in PR #12 and 0.815 in v3, against a bar of 0.90). One identity that did pass, and stayed passing, is the barycenter reconstruction (H5.1b in v3: 0 misses, worst 1.8e-15). v3's <code>pit_rounds=20</code> and related changes did not move the composition-cell failure (<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/TRACE_CLAIMS_RESULTS.md">TRACE_CLAIMS_RESULTS.md</a>; <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/TRACE_V3_RESULTS.md">TRACE_V3_RESULTS.md</a>).</p>
+<p><strong>v4</strong> (<code>d50732f</code>). <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V4_RESULTS.md">V4_RESULTS.md</a>: overall accuracy <strong>FAIL</strong> (all ten H7 cells FAIL); coverage <strong>INCOMPLETE</strong> (the cover track wrote 800 records with a budget CI, but not the per-cell bands the bar requires); speed below the conditional 5× bar (CFM/v4 = 1.02 at n = 10<sup>5</sup> and 2.94 at n = 10<sup>6</sup>). The diagnosis in <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/BOARD_V5.md">BOARD_V5.md</a> §2–3, from the same frozen <code>v4_*.jsonl</code>, is that the game was played on a Lagrangian quantile-curve average rather than on the mixture counterfactual, and that estimated mass landed in the wrong role: on <code>skew_comp</code> at n = 20 000, planted \(|\mathrm{truth}_c|\approx 0.040\) and \(|\mathrm{truth}_s|\approx 0.0001\), but v4 averaged \(|\hat c|\approx 0.0027\) and \(|\hat s|\approx 0.013\) (BOARD_V5 §2.1). That is what v5 was designed to change.</p>
+<p><strong>v5 first gate</strong> (<code>bce021e</code>). <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_GATE1_RESULTS.md">V5_GATE1_RESULTS.md</a>: <strong>FAIL</strong>. At n = 2000, <code>skew_comp</code> had err 0.02699 with a 95% upper bound 0.00711, above δ = 0.004025, and <code>tail_comp</code> had err 0.009708 with a role-check <strong>FAIL</strong> (mean \(|\hat c|\) = 0.003115 below mean \(|\hat s|\) = 0.004922). The n = 20 000 cells are <strong>INCOMPLETE</strong>: their indices 9600–9619 "are held back and must not be touched in this run" (note 1). Under the kill rule an INCOMPLETE required cell blocks a PASS, and the first gate is closed (PREREG_V5_1 header). The mixture object was in place; it was not enough with the binned mean booster.</p>
+<p><strong>v5 diagnosis</strong> (exploratory, spent seeds 9500–9549 only; 9600–9619 not touched). <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/V5_DIAGNOSIS.md">V5_DIAGNOSIS.md</a>, not a gate and not a claim. With the true conditional, the same Eulerian mixture is <strong>BEST</strong> in both n = 2000 cells and the role check passes; grid and inversion error is about \(10^{-6}\), "three orders below δ." Most of v5's error is the location model (75% on <code>skew_comp</code>, 65% on <code>tail_comp</code>), a near-equal and opposite transfer from composition to response. Ordinary least squares in place of the booster, on those same spent seeds, removed the bias and both cells became BEST — "It is evidence for a narrower pre-registered test on fresh seeds, not a result." The suspected heteroskedasticity issue was not supported. The note already states that the simulator's mean is linear, so OLS is the correct family by construction.</p>
+<p><strong>v5.1</strong> (<code>b33f507</code>). The test those diagnosis numbers pointed to, on fresh seeds 9700–9749 and 9800–9819. <strong>PASS</strong>: all four cells BEST, all four role checks PASS (<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>; table, discussion and figure in §5). Replacing only the location fit, and keeping the mixture, was enough on these linear-mean pure-composition cells.</p>
+<p><strong>v5.2</strong> (<code>df5aff8</code>). The attempt to go past the linear-mean limit. <strong>FAIL</strong>, parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">PARK_V5_2.md</a>): two cells INCOMPLETE (σ<sub>B</sub> calibration infeasible), accuracy FAIL after Holm on several tail and structure cells, a role FAIL, and false attribution FAIL on all four structure-only cells. "V5.1's linear-mean claim stands exactly as stated in V5_1_GATE_RESULTS.md. This failure neither strengthens nor weakens it."</p>
 
 <h2>4. Gate design</h2>
-<p>As frozen in PREREG_V5_1 §3–§5: <code>skew_comp</code>, <code>tail_comp</code> at n = 2000 (p = 5, indices 9700–9749, 50 reps) and n = 20 000 (p = 20, indices 9800–9819, 20 reps); paired d = err<sub>v5.1</sub> − err<sub>best rival</sub>; BEST if the one-sided 95% upper bound is below 0, NON-INFERIOR if below δ = 0.10 × planted magnitude; role check; Holm across the four tests; 30-minute wall cap on 8 cores.</p>
-<p><span class="todo">TODO:</span> the simulator families and truth file in prose.</p>
+<p>Cells, seeds and bars are as frozen in <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §3–§5</a>, which inherits generators, the truth file, <code>seed_of(...)</code> streams, the estimand and the rivals from PREREG_V5 §3–4, and the bars from PREREG_V4 §5. What follows restates that design in prose, citing the files it comes from. No new generator and no new bar.</p>
+<p><strong>Simulator families.</strong> The generators are the H7 shape scenarios of <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/PREREG_TRACE_CLAIMS_AMENDMENT_1.md">PREREG_TRACE_CLAIMS_AMENDMENT_1.md</a> §A2, implemented in <code>benchmarks/shiftbench/sb_dgp_shape.py</code> (PREREG_V5 §3: "Generators unchanged from <code>benchmarks/</code> (H7 runner). <strong>No new generators.</strong>"). The mean is linear in both periods,
+\[
+\mu(x)=1+x_{0:4}^{\top}\beta,\qquad \beta=(1.0,\,-0.8,\,0.6,\,0.4,\,-0.3),
+\]
+with independent \(N(0,1)\) features and \(N(0,1)\) noise in period A (Amendment 1 A2: "Baseline as before… Every new law is centred (mean 0)"). At n = 20 000 the simulator uses p = 20: the five active features and fifteen further independent \(N(0,1)\) columns that do not enter \(\mu\) (<code>ShapeScenario.draw_x</code> and <code>mu</code> in <code>sb_dgp_shape.py</code>; PREREG_V5 §3, "p as in the frozen H7 grid: 5 at 2e3, 20 at 2e4"). Period B changes only the <em>shape</em> of one input law or of the noise; a scalar \(\sigma_B\), calibrated once on the oracle sample, rescales period-B noise so that \(\lambda_2(Y_B)=\lambda_2(Y_A)\) (\(\lambda_1\) is already matched because every law has mean 0). The two cells in this gate are:</p>
+<ul>
+<li><code>skew_comp</code>: period-B feature \(x_0\) is drawn from a standardised \(\chi^2_3\) law (<code>chi3</code> = frozen <code>_skew_feature</code>); noise stays normal, scaled by \(\sigma_B\). Graded channel: \(\lambda_3\) (\(k=2\)). Planted as composition on that channel.</li>
+<li><code>tail_comp</code>: period-B feature \(x_1\) is drawn from a scaled Student-\(t\) with 5 degrees of freedom (<code>t5</code> = \(t(5)\cdot\sqrt{3/5}\)); noise stays normal, scaled by \(\sigma_B\). Graded channel: \(\lambda_4\) (\(k=3\)). Planted as composition on that channel.</li>
+</ul>
+<p>Three other families live in the same file and the same truth file — <code>skew_struct</code> (noise → <code>skew</code>), <code>tail_struct</code> (noise → <code>t5</code>), <code>shape_mixed</code> (\(x_0\) → <code>chi3</code> and noise → <code>skewneg</code>) — and were <strong>not</strong> run under PREREG_V5_1 (out of scope, §6).</p>
+<p><strong>Truth file.</strong> <a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/shiftbench_truth_shape.json"><code>benchmarks/results/shiftbench_truth_shape.json</code></a>, built by <code>sb_dgp_shape.build_truth</code> on 2,000,000 oracle draws per law with raw RNG seed 99 (the same constant recorded in Amendment 1 A2 and in the spent-constant inventory of <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">PREREG_V5_1_COVERAGE.md</a> §4; it is not a replication index and is not in 9600–9619). For each family the file stores \(\sigma_B\), the L-moments of the four hybrid laws \(Y_A\), \(Y_B\), \(Y_c=(X_B,\text{structure }A)\), \(Y_{c'}=(X_A,\text{structure }B)\), and both the order-free Shapley split (the TRACE estimand) and the A-reference split (the rival estimand). The graded-channel Shapley truths used in the gate, already quoted in §5, are: <code>skew_comp</code> \(\lambda_3\) composition 0.04011, structure −0.0001375; <code>tail_comp</code> \(\lambda_4\) composition 0.004298, structure 0.000288 (from <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>, which reads them from this file). \(\sigma_B\) and the achieved \(|\Delta\lambda_1|\), \(|\Delta\lambda_2|\) are in the file; the amendment required \(|\Delta\lambda_2|\le 2\times 10^{-3}\) before any method ran.</p>
+<p><strong>Estimand, rivals, seeds and bars.</strong> The scored quantity is \(\mathrm{err}=|\hat c_k-\mathrm{truth}_{c,k}|+|\hat s_k-\mathrm{truth}_{s,k}|\) on the graded channel \(k\), each method against its own estimand (Amendment 1 A2; <code>graded_err</code> in <code>summarize_v4.py</code>, used by <code>summarize_v5_1_gate.py</code>). Rivals DFL and CFM are re-run on the same seeds, paired; \(d_r=\mathrm{err}_{\mathrm{v5.1},r}-\mathrm{err}_{\mathrm{best\,rival},r}\). <strong>BEST</strong> if the one-sided 95% upper bound of mean \(d\) is below 0 (Student-\(t\) interval with \(n-1\) degrees of freedom, and a 10,000-draw percentile bootstrap with seed 2026; both must agree, the larger bound is used — V5_1_GATE_RESULTS note 2 records that this scorer uses \(t\) rather than a normal quantile, which can only make a cell harder to pass). <strong>NON-INFERIOR</strong> if that bound is below \(\delta=0.10\times\) the planted magnitude (0.004025 on <code>skew_comp</code>, 0.0004586 on <code>tail_comp</code>, from the truth file). Role check: mean \(|\hat c|>\) mean \(|\hat s|\) on the graded channel, and swapping the two roles does not lower the error (operationalisation of V5_GATE1_RESULTS note 2). Gate <strong>PASS</strong> requires all four cells BEST or NON-INFERIOR <strong>and</strong> all four role checks, with Holm across the four paired tests. Wall cap 30 minutes on 8 cores; incomplete cells are never imputed. Seeds: 9700–9749 (n = 2000, p = 5, 50 reps) and 9800–9819 (n = 20 000, p = 20, 20 reps), disjoint from the spent diagnosis seeds 9500–9549 and from the sealed 9600–9619 (PREREG_V5_1 §3).</p>
 
 <h2>5. Results</h2>
 <p>Quoted as is from <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>: prereg <code>b33f507</code>, gate verdict <strong>PASS</strong>, wall time 15.0 s on 8 workers (cap 1800 s), 140/140 tasks finished.</p>
@@ -201,10 +224,25 @@ mean \(|\hat s|\). The <code>tail_comp</code> cells sit closer to their bars tha
 terms because the planted λ4 effect is roughly an order of magnitude smaller than the λ3 one (δ = 0.0004586 against
 0.004025). Holm-adjusted p values stay below 0.05 in all four cells. Two things the table does
 not show: whether a band around \(\hat c,\hat s\) would have the stated coverage (no band was
-computed; see <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">PREREG_V5_1_COVERAGE.md</a>, not run), and
+computed; the coverage study is pre-registered, held, not approved and not run — see
+<a href="v5_1_coverage_prereg.html">the coverage pre-registration page</a>,
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">PREREG_V5_1_COVERAGE.md</a>
+and <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/HOLD_V5_1_COVERAGE.md">HOLD_V5_1_COVERAGE.md</a>), and
 anything about non-linear means (§6).</p>
-<p><span class="todo">Not drawn yet:</span> a figure of the paired d per cell from the existing
-<code>benchmarks/results/v5_1_gate_shape.jsonl</code> (no new run needed; open item in §8).</p>
+<figure>
+<img src="figures/v5_1_paired_d.svg" alt="Paired d of v5.1 versus the best rival, four gate cells: one point per committed replication, solid line at 0 (the BEST bar), dashed line at the published mean d." width="900" height="760">
+<figcaption><strong>Figure 1.</strong> Paired \(d_r=\mathrm{err}_{\mathrm{v5.1},r}-\mathrm{err}_{\mathrm{best\,rival},r}\)
+on the graded channel, one point per committed replication. Drawn from the already-committed
+<a href="https://github.com/jgridifier/traceot/blob/main/benchmarks/results/v5_1_gate_shape.jsonl"><code>v5_1_gate_shape.jsonl</code></a>
+by the deterministic script
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/fig_v5_1_paired_d.py"><code>fig_v5_1_paired_d.py</code></a>,
+which uses the same <code>graded_err</code> as <code>summarize_v5_1_gate.py</code>, runs no TRACE fit, and touches no seed
+(indices 9600–9619 are not used). The solid line is 0, the BEST bar (the one-sided 95% upper bound of the mean must be below 0).
+The dashed line, and the numbers printed above each panel, are the published mean \(d\) and the published upper bounds and \(\delta\)
+quoted from <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_GATE_RESULTS.md">V5_1_GATE_RESULTS.md</a>.
+The script checks that the mean of the plotted points matches that published mean \(d\) to \(10^{-15}\).
+Use “Widen page” above if the figure is tight.</figcaption>
+</figure>
 
 <h2>6. Limitations</h2>
 <p>Verbatim from <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1.md">PREREG_V5_1 §7</a> (Known limitation, stated in advance):</p>
@@ -229,11 +267,12 @@ final, and changes no other returned value. Small values do not show the mean is
 
 <h2>8. Open items</h2>
 <ul>
-<li>Done 2026-11-10: §1, the full method in §2, and the discussion in §5 (existing results and code only). <span class="todo">TODO</span> final abstract; §3 per-step paragraphs; §4 simulator prose; §5 figure of paired d.</li>
+<li>Done 2026-11-10: §1, the full method in §2, and the discussion in §5 (existing results and code only).</li>
+<li>Done 2026-11-12: final abstract; §3 per-step paragraphs and v1–v3 records; §4 simulator and truth-file prose; §5 figure of paired d from the existing jsonl (existing results and code only, no new run).</li>
 <li>Done 2026-11-10: linear-mean check in the application — residual-vs-fit check <code>linear_mean_check</code>, report only, no gating claim (§7).</li>
 <li>Release tag against the gate's implementation merge SHA <code>665939b</code> (not tagged yet).</li>
 <li>Non-linear means need their own pre-registration on fresh seeds, with a hypothesis not chosen by looking at the v5.2 run.</li>
-<li>Out-of-scope suites (struct cells, coverage, ShiftBench, speed, per-feature shares) each need their own pre-registration before any claim. Coverage: <a href="v5_1_coverage_prereg.html">pre-registered</a> (not approved, not run).</li>
+<li>Out-of-scope suites (struct cells, coverage, ShiftBench, speed, per-feature shares) each need their own pre-registration before any claim. Coverage: <a href="v5_1_coverage_prereg.html">pre-registered</a>, <strong>held</strong> on 2026-11-11 (the owner's words, verbatim: <em>"Not yet, hold the coverage study."</em>), not approved, not run. Record: <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/HOLD_V5_1_COVERAGE.md">HOLD_V5_1_COVERAGE.md</a>.</li>
 <li>Indices 9600–9619 stay sealed; v5.1's prereg permits no holdout confirmation.</li>
 </ul>
 
