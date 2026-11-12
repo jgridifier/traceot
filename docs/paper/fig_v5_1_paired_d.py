@@ -109,11 +109,7 @@ def paired_d(rows, truth, scen, n):
 
 
 def load_and_check():
-    rows = [
-        json.loads(x)
-        for x in (RES / "v5_1_gate_shape.jsonl").read_text().splitlines()
-        if x
-    ]
+    rows = [json.loads(x) for x in (RES / "v5_1_gate_shape.jsonl").read_text().splitlines() if x]
     truth = json.loads((RES / "shiftbench_truth_shape.json").read_text())
     summary = json.loads((RES / "v5_1_gate_summary.json").read_text())
     cells = []
@@ -121,9 +117,7 @@ def load_and_check():
         d = paired_d(rows, truth, scen, n)
         pub = next(c for c in summary["cells"] if c["scen"] == scen and c["n"] == n)
         if len(d) != reps or len(d) != pub["reps"]:
-            raise SystemExit(
-                f"rep count mismatch {scen} n={n}: got {len(d)}, expected {reps}"
-            )
+            raise SystemExit(f"rep count mismatch {scen} n={n}: got {len(d)}, expected {reps}")
         mean = sum(d) / len(d)
         if not math.isclose(mean, pub["mean_d"], rel_tol=0, abs_tol=1e-15):
             raise SystemExit(
@@ -236,7 +230,6 @@ def svg_escape(s):
     )
 
 
-
 def render(cells):
     # layout: 2x2 panels, light paper background. Room above each panel for a
     # two-line heading (title + published numbers) so nothing sits on the points.
@@ -270,7 +263,7 @@ def render(cells):
             "from V5_1_GATE_RESULTS.md. Drawn from v5_1_gate_shape.jsonl; no new fit.</desc>"
         ),
         f'<rect width="{W}" height="{H}" fill="{bg}"/>',
-        f'<text x="{W/2}" y="26" text-anchor="middle" font-family="{font}" font-size="15.5" font-weight="600" fill="{ink}">Paired d = err(v5.1) − err(best rival), graded channel</text>',
+        f'<text x="{W / 2}" y="26" text-anchor="middle" font-family="{font}" font-size="15.5" font-weight="600" fill="{ink}">Paired d = err(v5.1) − err(best rival), graded channel</text>',
     ]
 
     def n_label(n):
@@ -294,7 +287,9 @@ def render(cells):
             f'<rect x="{x0:.2f}" y="{y0:.2f}" width="{pw:.2f}" height="{ph:.2f}" fill="#ffffff" stroke="{rule}" stroke-width="1"/>'
         )
 
-        title = f"{cell['scen']}   ·   n = {n_label(cell['n'])},  p = {cell['p']},  {cell['reps']} reps"
+        title = (
+            f"{cell['scen']}   ·   n = {n_label(cell['n'])},  p = {cell['p']},  {cell['reps']} reps"
+        )
         stats = (
             f"mean d = {fmt(cell['mean_d'])}"
             f"    upper t = {fmt(cell['upper_t'])}"
@@ -303,10 +298,10 @@ def render(cells):
             f"    {cell['verdict']}"
         )
         parts.append(
-            f'<text x="{x0 + pw/2:.2f}" y="{y0 - 22:.2f}" text-anchor="middle" font-family="{font}" font-size="12.5" font-weight="600" fill="{ink}">{svg_escape(title)}</text>'
+            f'<text x="{x0 + pw / 2:.2f}" y="{y0 - 22:.2f}" text-anchor="middle" font-family="{font}" font-size="12.5" font-weight="600" fill="{ink}">{svg_escape(title)}</text>'
         )
         parts.append(
-            f'<text x="{x0 + pw/2:.2f}" y="{y0 - 7:.2f}" text-anchor="middle" font-family="{font}" font-size="10" fill="{muted}">{svg_escape(stats)}</text>'
+            f'<text x="{x0 + pw / 2:.2f}" y="{y0 - 7:.2f}" text-anchor="middle" font-family="{font}" font-size="10" fill="{muted}">{svg_escape(stats)}</text>'
         )
 
         ticks = nice_ticks(ymin, ymax, n=6)
@@ -364,10 +359,10 @@ def render(cells):
             )
 
     parts.append(
-        f'<text x="{W/2}" y="{H - 26}" text-anchor="middle" font-family="{font}" font-size="10.5" fill="{muted}">Solid red line: 0, the BEST bar (one-sided 95% upper bound of the mean must be below 0).  Dashed green line: published mean d.</text>'
+        f'<text x="{W / 2}" y="{H - 26}" text-anchor="middle" font-family="{font}" font-size="10.5" fill="{muted}">Solid red line: 0, the BEST bar (one-sided 95% upper bound of the mean must be below 0).  Dashed green line: published mean d.</text>'
     )
     parts.append(
-        f'<text x="{W/2}" y="{H - 12}" text-anchor="middle" font-family="{font}" font-size="10" fill="{muted}">Points: committed replications in v5_1_gate_shape.jsonl, scored with the same graded_err as summarize_v5_1_gate.py.  Numbers quoted from V5_1_GATE_RESULTS.md.  No new run.</text>'
+        f'<text x="{W / 2}" y="{H - 12}" text-anchor="middle" font-family="{font}" font-size="10" fill="{muted}">Points: committed replications in v5_1_gate_shape.jsonl, scored with the same graded_err as summarize_v5_1_gate.py.  Numbers quoted from V5_1_GATE_RESULTS.md.  No new run.</text>'
     )
     parts.append("</svg>")
     return "\n".join(parts) + "\n"
