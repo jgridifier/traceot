@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-11 · traceot</title>
-<meta name="description" content="No material TRACE change since 2026-11-10. Only a style-only theme PR merged; paper §3/§4 drafting not started; coverage study still unapproved.">
+<title>TRACE nightly · 2026-11-12 · traceot</title>
+<meta name="description" content="Coverage study formally held; paper abstract, §3, §4 and the §5 figure filled in; home-screen icons for the learn pages. Next: the v5.1 release tag.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -25,9 +25,9 @@
 <body>
 <main>
 <header class="mast">
-  <p class="date">Nightly · 2026-11-11 · America/New_York (EST)</p>
+  <p class="date">Nightly · 2026-11-12 · America/New_York (EST)</p>
   <h1>TRACE nightly</h1>
-  <p class="dek">No material change since <a href="nightly/2026-11-10.html">2026-11-10</a>.</p>
+  <p class="dek">The paper text is now complete. The coverage study is formally on hold. Previous: <a href="nightly/2026-11-11.html">2026-11-11</a>.</p>
   <nav>
     <a href="../index.html">Learn home</a> ·
     <a href="research_board.html">Research board</a> ·
@@ -37,24 +37,39 @@
 </header>
 
 <div class="tldr">
-  <p><strong>Short version:</strong> nothing changed in results, code, decisions or the paper text. The only merge was a style-only theme PR. Yesterday's planned step (paper §3 and §4) has not started. The coverage study is still unapproved and has not been run.</p>
+  <p><strong>Short version:</strong> yesterday's blocker cleared. PR #51 filled every remaining text section of the V5.1 working paper: the abstract, §3, §4, and a §5 figure redrawn from data already committed. It also recorded your “hold” on the coverage study. PR #52 added home-screen icons. There are no new runs and no new numbers. The only unchecked paper item that's actually actionable is the v5.1 release tag.</p>
 </div>
 
 <section id="new">
 <div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+
 <div class="card">
-  <div class="card-top"><span class="tag">Style only</span></div>
-  <p><strong>Shared <code>brief.css</code> theme</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/49">#49</a>, merged 2026-11-10 22:14 EST, CI green). This adds <code>docs/assets/brief.css</code> and <code>THEME.md</code>, and the nightly page and the 2026-11-10 snapshot now link the stylesheet instead of inlining it. Content is unchanged.</p>
+  <div class="card-top"><span class="tag">Decision</span></div>
+  <p><strong>Coverage study formally HELD</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/51">#51</a>, merged 2026-11-12 06:33 EST). Your answer from 2026-11-11 07:31 EST is quoted verbatim in the prereg header: <em>“Not yet, hold the coverage study.”</em> The status now reads <em>PRE-REGISTERED · NOT APPROVED · NOT RUN · HELD</em>. The record is in <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/HOLD_V5_1_COVERAGE.md"><code>HOLD_V5_1_COVERAGE.md</code></a>. No runner exists, and indices 10400–10799 have not been used.</p>
+  <p class="note">The hold note also <em>proposes</em> a fallback that is not registered and has not been run. If coverage is never approved, it would check whether the spread of ĉ and ŝ across the already-committed gate replications shrinks at a 1/√n rate between n = 2000 and n = 20 000. That check needs no new fit and no new seeds. It would only be pre-registered if you ask for it in your own words.</p>
 </div>
-<p>Nothing else is new. No new results, failures, decisions or design changes landed, and no PR is open. <code>origin/main</code> is at <code>3612d96</code>. The CI runs for #48 and #49, plus the Pages deploys, all passed.</p>
+
+<div class="card green">
+  <div class="card-top"><span class="tag">Paper</span></div>
+  <p><strong>Working-paper text complete</strong> (same PR <a href="https://github.com/jgridifier/traceot/pull/51">#51</a>). The abstract is final, and the §3 per-step paragraphs now include the v1–v3 records, with failures kept. §4 adds prose on the simulator families and the truth file. §5 gains <strong>Figure 1</strong>, which plots the paired d (v5.1 error minus best-rival error) for each committed replication in the four gate cells. The figure comes from the existing <code>v5_1_gate_shape.jsonl</code> via the deterministic script <code>docs/paper/fig_v5_1_paired_d.py</code>, which runs no TRACE fit and touches no seed. The script checks that the plotted mean matches the published mean d to 1e-15. Every number quoted there comes from <code>V5_1_GATE_RESULTS.md</code>, and none is new. Read it at <a href="v5_1_paper.html">v5_1_paper.html</a>.</p>
+  <p class="note">CI on #51 failed twice before passing, both times on <code>ruff</code> lint of the figure script (E501 long lines, then formatting). Fix commits <code>a2c5fa8</code> and <code>443f265</code> resolved it, and the third run was green. No test failures were involved.</p>
+</div>
+
+<div class="card teal">
+  <div class="card-top"><span class="tag">Design</span></div>
+  <p><strong>Home-screen icons and web-app manifest</strong> for the learn pages (PR <a href="https://github.com/jgridifier/traceot/pull/52">#52</a>, merged 2026-11-12 13:32 EST, CI and Pages green). The <code>docs/learn/icons/head.html</code> block was added to every nightly page, including this one, so “Add to Home Screen” now shows a TRACE Learn icon.</p>
+</div>
+
+<p>Nothing else changed: no PRs are open, no new branches were added beyond those PRs, and there were no new results or failures in the method itself. <code>origin/main</code> is at <code>54de467</code>.</p>
 </section>
 
 <section id="blocker">
-<div class="sec-head"><span class="n">02</span><h2>Blocker</h2><span class="line"></span></div>
+<div class="sec-head"><span class="n">02</span><h2>What's still open</h2><span class="line"></span></div>
 <div class="card red">
   <ul>
-    <li><strong>Paper §3/§4 not started.</strong> No branch or PR picked up the step planned on 2026-11-10. The TODO markers are still in <a href="https://github.com/jgridifier/traceot/blob/main/docs/paper/V5_1_working_paper.md"><code>V5_1_working_paper.md</code></a>: the §3 per-step paragraphs, the §4 simulator prose, the final abstract and the §5 paired-effect-size figure.</li>
-    <li><strong>Coverage study waits on your approval.</strong> The <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md"><code>PREREG_V5_1_COVERAGE.md</code></a> header still reads <em>PRE-REGISTERED · NOT APPROVED · NOT RUN</em>. The file has had no commit since the freeze (<code>dfaaf72</code>), and no approval in your own dated words is recorded. No runner exists, and indices 10400–10799 have not been touched.</li>
+    <li><strong>Coverage study:</strong> it is held by your decision. It only moves once your own dated go is committed to the <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">prereg header</a>.</li>
+    <li><strong>Release tag:</strong> this is item 3 of the approved application plan in <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md"><code>DECISION_2026-11-04.md</code></a> and is still unchecked in paper §8. The repo has no tags yet.</li>
+    <li><strong>Non-linear means</strong> and the other out-of-scope suites (struct cells, ShiftBench, speed, per-feature shares) each still need their own pre-registration first.</li>
   </ul>
 </div>
 <p class="note">Seeds 9600–9619 remain sealed and untouched.</p>
@@ -62,13 +77,14 @@
 
 <section id="tomorrow">
 <div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
-<p>Same as yesterday's plan: write paper §3, one paragraph per pre-registration step with failures kept, and §4, the simulator families, truth file and gate design. That replaces the two TODO markers. Docs only, with no new numbers. The coverage run stays on hold until your approval is committed to the prereg header.</p>
+<p>Close the last item in the shipped plan. Tag <code>v5.1.0</code> on the gate's implementation merge <code>665939b</code> (PR <a href="https://github.com/jgridifier/traceot/pull/29">#29</a>). Write release notes drawn only from the paper and <code>V5_1_GATE_RESULTS.md</code>: the linear-mean scope, the four-cell gate, and the coverage hold. Tick the box in paper §8, all with CI unchanged. This is docs and release only, with no new numbers. The coverage run stays held.</p>
 </section>
 
 <section id="archive">
 <div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
 <ol reversed>
-  <li><a href="nightly/2026-11-11.html">2026-11-11</a> (this one)</li>
+  <li><a href="nightly/2026-11-12.html">2026-11-12</a> (this one)</li>
+  <li><a href="nightly/2026-11-11.html">2026-11-11</a></li>
   <li><a href="nightly/2026-11-10.html">2026-11-10</a></li>
   <li><a href="nightly/2026-11-09.html">2026-11-09</a></li>
   <li><a href="nightly/2026-11-08.html">2026-11-08</a></li>
@@ -88,7 +104,7 @@
 </section>
 
 <footer>
-  <p>Dated <strong>2026-11-11</strong>, America/New_York (EST), written against main <code>3612d96</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+  <p>Dated <strong>2026-11-12</strong>, America/New_York (EST), written against main <code>54de467</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
 </footer>
 </main>
 </body>
