@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Draw the §5 paired-d figure from already-committed V5.1 gate outputs.
 
 Reads only:
