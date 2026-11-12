@@ -1,0 +1,30 @@
+{
+  "name": "TRACE Learn",
+  "short_name": "TRACE",
+  "description": "Applied TRACE learning pages: where the method stands, how a shift report reads, and the next build step.",
+  "start_url": "/traceot/learn/nightly.html",
+  "scope": "/traceot/learn/",
+  "display": "standalone",
+  "background_color": "#1F1912",
+  "theme_color": "#1F1912",
+  "icons": [
+    {
+      "src": "/traceot/learn/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/traceot/learn/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/traceot/learn/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

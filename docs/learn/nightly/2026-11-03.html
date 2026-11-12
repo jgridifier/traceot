@@ -131,6 +131,18 @@
   footer a { color: var(--accent); }
   .meta { font-size: .9rem; color: var(--muted); }
 </style>
+<!-- TRACE Learn home-screen / PWA tags. Paste into <head> of every TRACE nightly page.
+     The nightly routine should include this block so future nightly pages inherit it.
+     Paths are root-absolute so they resolve under https://jgridifier.github.io/traceot/
+     from both learn/nightly.html and learn/nightly/YYYY-MM-DD.html. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
 </head>
 <body>
 <body>
