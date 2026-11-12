@@ -1,15 +1,19 @@
 # TRACE v5.1: splitting a shift in distribution shape into composition and response on a mixture counterfactual
 
-**Working paper, skeleton.** Status: **SHIPPED (V5.1 only)**, opened 2026-11-09 (America/New_York).
+**Working paper.** Status: **SHIPPED (V5.1 only)**, opened 2026-11-09 (America/New_York)
+as a skeleton; abstract, §3, §4 and the §5 figure were filled in on 2026-11-12.
 Approved by the owner on 2026-11-05: *"Yes, ship V5.1: open the working-paper skeleton and app on
 the passed V5.1 gate, sealed holdout untouched."* Decision record:
 [DECISION_2026-11-04.md](../research/DECISION_2026-11-04.md) (PR #37).
 
 **Ground rules for this document.** Docs only. Every number below is quoted from an existing
 file in this repository, with a link to it; no new run was made for this paper. Indices
-9600–9619 stay sealed and no holdout was run (PREREG_V5_1 §3, §6). Sections marked **TODO**
-are not written yet. §1, §2 and the §5 discussion were filled in on 2026-11-10 from existing
-results and code only (no new numbers).
+9600–9619 stay sealed and no holdout was run (PREREG_V5_1 §3, §6). §1, §2 and the §5 discussion
+were filled in on 2026-11-10 from existing results and code only. The abstract, §3, §4 and the
+§5 figure were filled in on 2026-11-12, still from existing results and code only: the figure
+is drawn from the committed `benchmarks/results/v5_1_gate_shape.jsonl` by a deterministic
+script ([fig_v5_1_paired_d.py](fig_v5_1_paired_d.py)) that runs no TRACE fit and touches no
+seed.
 
 Readable version: [docs/learn/v5_1_paper.html](../learn/v5_1_paper.html) ·
 How to use it: [docs/learn/v5_1_app.html](../learn/v5_1_app.html).
@@ -32,8 +36,6 @@ all four pure-composition cells, and passed the role check in all four
 ([V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md)). The simulator's mean is linear,
 so this result says nothing about non-linear means; a follow-up that tried curved means was
 pre-registered, run once, and parked ([PARK_V5_2.md](../research/PARK_V5_2.md)).
-
-**TODO:** final abstract wording once §1 and §6 are written.
 
 ## 1. Problem
 
@@ -185,17 +187,139 @@ Notes, quoted:
   (PREREG_V5_1 §3); "There is no separate holdout in this freeze; the gate seeds above are the
   test." (PREREG_V5_1 §6)
 
-**TODO:** one paragraph per step on what was learned; list of v1–v3 records.
+**Earlier scored suites (the v1–v3 accuracy line), all kept.**
+
+* TRACE claims, PR #12 — first scored suite: [TRACE_CLAIMS_RESULTS.md](../benchmark/TRACE_CLAIMS_RESULTS.md),
+  frozen by [PREREG_TRACE_CLAIMS.md](../benchmark/PREREG_TRACE_CLAIMS.md) as amended by
+  [Amendment 1](../benchmark/PREREG_TRACE_CLAIMS_AMENDMENT_1.md).
+* TRACE v3: [TRACE_V3_RESULTS.md](../benchmark/TRACE_V3_RESULTS.md), frozen by
+  [PREREG_TRACE_V3.md](../benchmark/PREREG_TRACE_V3.md).
+
+**What was learned at each step.** Every number in this subsection is quoted from the record
+named in the sentence; no new run.
+
+**TRACE claims (PR #12) and v3.** Both already showed the pattern that later drove v4 and v5.
+TRACE recovered a structure-only skew change at n = 20 000 (H7 `skew_struct` recovery **PASS**
+in both records) but not composition-driven shape changes: H7 recovery was 0.000 on every
+`skew_comp`, `tail_comp` and `shape_mixed` cell in both records, and H7 overall was **FAIL**
+(1 of 10 recovery cells). Against rivals, TRACE did not win on the composition cells (0 of 5
+rival tests in both records; in PR #12, on `skew_comp` at n = 20 000, the paired difference vs
+CFM was 0.071). Coverage of TRACE's bands also failed (H8(b) pooled 0.807 in PR #12 and 0.815
+in v3, against a bar of 0.90). One identity that did pass, and stayed passing, is the
+barycenter reconstruction (H5.1b in v3: 0 misses, worst 1.8e-15). v3's `pit_rounds=20` and
+related changes did not move the composition-cell failure
+([TRACE_CLAIMS_RESULTS.md](../benchmark/TRACE_CLAIMS_RESULTS.md);
+[TRACE_V3_RESULTS.md](../benchmark/TRACE_V3_RESULTS.md)).
+
+**v4** (`d50732f`). [V4_RESULTS.md](../benchmark/V4_RESULTS.md): overall accuracy **FAIL**
+(all ten H7 cells FAIL); coverage **INCOMPLETE** (the cover track wrote 800 records with a
+budget CI, but not the per-cell bands the bar requires); speed below the conditional 5× bar
+(CFM/v4 = 1.02 at n = 10⁵ and 2.94 at n = 10⁶). The diagnosis in
+[BOARD_V5.md](../research/BOARD_V5.md) §2–3, from the same frozen `v4_*.jsonl`, is that the
+game was played on a Lagrangian quantile-curve average rather than on the mixture
+counterfactual, and that estimated mass landed in the wrong role: on `skew_comp` at
+n = 20 000, planted \(|\mathrm{truth}_c|\approx 0.040\) and
+\(|\mathrm{truth}_s|\approx 0.0001\), but v4 averaged \(|\hat c|\approx 0.0027\) and
+\(|\hat s|\approx 0.013\) (BOARD_V5 §2.1). That is what v5 was designed to change.
+
+**v5 first gate** (`bce021e`). [V5_GATE1_RESULTS.md](../benchmark/V5_GATE1_RESULTS.md):
+**FAIL**. At n = 2000, `skew_comp` had err 0.02699 with a 95% upper bound 0.00711, above
+δ = 0.004025, and `tail_comp` had err 0.009708 with a role-check **FAIL** (mean
+\(|\hat c|\) = 0.003115 below mean \(|\hat s|\) = 0.004922). The n = 20 000 cells are
+**INCOMPLETE**: their indices 9600–9619 "are held back and must not be touched in this run"
+(note 1). Under the kill rule an INCOMPLETE required cell blocks a PASS, and the first gate
+is closed (PREREG_V5_1 header). The mixture object was in place; it was not enough with the
+binned mean booster.
+
+**v5 diagnosis** (exploratory, spent seeds 9500–9549 only; 9600–9619 not touched).
+[V5_DIAGNOSIS.md](../research/V5_DIAGNOSIS.md), not a gate and not a claim. With the true
+conditional, the same Eulerian mixture is **BEST** in both n = 2000 cells and the role check
+passes; grid and inversion error is about \(10^{-6}\), "three orders below δ." Most of v5's
+error is the location model (75% on `skew_comp`, 65% on `tail_comp`), a near-equal and opposite
+transfer from composition to response. Ordinary least squares in place of the booster, on
+those same spent seeds, removed the bias and both cells became BEST — "It is evidence for a
+narrower pre-registered test on fresh seeds, not a result." The suspected heteroskedasticity
+issue was not supported. The note already states that the simulator's mean is linear, so OLS
+is the correct family by construction.
+
+**v5.1** (`b33f507`). The test those diagnosis numbers pointed to, on fresh seeds 9700–9749
+and 9800–9819. **PASS**: all four cells BEST, all four role checks PASS
+([V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md); table, discussion and figure in
+§5). Replacing only the location fit, and keeping the mixture, was enough on these
+linear-mean pure-composition cells.
+
+**v5.2** (`df5aff8`). The attempt to go past the linear-mean limit. **FAIL**, parked
+([PARK_V5_2.md](../research/PARK_V5_2.md)): two cells INCOMPLETE (σ_B calibration infeasible),
+accuracy FAIL after Holm on several tail and structure cells, a role FAIL, and false
+attribution FAIL on all four structure-only cells. "V5.1's linear-mean claim stands exactly
+as stated in V5_1_GATE_RESULTS.md. This failure neither strengthens nor weakens it."
 
 ## 4. Gate design
 
-Cells, seeds and bars are as frozen in [PREREG_V5_1 §3–§5](../research/PREREG_V5_1.md):
-`skew_comp`, `tail_comp` at n = 2000 (p = 5, indices 9700–9749, 50 reps) and n = 20 000
-(p = 20, indices 9800–9819, 20 reps); paired d = err_v5.1 − err_best_rival; BEST if the
-one-sided 95% upper bound is below 0, NON-INFERIOR if below δ = 0.10 × planted magnitude;
-role check; Holm across the four tests; 30-minute wall cap on 8 cores.
+Cells, seeds and bars are as frozen in [PREREG_V5_1 §3–§5](../research/PREREG_V5_1.md),
+which inherits generators, the truth file, `seed_of(...)` streams, the estimand and the
+rivals from PREREG_V5 §3–4, and the bars from PREREG_V4 §5. What follows restates that
+design in prose, citing the files it comes from. No new generator and no new bar.
 
-**TODO:** describe the simulator families and the truth file in prose.
+**Simulator families.** The generators are the H7 shape scenarios of
+[PREREG_TRACE_CLAIMS_AMENDMENT_1.md](../benchmark/PREREG_TRACE_CLAIMS_AMENDMENT_1.md) §A2,
+implemented in `benchmarks/shiftbench/sb_dgp_shape.py` (PREREG_V5 §3: "Generators unchanged
+from `benchmarks/` (H7 runner). **No new generators.**"). The mean is linear in both
+periods,
+\[
+\mu(x)=1+x_{0:4}^{\top}\beta,\qquad \beta=(1.0,\,-0.8,\,0.6,\,0.4,\,-0.3),
+\]
+with independent \(N(0,1)\) features and \(N(0,1)\) noise in period A (Amendment 1 A2:
+"Baseline as before… Every new law is centred (mean 0)"). At n = 20 000 the simulator uses
+p = 20: the five active features and fifteen further independent \(N(0,1)\) columns that do
+not enter \(\mu\) (`ShapeScenario.draw_x` and `mu` in `sb_dgp_shape.py`; PREREG_V5 §3,
+"p as in the frozen H7 grid: 5 at 2e3, 20 at 2e4"). Period B changes only the *shape* of
+one input law or of the noise; a scalar \(\sigma_B\), calibrated once on the oracle sample,
+rescales period-B noise so that \(\lambda_2(Y_B)=\lambda_2(Y_A)\) (\(\lambda_1\) is already
+matched because every law has mean 0). The two cells in this gate are:
+
+* `skew_comp`: period-B feature \(x_0\) is drawn from a standardised \(\chi^2_3\) law
+  (`chi3` = frozen `_skew_feature`); noise stays normal, scaled by \(\sigma_B\). Graded
+  channel: \(\lambda_3\) (\(k=2\)). Planted as composition on that channel.
+* `tail_comp`: period-B feature \(x_1\) is drawn from a scaled Student-\(t\) with 5 degrees
+  of freedom (`t5` = \(t(5)\cdot\sqrt{3/5}\)); noise stays normal, scaled by \(\sigma_B\).
+  Graded channel: \(\lambda_4\) (\(k=3\)). Planted as composition on that channel.
+
+Three other families live in the same file and the same truth file — `skew_struct` (noise
+→ `skew`), `tail_struct` (noise → `t5`), `shape_mixed` (\(x_0\) → `chi3` and noise →
+`skewneg`) — and were **not** run under PREREG_V5_1 (out of scope, §6).
+
+**Truth file.** [`benchmarks/results/shiftbench_truth_shape.json`](../../benchmarks/results/shiftbench_truth_shape.json),
+built by `sb_dgp_shape.build_truth` on 2,000,000 oracle draws per law with raw RNG seed 99
+(the same constant recorded in Amendment 1 A2 and in the spent-constant inventory of
+[PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md) §4; it is not a replication
+index and is not in 9600–9619). For each family the file stores \(\sigma_B\), the L-moments
+of the four hybrid laws \(Y_A\), \(Y_B\), \(Y_c=(X_B,\text{structure }A)\),
+\(Y_{c'}=(X_A,\text{structure }B)\), and both the order-free Shapley split (the TRACE
+estimand) and the A-reference split (the rival estimand). The graded-channel Shapley truths
+used in the gate, already quoted in §5, are: `skew_comp` \(\lambda_3\) composition 0.04011,
+structure −0.0001375; `tail_comp` \(\lambda_4\) composition 0.004298, structure 0.000288
+(from [V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md), which reads them from this
+file). \(\sigma_B\) and the achieved \(|\Delta\lambda_1|\), \(|\Delta\lambda_2|\) are in the
+file; the amendment required \(|\Delta\lambda_2|\le 2\times 10^{-3}\) before any method ran.
+
+**Estimand, rivals, seeds and bars.** The scored quantity is
+\(\mathrm{err}=|\hat c_k-\mathrm{truth}_{c,k}|+|\hat s_k-\mathrm{truth}_{s,k}|\) on the
+graded channel \(k\), each method against its own estimand (Amendment 1 A2; `graded_err` in
+`summarize_v4.py`, used by `summarize_v5_1_gate.py`). Rivals DFL and CFM are re-run on the
+same seeds, paired; \(d_r=\mathrm{err}_{\mathrm{v5.1},r}-\mathrm{err}_{\mathrm{best\,rival},r}\).
+**BEST** if the one-sided 95% upper bound of mean \(d\) is below 0 (Student-\(t\) interval
+with \(n-1\) degrees of freedom, and a 10,000-draw percentile bootstrap with seed 2026;
+both must agree, the larger bound is used — V5_1_GATE_RESULTS note 2 records that this
+scorer uses \(t\) rather than a normal quantile, which can only make a cell harder to pass).
+**NON-INFERIOR** if that bound is below \(\delta=0.10\times\) the planted magnitude
+(0.004025 on `skew_comp`, 0.0004586 on `tail_comp`, from the truth file). Role check: mean
+\(|\hat c|>\) mean \(|\hat s|\) on the graded channel, and swapping the two roles does not
+lower the error (operationalisation of V5_GATE1_RESULTS note 2). Gate **PASS** requires all
+four cells BEST or NON-INFERIOR **and** all four role checks, with Holm across the four
+paired tests. Wall cap 30 minutes on 8 cores; incomplete cells are never imputed. Seeds:
+9700–9749 (n = 2000, p = 5, 50 reps) and 9800–9819 (n = 20 000, p = 20, 20 reps), disjoint
+from the spent diagnosis seeds 9500–9549 and from the sealed 9600–9619 (PREREG_V5_1 §3).
 
 ## 5. Results
 
@@ -230,11 +354,25 @@ mean \(|\hat s|\). The `tail_comp` cells sit closer to their bars than `skew_com
 terms because the planted λ4 effect is roughly an order of magnitude smaller than the λ3 one (δ = 0.0004586 against
 0.004025). Holm-adjusted p values stay below 0.05 in all four cells. Two things the table does
 not show: whether a band around \(\hat c,\hat s\) would have the stated coverage (no band was
-computed; see [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md), not run), and
+computed; the coverage study is pre-registered, held, not approved and not run — see
+[PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md) and
+[HOLD_V5_1_COVERAGE.md](../research/HOLD_V5_1_COVERAGE.md)), and
 anything about non-linear means (§6).
 
-**Not drawn yet:** a figure of the paired d per cell from the existing
-`benchmarks/results/v5_1_gate_shape.jsonl` (no new run needed; open item in §8).
+**Figure 1.** Paired \(d_r=\mathrm{err}_{\mathrm{v5.1},r}-\mathrm{err}_{\mathrm{best\,rival},r}\)
+on the graded channel, one point per committed replication.
+
+![Paired d of v5.1 versus the best rival, four gate cells](../learn/figures/v5_1_paired_d.svg)
+
+The figure is drawn from the already-committed
+[`benchmarks/results/v5_1_gate_shape.jsonl`](../../benchmarks/results/v5_1_gate_shape.jsonl)
+by the deterministic script [fig_v5_1_paired_d.py](fig_v5_1_paired_d.py), which uses the
+same `graded_err` as `summarize_v5_1_gate.py`, runs no TRACE fit, and touches no seed
+(indices 9600–9619 are not used). The solid line is 0, the BEST bar (the one-sided 95%
+upper bound of the mean must be below 0). The dashed line, and the numbers printed above
+each panel, are the published mean \(d\) and the published upper bounds and \(\delta\)
+quoted from [V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md). The script checks
+that the mean of the plotted points matches that published mean \(d\) to \(10^{-15}\).
 
 ## 6. Limitations
 
@@ -275,8 +413,9 @@ final, and changes no other returned value. Small values do not show the mean is
 
 * [x] Write §1 (problem and related work), the full method in §2, and the discussion in §5
   (2026-11-10; existing results and code only).
-* [ ] **TODO** final abstract; §3 per-step paragraphs; §4 simulator prose; §5 figure of paired d
-  from the existing jsonl.
+* [x] Final abstract; §3 per-step paragraphs and v1–v3 records; §4 simulator and truth-file
+  prose; §5 figure of paired d from the existing jsonl (2026-11-12; existing results and
+  code only, no new run).
 * [x] Linear-mean check in the application: residual-vs-fit check, report only, no gating claim
   (`linear_mean_check`, 2026-11-10; diagnostic only, §7).
 * [ ] Release tag against the gate's implementation merge SHA
@@ -285,6 +424,7 @@ final, and changes no other returned value. Small values do not show the mean is
   chosen by looking at the v5.2 run (PARK_V5_2.md).
 * [ ] Out-of-scope suites in PREREG_V5_1 §6 (struct cells, coverage, ShiftBench, speed,
   per-feature shares) each need their own pre-registration before any claim.
-  Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md)
-  (not approved, not run).
+  Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md),
+  **held** on 2026-11-11 (the owner's words, verbatim: *"Not yet, hold the coverage study."*),
+  not approved, not run. Record: [HOLD_V5_1_COVERAGE.md](../research/HOLD_V5_1_COVERAGE.md).
 * [ ] Indices 9600–9619 stay sealed; no holdout confirmation of v5.1 is permitted by its prereg.

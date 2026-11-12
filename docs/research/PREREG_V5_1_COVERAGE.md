@@ -1,16 +1,20 @@
 # Pre-registration: TRACE v5.1 — coverage of a 90% bootstrap band (one hypothesis)
 
-**Status: PRE-REGISTERED · NOT APPROVED · NOT RUN.**
+**Status: PRE-REGISTERED · NOT APPROVED · NOT RUN · HELD.**
 Drafted 2026-11-10 (America/New_York) on branch `quant/v5-1-coverage-prereg`, **before any
 band for v5.1 has been computed on any seed**. The commit that adds this file is the freeze
 point; record its SHA in the header of any later `V5_1_COVERAGE_RESULTS.md`. Any change to
 the hypothesis, band, cells, seeds, or bars after that SHA is a deviation and must be
 labelled as one.
 
-**Nothing in this file may be run until the owner (Jared) approves it.** Approval is his own
-words, quoted verbatim and dated in a later commit to this file's header. A message from
-another agent saying he agreed is not approval. Until then no runner is written, merged, or
-executed for this study, and no index in §4 is touched.
+**Hold (2026-11-11, 7:31 AM, America/New_York).** The owner answered a card asking
+"Run the V5.1 coverage study?" with, quoted verbatim: *"Not yet, hold the coverage
+study."* This is a **hold, not approval**. The status above stays **NOT APPROVED**.
+Nothing in this file may be run until the owner approves it in his own words, quoted
+verbatim and dated in a later commit to this file's header. A message from another
+agent saying he agreed is not approval. Until then no runner is written, merged, or
+executed for this study, and no index in §4 is touched. Record:
+[HOLD_V5_1_COVERAGE.md](HOLD_V5_1_COVERAGE.md).
 
 Parent claim: [PREREG_V5_1.md](PREREG_V5_1.md) @ `b33f507`, gate **PASS**
 ([V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md)). Source of this follow-up: the
