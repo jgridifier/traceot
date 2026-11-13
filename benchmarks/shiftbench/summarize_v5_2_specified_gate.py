@@ -157,11 +157,14 @@ def main():
         swap_rescue = float(np.mean(e_swap)) <= float(np.mean(e5))
         fals = "PASS" if (mc > ms and not swap_rescue) else "FAIL"
         n_rival = int(np.isfinite(eriv).sum())
-        rival_msgs = sorted({
-            f"{nm}: {r['rivals'][nm]['error']}"
-            for r in rs for nm in ("DFL", "CFM")
-            if "error" in r["rivals"].get(nm, {})
-        })
+        rival_msgs = sorted(
+            {
+                f"{nm}: {r['rivals'][nm]['error']}"
+                for r in rs
+                for nm in ("DFL", "CFM")
+                if "error" in r["rivals"].get(nm, {})
+            }
+        )
         cell.update(
             {
                 "mean_err_specified": float(e5.mean()),
@@ -254,8 +257,7 @@ def main():
         for c in cells
     )
     rivals_incomplete = any(
-        c.get("incomplete_reason") == "rivals"
-        or "rivals unavailable" in str(c.get("verdict", ""))
+        c.get("incomplete_reason") == "rivals" or "rivals unavailable" in str(c.get("verdict", ""))
         for c in cells
     )
     if wall.get("stop") == "calibration_incomplete":
@@ -286,11 +288,7 @@ def main():
         "([PREREG_V5_2_SPECIFIED.md](../research/PREREG_V5_2_SPECIFIED.md)).",
         f"**Implementation merge SHA:** `{IMPL_SHA}`.",
         f"**Gate verdict:** **{overall}**."
-        + (
-            " H is not decided."
-            if "INCOMPLETE" in overall
-            else ""
-        ),
+        + (" H is not decided." if "INCOMPLETE" in overall else ""),
         f"**Wall time:** {wall.get('wall_sec', float('nan')):.1f} s on "
         f"{wall.get('workers', '?')} workers (cap {wall.get('cap_sec', 1800)} s); "
         f"{wall.get('tasks_done', 0)}/{wall.get('tasks_total', 140)} tasks finished.",

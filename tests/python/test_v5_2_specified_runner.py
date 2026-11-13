@@ -157,9 +157,7 @@ def test_summariser_all_rival_errors_leaves_h_undecided(tmp_path, monkeypatch):
     monkeypatch.setattr(sm, "RES", tmp_path)
     monkeypatch.setattr(sm, "OUT_MD", out_md)
     monkeypatch.setattr(sm, "OUT_JSON", out_json)
-    monkeypatch.setattr(
-        sm, "TRUTH_FILE", tmp_path / "shiftbench_truth_shape_v5_2_specified.json"
-    )
+    monkeypatch.setattr(sm, "TRUTH_FILE", tmp_path / "shiftbench_truth_shape_v5_2_specified.json")
     monkeypatch.setattr(sm, "CELLS", [("skew_comp", 2000)])
     monkeypatch.setattr(sm, "REPS", {2000: 2})
     sm.main()
