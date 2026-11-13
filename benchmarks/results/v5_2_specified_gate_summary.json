@@ -1,0 +1,141 @@
+{
+  "prereg_sha": "cc8c1d7afc9c58a8b97b8b3b28b6ad6fd1704920",
+  "impl_sha": "1aab4778abf8f84c8c8f7d9603eb8c322f1ba3c9",
+  "overall": "INCOMPLETE (rivals unavailable)",
+  "cells": [
+    {
+      "scen": "skew_comp",
+      "n": 2000,
+      "graded_lmoment": 3,
+      "delta": 0.0033222175159189904,
+      "reps": 50,
+      "truth": {
+        "comp": 0.03293662801419994,
+        "struct": -0.0002855471449899616
+      },
+      "skey": "skew_comp|k1",
+      "mean_err_specified": 0.013142844819028427,
+      "mean_abs_comp_hat": 0.03386682167766774,
+      "mean_abs_struct_hat": 0.003176861285921999,
+      "mean_comp_hat": 0.03386682167766774,
+      "mean_struct_hat": -0.0007798284209613086,
+      "mean_err_roles_swapped": 0.06786882525781895,
+      "falsifier": "PASS",
+      "n_rivals_ok": 0,
+      "rival_errors": [
+        "CFM: No module named 'sklearn'",
+        "DFL: No module named 'sklearn'"
+      ],
+      "sec_specified_mean": 0.007440385859954404,
+      "sec_cfm_mean": 0.0007077864003076684,
+      "sec_dfl_mean": 0.0004503658197063487,
+      "verdict": "INCOMPLETE (rivals unavailable)",
+      "verdict_ci": "INCOMPLETE",
+      "incomplete_reason": "rivals",
+      "note": "every DFL and CFM call in this cell recorded an error; accuracy bars cannot be scored"
+    },
+    {
+      "scen": "tail_comp",
+      "n": 2000,
+      "graded_lmoment": 4,
+      "delta": 0.00035622232979595216,
+      "reps": 50,
+      "truth": {
+        "comp": 0.003384600392694892,
+        "struct": -0.00017762290526462943
+      },
+      "skey": "tail_comp|k1",
+      "mean_err_specified": 0.01136067635763105,
+      "mean_abs_comp_hat": 0.00913754689865084,
+      "mean_abs_struct_hat": 0.002055398751315152,
+      "mean_comp_hat": 0.0007204982774179067,
+      "mean_struct_hat": 0.0003379963683864826,
+      "mean_err_roles_swapped": 0.012496859239451383,
+      "falsifier": "PASS",
+      "n_rivals_ok": 0,
+      "rival_errors": [
+        "CFM: No module named 'sklearn'",
+        "DFL: No module named 'sklearn'"
+      ],
+      "sec_specified_mean": 0.007366076659964165,
+      "sec_cfm_mean": 0.0006587408803170547,
+      "sec_dfl_mean": 0.00044038023916073146,
+      "verdict": "INCOMPLETE (rivals unavailable)",
+      "verdict_ci": "INCOMPLETE",
+      "incomplete_reason": "rivals",
+      "note": "every DFL and CFM call in this cell recorded an error; accuracy bars cannot be scored"
+    },
+    {
+      "scen": "skew_comp",
+      "n": 20000,
+      "graded_lmoment": 3,
+      "delta": 0.0033222175159189904,
+      "reps": 20,
+      "truth": {
+        "comp": 0.03293662801419994,
+        "struct": -0.0002855471449899616
+      },
+      "skey": "skew_comp|k1",
+      "mean_err_specified": 0.005437685572669399,
+      "mean_abs_comp_hat": 0.03295801571586364,
+      "mean_abs_struct_hat": 0.0011571638759062452,
+      "mean_comp_hat": 0.03295801571586364,
+      "mean_struct_hat": -0.0005898644798008558,
+      "mean_err_roles_swapped": 0.06677005535485439,
+      "falsifier": "PASS",
+      "n_rivals_ok": 0,
+      "rival_errors": [
+        "CFM: No module named 'sklearn'",
+        "DFL: No module named 'sklearn'"
+      ],
+      "sec_specified_mean": 0.08548730815055024,
+      "sec_cfm_mean": 0.07029205004873802,
+      "sec_dfl_mean": 0.04762282350020541,
+      "verdict": "INCOMPLETE (rivals unavailable)",
+      "verdict_ci": "INCOMPLETE",
+      "incomplete_reason": "rivals",
+      "note": "every DFL and CFM call in this cell recorded an error; accuracy bars cannot be scored"
+    },
+    {
+      "scen": "tail_comp",
+      "n": 20000,
+      "graded_lmoment": 4,
+      "delta": 0.00035622232979595216,
+      "reps": 20,
+      "truth": {
+        "comp": 0.003384600392694892,
+        "struct": -0.00017762290526462943
+      },
+      "skey": "tail_comp|k1",
+      "mean_err_specified": 0.004111967836364064,
+      "mean_abs_comp_hat": 0.003838973080806047,
+      "mean_abs_struct_hat": 0.0006189412149676492,
+      "mean_comp_hat": 0.002092401068979013,
+      "mean_struct_hat": 0.00010057381420817899,
+      "mean_err_roles_swapped": 0.0072118111119250745,
+      "falsifier": "PASS",
+      "n_rivals_ok": 0,
+      "rival_errors": [
+        "CFM: No module named 'sklearn'",
+        "DFL: No module named 'sklearn'"
+      ],
+      "sec_specified_mean": 0.08459455279989925,
+      "sec_cfm_mean": 0.06614431619964307,
+      "sec_dfl_mean": 0.049448442500579406,
+      "verdict": "INCOMPLETE (rivals unavailable)",
+      "verdict_ci": "INCOMPLETE",
+      "incomplete_reason": "rivals",
+      "note": "every DFL and CFM call in this cell recorded an error; accuracy bars cannot be scored"
+    }
+  ],
+  "wall": {
+    "wall_sec": 1.3051802779955324,
+    "tasks_done": 140,
+    "tasks_total": 140,
+    "tasks_preregistered": 140,
+    "cells_infeasible": [],
+    "cap_sec": 1800,
+    "workers": 8,
+    "prereg_sha": "cc8c1d7afc9c58a8b97b8b3b28b6ad6fd1704920"
+  }
+}

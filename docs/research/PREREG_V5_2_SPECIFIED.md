@@ -1,6 +1,6 @@
 # Pre-registration: TRACE v5.2 specified-family non-linear mean (one hypothesis)
 
-**Status: PRE-REGISTERED · APPROVED 2026-11-13 (NOT RUN until results land).**
+**Status: PRE-REGISTERED · APPROVED 2026-11-13 · RUN 2026-11-13 (INCOMPLETE: rivals unavailable; H not decided).**
 
 Drafted 2026-11-13 (America/New_York) on branch `quant/v5-2-specified-prereg`, **before any
 specified-family code exists and before anything has been run on the seeds below**. The merge
@@ -24,6 +24,14 @@ I’m more an advisor on that project."*
 Status is **APPROVED 2026-11-13 (NOT RUN until results land)**. This commit changes
 only the status line and adds this approval; the hypothesis, mean model, simulator,
 cells, seeds, bars, cap, and kill rule are unchanged.
+
+**Run (2026-11-13, 3:23 PM, America/New_York).** Single pass on seeds 11000–11049 and
+11100–11119. Results: [V5_2_SPECIFIED_GATE_RESULTS.md](../benchmark/V5_2_SPECIFIED_GATE_RESULTS.md).
+Verdict: **INCOMPLETE (rivals unavailable)**. TRACE finished 140/140 tasks and passed
+the role check on all four cells; every DFL and CFM call recorded `No module named
+'sklearn'`, so the accuracy bars cannot be scored. H is not decided. This is not a
+FAIL and not a park. Seeds were not retried. This paragraph is a pointer only; the
+hypothesis, mean model, simulator, cells, seeds, bars, cap, and kill rule are unchanged.
 
 Parent claim: [PREREG_V5_1.md](PREREG_V5_1.md) @ `b33f507`, implementation `665939b`, gate
 **PASS** on all four cells
