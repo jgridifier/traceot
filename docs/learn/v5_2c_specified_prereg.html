@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TRACE v5.2c specified-family replication — same hypothesis, fresh seeds, spawn-safe harness, rehearsal, watchdog</title>
-<meta name="description" content="Plain-language guide to the frozen TRACE replication: the same specified-family hypothesis as V5.2 specified, on fresh seeds 13000–13049 and 13100–13119, with a spawn-safe harness, a mandatory rehearsal, and a five-minute watchdog. Pre-registered, approved 2026-11-13, not run.">
+<meta name="description" content="Plain-language guide to the frozen TRACE replication. The single pass ran on 2026-11-13 and FAILED: both heavy-tail cells missed the accuracy bar after Holm. The specified-family claim is parked.">
 <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <style>
@@ -43,8 +43,8 @@
     font-weight: 600;
     padding: .15rem .55rem;
     border-radius: 999px;
-    background: #1a2e24;
-    color: #8fd4b0;
+    background: #3a1e1c;
+    color: #e08a7a;
   }
   ul{ padding-left: 1.2rem; }
   li{ margin: .35rem 0; }
@@ -59,15 +59,32 @@
   <a href="v5_1_coverage.html">V5.1 coverage (PASS)</a> ·
   <a href="v5_2_specified.html">Specified results (INCOMPLETE)</a> ·
   <a href="v5_2b_specified_prereg.html">V5.2b (ABORTED)</a> ·
+  <a href="v5_2c_specified.html">V5.2c results (FAIL)</a> ·
   <a href="nightly.html">Nightly</a> ·
-  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">Full pre-registration</a>
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">Full pre-registration</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">Park</a>
 </p>
 
 <h1>TRACE: the same curved-mean test, on fresh seeds, with a spawn-safe harness and a rehearsal</h1>
-<p><span class="status">PRE-REGISTERED · APPROVED 2026-11-13 · NOT RUN</span> &nbsp; <span class="muted">opened under the owner's standing approval of 2026-11-13, 2:59 PM ET</span></p>
+<p><span class="status">PRE-REGISTERED · APPROVED 2026-11-13 · RUN 2026-11-13 (FAIL, parked)</span> &nbsp; <span class="muted">opened under the owner's standing approval of 2026-11-13, 2:59 PM ET</span></p>
+
+<div class="callout bad">
+<strong>Ran once, 2026-11-13, 4:29 PM ET. Verdict: FAIL. The claim is parked.</strong>
+The single pass finished 140/140 tasks in 12.7 seconds, after a successful
+pre-flight and a successful rehearsal. Both <code>skew_comp</code> cells were
+BEST after Holm; both <code>tail_comp</code> cells failed accuracy after Holm.
+All four role checks passed. The hypothesis is rejected.
+Plain-language results: <a href="v5_2c_specified.html">v5_2c_specified.html</a>.
+Full write-up:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2C_SPECIFIED_GATE_RESULTS.md">V5_2C_SPECIFIED_GATE_RESULTS.md</a>.
+Park:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>.
+This page is the pre-registration, kept so the frozen protocol can be read
+beside the result. The scientific body of the pre-registration is unchanged.
+</div>
 
 <div class="callout warn">
-<strong>Approved, not run.</strong>
+<strong>What this file was, before the pass.</strong>
 This is a <em>replication</em> of the
 <a href="v5_2_specified_prereg.html">V5.2 specified-family pre-registration</a>,
 and of the mandatory pre-flight rule of the
@@ -89,8 +106,8 @@ On 2026-11-13 at 2:59 PM ET the owner said, quoted verbatim:
 <em>“You have my approval for all trace stuff - you are running the lab on this -
 I’m more an advisor on that project.”</em>
 The hypothesis, method, cells, bars, \(\delta\), cap, and kill rule are those of
-the parent pre-registration, by reference, and are not changed. Nothing has been
-run on the new seeds. Seeds 9600–9619 stay sealed. Seeds 12000–12119 are not re-run.
+the parent pre-registration, by reference, and are not changed. The pass has
+now been run; see the results callout above. Seeds 9600–9619 stay sealed. Seeds 12000–12119 were not re-run.
 </div>
 
 <div class="callout good">
@@ -185,11 +202,16 @@ The location family is correct by construction; that is the point of the test, a
 <li>Structure-only cells, mixed cells, speed, and real data are out of scope.</li>
 </ul>
 
-<p class="muted">Order of work: this pre-registration merges first (this page; nothing is
-run) → a runner that implements the spawn-safe harness, the rehearsal, the
-watchdog, and the new seeds, merged without running the gate → pre-flight in a
-spawned child, in an environment that has scikit-learn → rehearsal on seeds 97
-and 98 → only then, one single pass. Full pre-registration:
-<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">PREREG_V5_2C_SPECIFIED_REPLICATION.md</a>.</p>
+<p class="muted">Order of work, now complete: this pre-registration merged first
+(PR #64, freeze <code>f022ba3</code>) → the spawn-safe harness (PR #65) and the
+runner (PR #66, <code>1048c78</code>) merged without running the gate →
+pre-flight in a spawned child, with scikit-learn → rehearsal on seeds 97
+and 98 (8/8, 2.9 s) → one single pass, 4:29 PM ET, 140/140 tasks, 12.7 s,
+verdict FAIL. Full pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">PREREG_V5_2C_SPECIFIED_REPLICATION.md</a>
+· results:
+<a href="v5_2c_specified.html">v5_2c_specified.html</a>
+· park:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>.</p>
 </body>
 </html>
