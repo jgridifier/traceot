@@ -5,6 +5,9 @@ Status: research, unvalidated.
 
 ## [Unreleased]
 
+### Changed (2026-11-13)
+- Approval of two pre-registered TRACE studies. On 2026-11-13 at 2:59 PM (America/New_York) the owner said, quoted verbatim: "You have my approval for all trace stuff - you are running the lab on this - I’m more an advisor on that project." Status in `docs/research/PREREG_V5_1_COVERAGE.md` and `docs/research/PREREG_V5_2_SPECIFIED.md` is now **PRE-REGISTERED · APPROVED 2026-11-13 (NOT RUN until results land)**. The 2026-11-11 coverage hold is lifted. This commit changes only those headers (status line plus the dated approval quote) and this changelog entry; the frozen hypothesis, band, method, simulator, cells, seeds, bars, cap, and kill rules are untouched. Neither study is run in this commit; no runner is added; indices 9600–9619 stay sealed.
+
 ### Added (2026-11-13)
 - Pre-registration `docs/research/PREREG_V5_2_SPECIFIED.md`: TRACE follow-up on a correctly specified non-linear location family (V5.1 mixture with OLS on the linear terms plus the exact two curved terms of the mean). One hypothesis, four-cell gate mirroring V5.1, fresh seeds 11000–11049 (n = 2000) and 11100–11119 (n = 20 000), inherited BEST / NON-INFERIOR bars and role check, kill rule, and an anti-job section. Status **PRE-REGISTERED · NOT APPROVED · NOT RUN**. Nothing runs until the owner's own dated approval is quoted in the file's header. This is not a second v5.2 spline gate (that claim stays parked); the hypothesis is taken from PREREG_V5_1 §7, not from the v5.2 cell-level outcomes. Indices 9600–9619 stay sealed; 10400–10799 stay reserved for the held coverage study. Learn page `docs/learn/v5_2_specified_prereg.html`; links on `docs/index.html`. Docs only; no runner, no truth file, no new numbers.
 
