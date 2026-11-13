@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.2c specified-family replication — same hypothesis, fresh seeds, spawn-safe harness, rehearsal, watchdog</title>
+<meta name="description" content="Plain-language guide to the frozen TRACE replication: the same specified-family hypothesis as V5.2 specified, on fresh seeds 13000–13049 and 13100–13119, with a spawn-safe harness, a mandatory rehearsal, and a five-minute watchdog. Pre-registered, approved 2026-11-13, not run.">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #1a2e24;
+    color: #8fd4b0;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_paper.html">V5.1 paper</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_2_gate.html">V5.2 gate (parked)</a> ·
+  <a href="v5_1_coverage.html">V5.1 coverage (PASS)</a> ·
+  <a href="v5_2_specified.html">Specified results (INCOMPLETE)</a> ·
+  <a href="v5_2b_specified_prereg.html">V5.2b (ABORTED)</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">Full pre-registration</a>
+</p>
+
+<h1>TRACE: the same curved-mean test, on fresh seeds, with a spawn-safe harness and a rehearsal</h1>
+<p><span class="status">PRE-REGISTERED · APPROVED 2026-11-13 · NOT RUN</span> &nbsp; <span class="muted">opened under the owner's standing approval of 2026-11-13, 2:59 PM ET</span></p>
+
+<div class="callout warn">
+<strong>Approved, not run.</strong>
+This is a <em>replication</em> of the
+<a href="v5_2_specified_prereg.html">V5.2 specified-family pre-registration</a>,
+and of the mandatory pre-flight rule of the
+<a href="v5_2b_specified_prereg.html">V5.2b replication</a>,
+not a new hypothesis and not a re-run of either earlier pass.
+The first specified-family pass (seeds 11000–11049 and 11100–11119) finished
+TRACE on every task and passed the role check, but every rival call failed
+because scikit-learn was missing, so the accuracy bars could not be scored.
+The V5.2b pass (seeds 12000–12049 and 12100–12119) had a successful pre-flight
+and then <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2B_ABORT.md">aborted
+with zero results</a>: the pre-flight TRACE smoke ran in the parent process and
+initialized Rayon, after which a forked worker pool deadlocked; the process
+was SIGKILLed at 16:05 ET. Those seeds are spent. The hypothesis was left
+undecided both times. The frozen protocols forbid retrying a spent seed, so
+this file opens the same test on fresh seeds, keeps the mandatory pre-flight,
+and adds a spawn-safe harness, a mandatory rehearsal of the parallel pipeline,
+and a five-minute watchdog.
+On 2026-11-13 at 2:59 PM ET the owner said, quoted verbatim:
+<em>“You have my approval for all trace stuff - you are running the lab on this -
+I’m more an advisor on that project.”</em>
+The hypothesis, method, cells, bars, \(\delta\), cap, and kill rule are those of
+the parent pre-registration, by reference, and are not changed. Nothing has been
+run on the new seeds. Seeds 9600–9619 stay sealed. Seeds 12000–12119 are not re-run.
+</div>
+
+<div class="callout good">
+<strong>What is the same.</strong> The one hypothesis is unchanged: when the mean is
+curved and the location model is the correct family (ordinary least squares on the
+straight-line terms plus the exact two curved terms that define that mean), does the
+v5.1 mixture still pass the same four-cell gate against DFL and CFM? The method,
+the simulator, the rivals, the Holm-adjusted BEST / NON-INFERIOR rule, \(\delta\)
+(10% of the planted size of the graded channel), the role check, and the 30-minute
+cap are those of
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md">PREREG_V5_2_SPECIFIED.md</a>
+at freeze <code>cc8c1d7</code>, incorporated by reference so they cannot drift.
+The mandatory pre-flight (import TRACE and both rivals, one smoke fit of each
+method on seed 99, record package versions; any failure aborts without consuming
+gate seeds) is that of
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2B_SPECIFIED_REPLICATION.md">PREREG_V5_2B_SPECIFIED_REPLICATION.md</a>
+§2 at freeze <code>19ed320</code>, also by reference. The already-committed method
+(PR <a href="https://github.com/jgridifier/traceot/pull/58">#58</a>) and truth file
+are reused, not redesigned. The descriptive <code>tail_comp</code> note from the
+first pass remains a secondary, report-only item and is not a scored bar.
+</div>
+
+<h2>The four changes</h2>
+
+<h3>(a) Fresh seeds</h3>
+<table>
+<tr><th>Item</th><th>Fixed value</th></tr>
+<tr><td>Cells</td><td>The same four: <code>skew_comp</code> and <code>tail_comp</code>, at n = 2,000 (p = 5) and n = 20,000 (p = 20)</td></tr>
+<tr><td>Datasets</td><td>50 at the smaller size (indices <strong>13000–13049</strong>); 20 at the larger (<strong>13100–13119</strong>)</td></tr>
+<tr><td>Comparator</td><td>Best of DFL and CFM, paired on the same draws</td></tr>
+<tr><td>Accuracy</td><td>Unchanged from the parent: one-sided 95% upper bound of mean (error − rival error); <strong>BEST</strong> if that bound is &lt; 0; <strong>NON-INFERIOR</strong> if it is &lt; δ. After Holm, both the bound and the matching p-value must hold</td></tr>
+<tr><td>Gate PASS</td><td>All four cells BEST or NON-INFERIOR after Holm, all four role checks pass, and the run finishes inside the cap</td></tr>
+<tr><td>Time cap</td><td>30 minutes on 8 cores, starting after a successful pre-flight and a successful rehearsal; unfinished work is never filled in</td></tr>
+</table>
+<p>The new range was surveyed unused on <code>main</code> at <code>b030932</code>. It overlaps
+none of the spent or reserved ranges, including 9100–9429 (v4), 9500–9549 (spent v5),
+<strong>9600–9619 (sealed)</strong>, 9700–9819 (v5.1), 10100–10219 (v5.2),
+<strong>10400–10799 (coverage, spent)</strong>,
+<strong>11000–11049 / 11100–11119 (specified-family, spent)</strong>, and
+<strong>12000–12049 / 12100–12119 (V5.2b, spent, aborted)</strong>. Those spent
+seeds are not re-run.</p>
+
+<h3>(b) Spawn-safe harness</h3>
+<p>The V5.2b deadlock happened because the pre-flight called TRACE in the parent
+process (which started Rayon) and then forked the worker pool. Under this file,
+the pre-flight runs in a <em>spawned child</em> process. The parent that drives
+the run never imports TRACE and never calls it. After that child exits, the
+gate pool — and the rehearsal pool — is created with multiprocessing's
+<code>'spawn'</code> start method, from that same parent. Workers are fresh
+interpreters and may call TRACE; the parent still does not. The default
+<code>'fork'</code> start method is not used. A regression test, on a tiny
+non-gate seed, asserts that this sequence completes within a timeout. That
+test is not a gate result.</p>
+
+<h3>(c) Mandatory rehearsal</h3>
+<p>Before any gate seed is touched, and after a successful pre-flight, the
+runner runs the full parallel pipeline — all three methods, the same task
+function, the same spawn-safe pool, the same watchdog — on two throwaway
+non-gate seeds, <strong>98</strong> and <strong>97</strong>, for every cell
+(8 tasks, at the same n and p as the gate cells). Rehearsal outputs go to a
+separate file and never enter scoring. Any failure — a task exception, a
+method error, a watchdog trip, or the 8 tasks not all finishing — aborts:
+the gate seeds are not used, they remain unspent, the hypothesis is left
+undecided, and it is not a fail and not a park.</p>
+
+<h3>(d) Watchdog</h3>
+<p>If no task completes within five minutes, the pass is <strong>ABORTED</strong>,
+not failed. The hypothesis is left undecided, and it is not a park. The same
+rule applies if five minutes pass between completions. During rehearsal, a
+watchdog trip is a rehearsal failure and does not spend the gate seeds.
+During the gate, a watchdog trip is also ABORTED (not FAIL), but because the
+gate has started those seeds are spent, the same way the V5.2b seeds were
+spent. The 30-minute cap still applies when tasks are completing on time:
+unfinished cells at the cap are INCOMPLETE, and that inherited rule rejects
+the hypothesis.</p>
+
+<div class="callout bad">
+<strong>Kill rule.</strong> If any cell misses the accuracy bar, fails the role check,
+or runs out of time, the claim is parked (<code>PARK_V5_2C_SPECIFIED.md</code>), and
+nothing is re-run, re-seeded, or re-tuned. V5.1’s straight-line claim is unchanged
+either way, and the v5.2 park stays in place. If the simulator cannot be calibrated,
+if the pre-flight aborts, if the rehearsal aborts, or if the watchdog trips, the
+hypothesis is left undecided — it is not redesigned, and it is not a fail.
+</div>
+
+<h2>What this will not claim</h2>
+<ul>
+<li>A PASS does <strong>not</strong> say a spline, a GAM, or any approximating model works.
+The location family is correct by construction; that is the point of the test, and its limit.</li>
+<li>It does not un-park v5.2, and it does not re-run v5.2’s seeds, the first specified-family seeds, or the V5.2b seeds.</li>
+<li>It does not unseal 9600–9619, and it does not re-run the coverage study.</li>
+<li>Structure-only cells, mixed cells, speed, and real data are out of scope.</li>
+</ul>
+
+<p class="muted">Order of work: this pre-registration merges first (this page; nothing is
+run) → a runner that implements the spawn-safe harness, the rehearsal, the
+watchdog, and the new seeds, merged without running the gate → pre-flight in a
+spawned child, in an environment that has scikit-learn → rehearsal on seeds 97
+and 98 → only then, one single pass. Full pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">PREREG_V5_2C_SPECIFIED_REPLICATION.md</a>.</p>
+</body>
+</html>
