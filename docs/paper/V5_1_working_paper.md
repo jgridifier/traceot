@@ -420,8 +420,12 @@ final, and changes no other returned value. Small values do not show the mean is
   (`linear_mean_check`, 2026-11-10; diagnostic only, §7).
 * [ ] Release tag against the gate's implementation merge SHA
   `665939bd4aa78ffc7474b91d482d18ac0191d595` (decision plan item; not tagged yet).
-* [ ] Non-linear means: need their own pre-registration on fresh seeds whose hypothesis is not
-  chosen by looking at the v5.2 run (PARK_V5_2.md).
+* [ ] Non-linear means: pre-registered in [PREREG_V5_2_SPECIFIED.md](../research/PREREG_V5_2_SPECIFIED.md)
+  (2026-11-13), **not approved, not run**. Hypothesis taken from PREREG_V5_1 §7 (the mixture
+  given a correctly specified location family, now under a non-linear mean), not from the
+  v5.2 cell-level outcomes ([PARK_V5_2.md](../research/PARK_V5_2.md)). Fresh seeds 11000–11049
+  and 11100–11119. Nothing runs until the owner's own dated approval is in that file's
+  header. Learn page: [v5_2_specified_prereg.html](../learn/v5_2_specified_prereg.html).
 * [ ] Out-of-scope suites in PREREG_V5_1 §6 (struct cells, coverage, ShiftBench, speed,
   per-feature shares) each need their own pre-registration before any claim.
   Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md),
