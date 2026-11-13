@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.2 specified-family pre-registration — does the mixture still work under a non-linear mean?</title>
+<meta name="description" content="Plain-language guide to the frozen TRACE follow-up: when the mean is curved and the location model is the correct family, does the v5.1 mixture still pass the four-cell gate? Pre-registered, not approved, not run.">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_paper.html">V5.1 paper</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_2_gate.html">V5.2 gate (parked)</a> ·
+  <a href="v5_1_coverage_prereg.html">V5.1 coverage (held)</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md">Full pre-registration</a>
+</p>
+
+<h1>TRACE: does the mixture still work when the mean is curved and the location family is right?</h1>
+<p><span class="status">PRE-REGISTERED · NOT APPROVED · NOT RUN</span> &nbsp; <span class="muted">drafted 2026-11-13 ET · nothing runs until Jared approves in the pre-registration header</span></p>
+
+<div class="callout warn">
+<strong>Not approved, not run.</strong> This page only freezes the test. Nothing is implemented
+or executed until Jared’s own dated approval is quoted in the header of
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md">PREREG_V5_2_SPECIFIED.md</a>.
+A message from another agent saying he agreed is not approval. Seeds 9600–9619 stay sealed.
+Seeds 10400–10799 stay reserved for the held coverage study and are not used.
+</div>
+
+<div class="callout good">
+<strong>Where we are.</strong> V5.1 passed its four-cell gate with a straight-line mean model,
+on a simulator whose mean is itself a straight line. That result, in the V5.1 pre-registration’s
+own words, “does <strong>not</strong> show robustness to non-linear means.” A later attempt
+(v5.2) tried a five-knot spline approximation under curved means, failed, and is
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">parked</a>.
+This page is not a second spline test. It asks the narrower question V5.1 already posed:
+if the mean is curved <em>and</em> the location model is the correct family, does the same
+mixture still pass the same gate?
+</div>
+
+<h2>The one hypothesis</h2>
+<div class="callout">
+When the true mean is a smooth non-linear additive function of the inputs, and the location
+model is ordinary least squares on the straight-line terms <em>plus the exact two curved terms
+that define that mean</em>, the v5.1 mixture with only that location fit changed is
+<strong>BEST or NON-INFERIOR</strong> against DFL and CFM, and passes the role check, on both
+pure-composition cells (<code>skew_comp</code>, <code>tail_comp</code>) at both sizes
+(2,000 rows and 20,000 rows).
+</div>
+
+<h2>The method change</h2>
+<p>V5.1 fits a straight line per period, \(\hat\mu_t(x)=\hat\beta_{0,t}+x^\top\hat\beta_t\).
+This test replaces that with</p>
+\[
+\hat\mu_t(x)=\hat\beta_{0,t}+x^\top\hat\beta_t+\hat\gamma_{1,t}\,x_3^2+\hat\gamma_{2,t}\sin(x_5),
+\]
+<p>the least-squares fit on the same intercept and columns, plus those two known curved terms.
+The true mean uses exactly those terms (a scaled \(X_3^2-1\) and a scaled \(\sin X_5\)), so the
+family is correctly specified. Everything after the fit is unchanged: the leftover-noise law,
+the four hybrid mixtures, the 256-point grid, the L-moments, and the two-player Shapley split.
+The work lives in the Rust core, with a thin Python switch <code>mean_model="specified"</code>.
+No neural nets, no smoothing parameter, no tuning.</p>
+<p>The curve is placed only on columns that the two composition cells do not shift, so the test
+is about a non-linear mean, not about extrapolating a quadratic into a heavy tail. Under the
+period-A law the curved part has variance about 1.86, next to 2.25 from the straight-line part,
+so it is not a small perturbation.</p>
+
+<h2>How it is graded</h2>
+<table>
+<tr><th>Item</th><th>Fixed value</th></tr>
+<tr><td>Cells</td><td>4: <code>skew_comp</code> and <code>tail_comp</code>, at n = 2,000 (p = 5) and n = 20,000 (p = 20)</td></tr>
+<tr><td>Datasets</td><td>50 at the smaller size (indices 11000–11049); 20 at the larger (11100–11119)</td></tr>
+<tr><td>Comparator</td><td>Best of DFL and CFM, paired on the same draws</td></tr>
+<tr><td>Accuracy</td><td>One-sided 95% upper bound of mean (error − rival error), Student-t and a 10,000-draw bootstrap; the larger bound is used. <strong>BEST</strong> if that bound is &lt; 0; <strong>NON-INFERIOR</strong> if it is &lt; δ = 10% of the planted size of the graded channel</td></tr>
+<tr><td>Role check</td><td>The composition piece is larger, in absolute mean, than the response piece, and swapping the two roles does not lower the error</td></tr>
+<tr><td>Gate PASS</td><td>All four cells BEST or NON-INFERIOR after Holm, and all four role checks pass</td></tr>
+<tr><td>Time cap</td><td>30 minutes on 8 cores; unfinished work is never filled in</td></tr>
+</table>
+
+<h2>Seeds</h2>
+<p>Brand new: <code>11000–11049</code> and <code>11100–11119</code>. The pre-registration lists every
+range already used or reserved in the repo, including 9100–9429 (v4), 9500–9549 (spent v5),
+9700–9819 (v5.1), 10100–10219 (v5.2), and 10400–10799 (held coverage). The new range overlaps
+none of them. <strong>9600–9619 stay sealed</strong> and are not touched. <strong>10400–10799
+stay reserved</strong> for the held coverage study and are not touched.</p>
+
+<div class="callout bad">
+<strong>Kill rule.</strong> If any cell misses the accuracy bar, fails the role check, or runs
+out of time, the claim is parked (<code>PARK_V5_2_SPECIFIED.md</code>), and nothing is re-run,
+re-seeded, or re-tuned. V5.1’s straight-line claim is unchanged either way, and the v5.2 park
+stays in place. If the simulator cannot even be calibrated, the gate seeds are not run and the
+hypothesis is left undecided — it is not redesigned.
+</div>
+
+<h2>What this will not claim</h2>
+<ul>
+<li>A PASS does <strong>not</strong> say a spline, a GAM, or any approximating model works. The
+location family is correct by construction; that is the point of the test, and its limit.</li>
+<li>It does not un-park v5.2, and it does not re-run v5.2’s seeds.</li>
+<li>It does not run the held coverage study, does not register the proposed √n alternative, and
+does not give <code>linear_mean_check</code> a threshold.</li>
+<li>Structure-only cells, mixed cells, speed, and real data are out of scope.</li>
+</ul>
+
+<p class="muted">Order of work, once Jared’s own dated go is quoted in the pre-registration header:
+implementation (runs nothing on the gate seeds) → truth file from the oracle seed only → one
+single pass → results page. Until then the study stays unapproved and unrun. No result numbers
+appear on this page. Full pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md">PREREG_V5_2_SPECIFIED.md</a>.</p>
+</body>
+</html>
