@@ -5,6 +5,9 @@ Status: research, unvalidated.
 
 ## [Unreleased]
 
+### Added (2026-11-13)
+- Runner and summariser for the approved V5.1 coverage study (PREREG_V5_1_COVERAGE.md): `benchmarks/shiftbench/run_v5_1_coverage.py` and `summarize_v5_1_coverage.py`. Fresh indices 10400–10799 only; FORBIDDEN set includes every spent range in §4 and names the sealed range 9600–9619. Single-pass check: the results file must not already exist. This commit runs nothing and writes no results. Guard tests in `tests/python/test_v5_1_coverage_runner.py` do not touch any study seed.
+
 ### Changed (2026-11-13)
 - Approval of two pre-registered TRACE studies. On 2026-11-13 at 2:59 PM (America/New_York) the owner said, quoted verbatim: "You have my approval for all trace stuff - you are running the lab on this - I’m more an advisor on that project." Status in `docs/research/PREREG_V5_1_COVERAGE.md` and `docs/research/PREREG_V5_2_SPECIFIED.md` is now **PRE-REGISTERED · APPROVED 2026-11-13 (NOT RUN until results land)**. The 2026-11-11 coverage hold is lifted. This commit changes only those headers (status line plus the dated approval quote) and this changelog entry; the frozen hypothesis, band, method, simulator, cells, seeds, bars, cap, and kill rules are untouched. Neither study is run in this commit; no runner is added; indices 9600–9619 stay sealed.
 
