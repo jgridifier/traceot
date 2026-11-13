@@ -1,0 +1,26 @@
+{
+  "versions": {
+    "python": "3.13.5 (main, Aug 10 2026, 12:06:59) [GCC 14.2.0]",
+    "traceot": "0.1.0",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1"
+  },
+  "imports": {
+    "sklearn": "ok",
+    "traceot": "ok",
+    "DFL": "ok",
+    "CFM": "ok"
+  },
+  "smoke": {
+    "TRACE": "ok",
+    "DFL": "ok",
+    "CFM": "ok"
+  },
+  "ok": true,
+  "smoke_seed": 99,
+  "smoke_scen": "skew_comp",
+  "smoke_n": 2000,
+  "smoke_p": 5,
+  "prereg_sha": "19ed3202c701a5ee924399885265b1996d4a13cc"
+}

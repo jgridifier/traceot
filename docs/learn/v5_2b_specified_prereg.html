@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TRACE v5.2b specified-family replication — same hypothesis, fresh seeds, mandatory pre-flight</title>
-<meta name="description" content="Plain-language guide to the frozen TRACE replication: the same specified-family hypothesis as V5.2 specified, on fresh seeds, with a mandatory environment pre-flight. Pre-registered, approved 2026-11-13, not run.">
+<meta name="description" content="Plain-language guide to the frozen TRACE replication: the same specified-family hypothesis as V5.2 specified, on seeds 12000–12049 and 12100–12119. Pre-registered, approved 2026-11-13, aborted with no verdict (zero results; seeds spent).">
 <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <style>
@@ -60,14 +60,31 @@
   <a href="v5_2_specified.html">Specified results (INCOMPLETE)</a> ·
   <a href="v5_2_specified_prereg.html">Specified pre-registration</a> ·
   <a href="nightly.html">Nightly</a> ·
-  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2B_SPECIFIED_REPLICATION.md">Full pre-registration</a>
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2B_SPECIFIED_REPLICATION.md">Full pre-registration</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2B_ABORT.md">Abort record</a>
 </p>
 
 <h1>TRACE: the same curved-mean test, on fresh seeds, after a mandatory pre-flight</h1>
-<p><span class="status">PRE-REGISTERED · APPROVED 2026-11-13 · NOT RUN</span> &nbsp; <span class="muted">opened under the owner's standing approval of 2026-11-13, 2:59 PM ET</span></p>
+<p><span class="status" style="background:#2a1c18;color:#e0a898">PRE-REGISTERED · APPROVED 2026-11-13 · ABORTED (no verdict)</span> &nbsp; <span class="muted">opened under the owner's standing approval of 2026-11-13, 2:59 PM ET; aborted 16:05 ET the same day</span></p>
+
+<div class="callout bad">
+<strong>Aborted, 16:05 ET, 2026-11-13. No verdict.</strong>
+The single pass started after a successful pre-flight (scikit-learn 1.9.1, all
+three smoke fits ok on seed 99) and was aborted with <em>zero results</em>.
+The pre-flight TRACE smoke ran in the parent process and initialized Rayon;
+<code>multiprocessing.Pool(8)</code> then forked and deadlocked every worker.
+The process was SIGKILLed at 16:05 ET. The official results file was empty
+(0 bytes). The hypothesis is not decided. This is not a fail and not a park.
+Per the frozen pre-flight rule, seeds <strong>12000–12049</strong> and
+<strong>12100–12119</strong> are spent and will not be reused, because a
+successful pre-flight was followed by the start of the gate pass. Sealed seeds
+9600–9619 were not touched. Full record:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2B_ABORT.md">V5_2B_ABORT.md</a>.
+The scientific body of the pre-registration is unchanged.
+</div>
 
 <div class="callout warn">
-<strong>Approved, not run.</strong>
+<strong>What this file was.</strong>
 This is a <em>replication</em> of the
 <a href="v5_2_specified_prereg.html">V5.2 specified-family pre-registration</a>,
 not a new hypothesis and not a re-run of the first pass.
@@ -75,14 +92,13 @@ That first pass (seeds 11000–11049 and 11100–11119) finished TRACE on every 
 and passed the role check, but every rival call failed because scikit-learn was
 missing, so the accuracy bars could not be scored. The hypothesis was left
 undecided. The frozen protocol forbids retrying a task, so those seeds are spent.
-This file opens the same test on fresh seeds, and adds a mandatory check of the
-run environment <em>before</em> any of those seeds is touched.
+This file opened the same test on fresh seeds, and added a mandatory check of the
+run environment <em>before</em> any of those seeds was touched.
 On 2026-11-13 at 2:59 PM ET the owner said, quoted verbatim:
 <em>“You have my approval for all trace stuff - you are running the lab on this -
 I’m more an advisor on that project.”</em>
 The hypothesis, method, cells, bars, \(\delta\), cap, and kill rule are those of
-the parent pre-registration, by reference, and are not changed. Nothing has been
-run on the new seeds. Seeds 9600–9619 stay sealed.
+the parent pre-registration, by reference, and are not changed. Seeds 9600–9619 stay sealed.
 </div>
 
 <div class="callout good">
@@ -153,10 +169,13 @@ The location family is correct by construction; that is the point of the test, a
 <li>Structure-only cells, mixed cells, speed, and real data are out of scope.</li>
 </ul>
 
-<p class="muted">Order of work: this pre-registration merges first (this page; nothing is
-run) → a runner that implements the pre-flight and the new seeds, merged without
-running the gate → pre-flight in an environment that has scikit-learn → only then,
-one single pass. Full pre-registration:
-<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2B_SPECIFIED_REPLICATION.md">PREREG_V5_2B_SPECIFIED_REPLICATION.md</a>.</p>
+<p class="muted">The pre-registration and the runner both merged before the pass
+(PR <a href="https://github.com/jgridifier/traceot/pull/61">#61</a>,
+<a href="https://github.com/jgridifier/traceot/pull/62">#62</a>). The pre-flight
+in an environment that had scikit-learn succeeded; the gate then deadlocked and
+was aborted. Full pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2B_SPECIFIED_REPLICATION.md">PREREG_V5_2B_SPECIFIED_REPLICATION.md</a>.
+Abort record:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2B_ABORT.md">V5_2B_ABORT.md</a>.</p>
 </body>
 </html>
