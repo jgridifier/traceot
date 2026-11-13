@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.1 coverage — results in plain language</title>
+<meta name="description" content="The frozen TRACE v5.1 coverage test: a 90% bootstrap band around the composition and response pieces covers the truth inside the pre-registered pass interval on all four units.">
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_coverage_prereg.html">Coverage pre-reg</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_1_paper.html">V5.1 paper</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_COVERAGE_RESULTS.md">Full results</a>
+</p>
+
+<h1>TRACE v5.1 coverage: the 90% band covers about 90% of the time</h1>
+<p><span class="status" style="background:#18392c;color:#8fe0bf">PASS</span> &nbsp; <span class="muted">2026-11-13, 3:16–3:22 PM ET · prereg <code>dfaaf72</code> · runner merge <code>14754e6</code></span></p>
+
+<div class="callout good">
+<strong>Short version.</strong> After a 2026-11-11 hold and the owner's dated approval on
+2026-11-13, we ran the frozen coverage test once, on its own seeds. A 90% bootstrap band
+was placed around the composition piece and around the response piece, on 400 fresh draws
+of each of two straight-line cells. All four units landed inside the pre-registered pass
+interval (344–374 covers out of 400). The band claim passes. This says nothing new about
+how accurate the v5.1 point estimates are — that claim was already settled by the
+<a href="v5_1_gate.html">v5.1 gate</a>.
+</div>
+
+<h2>What was tested</h2>
+<p>When an outcome's distribution changes between two periods, TRACE splits the change
+into <em>composition</em> (the inputs moved) and <em>response</em> (the way the outcome reacts to
+the inputs changed). The v5.1 gate showed that, on two straight-line cells where all of
+the planted change is composition, the point estimates land in the right bucket and beat
+the rivals. This follow-up asks a different question: if we draw a 90% band around each
+piece, does that band contain the frozen truth about 90% of the time?</p>
+<p>The band is the one frozen in the pre-registration: a two-sample percentile bootstrap,
+500 resamples, 5th to 95th percentile, no bias correction. A replication is covered when
+the truth sits inside the interval. The pass rule is a binomial interval around 90% on
+400 draws: 344 to 374 covers. Too few <em>or</em> too many both fail. All four units (two
+cells × two pieces) must pass. There is no Holm adjustment.</p>
+
+<h2>The numbers</h2>
+<table>
+  <thead>
+    <tr><th>Unit</th><th>Covers</th><th>Rate</th><th>Pass interval</th><th>Mean width</th><th>Miss below / above</th><th>Verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>skew_comp</code> composition</td><td>365 / 400</td><td>0.9125</td><td>[344, 374]</td><td>0.02795</td><td>14 / 21</td><td class="pass">PASS</td></tr>
+    <tr><td><code>skew_comp</code> response</td><td>361 / 400</td><td>0.9025</td><td>[344, 374]</td><td>0.009303</td><td>17 / 22</td><td class="pass">PASS</td></tr>
+    <tr><td><code>tail_comp</code> composition</td><td>356 / 400</td><td>0.8900</td><td>[344, 374]</td><td>0.0154</td><td>15 / 29</td><td class="pass">PASS</td></tr>
+    <tr><td><code>tail_comp</code> response</td><td>360 / 400</td><td>0.9000</td><td>[344, 374]</td><td>0.007292</td><td>23 / 17</td><td class="pass">PASS</td></tr>
+  </tbody>
+</table>
+<p>Pooled coverage, reported only, with no bar: 1,442 / 1,600 (0.90125). Failed bootstrap
+refits: 0. Wall time: 350 seconds on 8 workers, well under the 60-minute cap. Every one
+of the 800 tasks finished. Every seed was in 10400–10799. The sealed range 9600–9619 was
+not touched.</p>
+
+<h2>What this does not say</h2>
+<ul>
+  <li>It does not change the v5.1 accuracy claim. That still rests on the four-cell gate.</li>
+  <li>It is only about these two straight-line cells at 2,000 rows and 5 inputs. It says nothing about 20,000 rows, structure cells, mixed cells, or curved means.</li>
+  <li>No library function for the band is shipped here. A later change that adds one has to reproduce this exact band.</li>
+</ul>
+
+<h2>How it was run</h2>
+<p>The owner approved the study on 2026-11-13 at 2:59 PM ET, in his own words:
+<em>“You have my approval for all trace stuff - you are running the lab on this -
+I’m more an advisor on that project.”</em>
+The runner was merged first and ran nothing
+(<a href="https://github.com/jgridifier/traceot/pull/57">PR #57</a>). Then one single pass
+was started, with the results file required not to already exist. Nothing was re-run,
+re-seeded, or retuned. The 2026-11-11 hold
+(<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/HOLD_V5_1_COVERAGE.md">hold record</a>)
+is historical.</p>
+<p class="muted">Two operational notes, neither a design change and neither a reason to
+re-run: the executable was a Python 3.13 wheel built from a then-unmerged commit that
+only <em>adds</em> a different location model; the ordinary-least-squares path used here
+is unchanged. A log was glanced at while the run was in progress; no parameter was
+changed. Details are in the
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_COVERAGE_RESULTS.md">full results</a>.</p>
+
+<p class="muted">Pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">PREREG_V5_1_COVERAGE.md</a>
+· freeze SHA <code>dfaaf72</code> · plain-language pre-reg:
+<a href="v5_1_coverage_prereg.html">v5_1_coverage_prereg.html</a>.</p>
+</body>
+</html>

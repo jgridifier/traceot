@@ -1,6 +1,6 @@
 # Pre-registration: TRACE v5.1 — coverage of a 90% bootstrap band (one hypothesis)
 
-**Status: PRE-REGISTERED · APPROVED 2026-11-13 (NOT RUN until results land).**
+**Status: PRE-REGISTERED · APPROVED 2026-11-13 · RUN 2026-11-13 (PASS).**
 Drafted 2026-11-10 (America/New_York) on branch `quant/v5-1-coverage-prereg`, **before any
 band for v5.1 has been computed on any seed**. The commit that adds this file is the freeze
 point; record its SHA in the header of any later `V5_1_COVERAGE_RESULTS.md`. Any change to
@@ -22,6 +22,11 @@ I’m more an advisor on that project."*
 The 2026-11-11 hold is lifted. Status is **APPROVED 2026-11-13 (NOT RUN until results
 land)**. This commit changes only the status line and adds this approval; the
 hypothesis, band, cells, seeds, and bars are unchanged.
+
+**Run (2026-11-13, 3:16–3:22 PM, America/New_York).** Single pass on seeds 10400–10799.
+Results: [V5_1_COVERAGE_RESULTS.md](../benchmark/V5_1_COVERAGE_RESULTS.md). Verdict:
+**PASS** (all four units inside [344, 374] of 400). This paragraph is a pointer only;
+the hypothesis, band, cells, seeds, and bars are unchanged.
 
 Parent claim: [PREREG_V5_1.md](PREREG_V5_1.md) @ `b33f507`, gate **PASS**
 ([V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md)). Source of this follow-up: the
