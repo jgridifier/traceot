@@ -17,6 +17,7 @@
 
 pub mod explain;
 pub mod mixture;
+pub mod specified;
 pub mod spline;
 
 pub use explain::{
@@ -27,4 +28,5 @@ pub use mixture::{
     lmoments_from_cdf_grid, mixture_cdf_location, mixture_cdf_quantile_rows, quantile_from_cdf,
     support_grid, MixtureLawV5,
 };
+pub use specified::{fit as fit_specified, predict as predict_specified, SpecifiedFit};
 pub use spline::{lstsq_pivoted, SplineBasis, SplineFit};
