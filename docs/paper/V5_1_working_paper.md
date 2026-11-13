@@ -436,6 +436,12 @@ final, and changes no other returned value. Small values do not show the mean is
   Learn page: [v5_2_specified.html](../learn/v5_2_specified.html).
   Hypothesis taken from PREREG_V5_1 §7, not from the v5.2 cell-level outcomes
   ([PARK_V5_2.md](../research/PARK_V5_2.md)); that park stays in force.
+* [ ] Specified-family replication: pre-registered in
+  [PREREG_V5_2B_SPECIFIED_REPLICATION.md](../research/PREREG_V5_2B_SPECIFIED_REPLICATION.md)
+  (2026-11-13), same hypothesis as the V5.2 specified gate, on fresh seeds
+  12000–12049 and 12100–12119, with a mandatory environment pre-flight.
+  Approved under the same 2026-11-13 standing approval. Not run. Learn page:
+  [v5_2b_specified_prereg.html](../learn/v5_2b_specified_prereg.html).
 * [x] Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md),
   held on 2026-11-11, approved and run 2026-11-13. Verdict **PASS** (all four units inside
   [344, 374] of 400). Record: [V5_1_COVERAGE_RESULTS.md](../benchmark/V5_1_COVERAGE_RESULTS.md).
