@@ -41,6 +41,10 @@ pub enum LocationModel {
     /// cubic spline basis (5 pooled-quantile knots per column, no cross terms, no
     /// penalty), solved by pivoted QR. See [`super::spline`].
     Spline,
+    /// TRACE_V5_2_SPECIFIED (PREREG_V5_2_SPECIFIED §2): per-period OLS on an
+    /// intercept, the same `p` raw columns, plus `x₃²` and `sin(x₅)` (raw,
+    /// uncentred; code columns 2 and 4). Solved by pivoted QR. See [`super::specified`].
+    Specified,
 }
 
 /// Per-period OLS location fit: coefficients `[β0, β1..βp]`.
@@ -252,8 +256,8 @@ pub struct ExplainV5Report {
     pub seconds_fit: f64,
     pub seconds_mixture: f64,
     pub seconds_total: f64,
-    /// `Spline` only: design columns dropped by the pivoted-QR rank rule, per period
-    /// (indices into intercept + 4p). Empty for the other location models.
+    /// `Spline` and `Specified`: design columns dropped by the pivoted-QR rank rule,
+    /// per period. Empty for the other location models.
     pub dropped_cols_a: Vec<usize>,
     pub dropped_cols_b: Vec<usize>,
     /// Report-only residual-vs-fit check of period A's location fit (own covariates,
@@ -330,6 +334,18 @@ pub fn explain_v5(
                 basis.predict(&f_b, x_a, n_a),
                 basis.predict(&f_a, x_b, n_b),
                 basis.predict(&f_b, x_b, n_b),
+            )
+        }
+        LocationModel::Specified => {
+            let f_a = super::specified::fit(x_a, n_a, p, y_a)?;
+            let f_b = super::specified::fit(x_b, n_b, p, y_b)?;
+            dropped_cols_a.clone_from(&f_a.dropped);
+            dropped_cols_b.clone_from(&f_b.dropped);
+            (
+                super::specified::predict(&f_a, x_a, n_a, p),
+                super::specified::predict(&f_b, x_a, n_a, p),
+                super::specified::predict(&f_a, x_b, n_b, p),
+                super::specified::predict(&f_b, x_b, n_b, p),
             )
         }
     };

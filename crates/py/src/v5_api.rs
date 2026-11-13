@@ -67,9 +67,10 @@ fn explain_v5_py<'py>(
         "booster" => LocationModel::Booster,
         "ols" => LocationModel::Ols,
         "spline" => LocationModel::Spline,
+        "specified" => LocationModel::Specified,
         _ => {
             return Err(PyValueError::new_err(
-                "mean_model must be 'booster', 'ols' or 'spline'",
+                "mean_model must be 'booster', 'ols', 'spline' or 'specified'",
             ))
         }
     };

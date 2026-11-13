@@ -6,6 +6,7 @@ Status: research, unvalidated.
 ## [Unreleased]
 
 ### Added (2026-11-13)
+- TRACE_V5_2_SPECIFIED: `mean_model="specified"` (`LocationModel::Specified` in the Rust core, thin Python switch `explain_v5_2_specified`). Per-period OLS on an intercept, the raw `p` columns, plus `x_3^2` and `sin(x_5)` (code columns 2 and 4, uncentred), solved by the same pivoted QR and drop rule as the spline model. Simulator `benchmarks/shiftbench/sb_dgp_shape_v5_2_specified.py` (curvature on unshifted columns, κ = 1) and runner `run_v5_2_specified_gate.py` (FORBIDDEN includes sealed 9600–9619 and reserved 10400–10799; single-pass results-file check). Unit tests use only non-gate seeds below 1000. This commit does not run indices 11000–11049 or 11100–11119. The truth file (oracle seed 99 only) is computed and committed with the implementation; if calibration is infeasible the gate seeds stay untouched.
 - Runner and summariser for the approved V5.1 coverage study (PREREG_V5_1_COVERAGE.md): `benchmarks/shiftbench/run_v5_1_coverage.py` and `summarize_v5_1_coverage.py`. Fresh indices 10400–10799 only; FORBIDDEN set includes every spent range in §4 and names the sealed range 9600–9619. Single-pass check: the results file must not already exist. This commit runs nothing and writes no results. Guard tests in `tests/python/test_v5_1_coverage_runner.py` do not touch any study seed.
 
 ### Changed (2026-11-13)
