@@ -135,6 +135,10 @@ def _patch_paths(g, tmp_path, monkeypatch):
     monkeypatch.setattr(g, "REHEARSAL_OUT", tmp_path / "v5_2c_specified_gate_rehearsal.jsonl")
     monkeypatch.setattr(g, "WALL", tmp_path / "v5_2c_specified_gate_wall.json")
     monkeypatch.setattr(g, "PREFLIGHT_OUT", tmp_path / "v5_2c_specified_gate_preflight.json")
+    # Other tests in this session may already have imported TRACE. The
+    # spawn-safe regression runs in a fresh process; these main() tests
+    # are about abort-before-seeds logic and mock the pre-flight / pool.
+    monkeypatch.setattr(g.spawn_safe, "assert_parent_has_not_called_trace", lambda: None)
 
 
 def test_main_aborts_before_seeds_on_failed_preflight(tmp_path, monkeypatch):
@@ -236,6 +240,7 @@ def test_main_does_not_run_when_results_file_exists(tmp_path, monkeypatch):
     out = tmp_path / "v5_2c_specified_gate_shape.jsonl"
     out.write_text("{}\n")
     monkeypatch.setattr(g, "OUT", out)
+    monkeypatch.setattr(g.spawn_safe, "assert_parent_has_not_called_trace", lambda: None)
     monkeypatch.setattr(sys, "argv", ["run_v5_2c_specified_gate.py"])
     with pytest.raises(AssertionError, match="single pass"):
         g.main()
