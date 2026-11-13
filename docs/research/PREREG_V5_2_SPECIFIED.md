@@ -1,6 +1,6 @@
 # Pre-registration: TRACE v5.2 specified-family non-linear mean (one hypothesis)
 
-**Status: PRE-REGISTERED · NOT APPROVED · NOT RUN.**
+**Status: PRE-REGISTERED · APPROVED 2026-11-13 (NOT RUN until results land).**
 
 Drafted 2026-11-13 (America/New_York) on branch `quant/v5-2-specified-prereg`, **before any
 specified-family code exists and before anything has been run on the seeds below**. The merge
@@ -17,6 +17,13 @@ for this study; no index in §4 is touched; indices **9600–9619** stay sealed;
 ([PREREG_V5_1_COVERAGE.md](PREREG_V5_1_COVERAGE.md),
 [HOLD_V5_1_COVERAGE.md](HOLD_V5_1_COVERAGE.md)) and are not used; no result numbers appear
 anywhere.
+
+**Approval (2026-11-13, 2:59 PM, America/New_York).** The owner said, quoted verbatim:
+*"You have my approval for all trace stuff - you are running the lab on this -
+I’m more an advisor on that project."*
+Status is **APPROVED 2026-11-13 (NOT RUN until results land)**. This commit changes
+only the status line and adds this approval; the hypothesis, mean model, simulator,
+cells, seeds, bars, cap, and kill rule are unchanged.
 
 Parent claim: [PREREG_V5_1.md](PREREG_V5_1.md) @ `b33f507`, implementation `665939b`, gate
 **PASS** on all four cells
