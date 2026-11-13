@@ -95,3 +95,85 @@ def test_after_holm_requires_both_ci_and_p():
     assert after_holm("NON-INFERIOR", hi=0.05, delta=0.1, p_best_holm=0.2, p_ni_holm=0.06) == "FAIL"
     # CI FAIL cannot be rescued
     assert after_holm("FAIL", hi=0.2, delta=0.1, p_best_holm=0.001, p_ni_holm=0.001) == "FAIL"
+
+
+def test_summariser_all_rival_errors_leaves_h_undecided(tmp_path, monkeypatch):
+    """Accuracy bars must not be scored as BEST when every rival recorded an error.
+
+    Uses two synthetic rows and a temporary output path. Does not touch gate seeds
+    and does not write the official results files.
+    """
+    import json
+
+    import summarize_v5_2_specified_gate as sm
+
+    truth_src = ROOT / "benchmarks" / "results" / "shiftbench_truth_shape_v5_2_specified.json"
+    (tmp_path / "shiftbench_truth_shape_v5_2_specified.json").write_text(truth_src.read_text())
+    lsplit = {
+        "comp": [0.0, 0.0, 0.033, 0.0],
+        "struct": [0.0, 0.0, -0.0005, 0.0],
+    }
+    rows = []
+    for rep in (1, 2):
+        rows.append(
+            {
+                "scen": "skew_comp",
+                "kappa": 1.0,
+                "n": 2000,
+                "p": 5,
+                "rep": rep,
+                "skey": "skew_comp|k1",
+                "TRACE_V5_2_SPECIFIED": {
+                    "lsplit": lsplit,
+                    "dropped_cols_a": [],
+                    "dropped_cols_b": [],
+                    "sec": 0.01,
+                },
+                "rivals": {
+                    "DFL": {"error": "No module named 'sklearn'", "sec": 0.01},
+                    "CFM": {"error": "No module named 'sklearn'", "sec": 0.01},
+                },
+            }
+        )
+    (tmp_path / "v5_2_specified_gate_shape.jsonl").write_text(
+        "\n".join(json.dumps(r) for r in rows) + "\n"
+    )
+    (tmp_path / "v5_2_specified_gate_wall.json").write_text(
+        json.dumps(
+            {
+                "wall_sec": 1.3,
+                "tasks_done": 2,
+                "tasks_total": 2,
+                "tasks_preregistered": 2,
+                "cells_infeasible": [],
+                "cap_sec": 1800,
+                "workers": 8,
+                "prereg_sha": sm.PREREG_SHA,
+            }
+        )
+    )
+    out_md = tmp_path / "results.md"
+    out_json = tmp_path / "summary.json"
+    monkeypatch.setattr(sm, "RES", tmp_path)
+    monkeypatch.setattr(sm, "OUT_MD", out_md)
+    monkeypatch.setattr(sm, "OUT_JSON", out_json)
+    monkeypatch.setattr(sm, "TRUTH_FILE", tmp_path / "shiftbench_truth_shape_v5_2_specified.json")
+    monkeypatch.setattr(sm, "CELLS", [("skew_comp", 2000)])
+    monkeypatch.setattr(sm, "REPS", {2000: 2})
+    sm.main()
+    summary = json.loads(out_json.read_text())
+    assert summary["overall"] == "INCOMPLETE (rivals unavailable)"
+    assert summary["impl_sha"] == "1aab4778abf8f84c8c8f7d9603eb8c322f1ba3c9"
+    cell = summary["cells"][0]
+    assert cell["verdict"] == "INCOMPLETE (rivals unavailable)"
+    assert cell["incomplete_reason"] == "rivals"
+    assert "mean_d" not in cell
+    assert cell["n_rivals_ok"] == 0
+    md = out_md.read_text()
+    assert "H is not decided" in md
+    assert "INCOMPLETE (rivals unavailable)" in md
+    # must not present a BEST/FAIL/PASS overall
+    verdict_line = [ln for ln in md.splitlines() if ln.startswith("**Gate verdict:**")][0]
+    assert "PASS" not in verdict_line
+    assert "FAIL" not in verdict_line
+    assert "BEST" not in verdict_line

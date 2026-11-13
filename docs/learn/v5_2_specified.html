@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.2 specified-family gate — results in plain language</title>
+<meta name="description" content="The frozen TRACE v5.2 specified-family gate ran once. TRACE finished every task and passed the role check, but the rivals failed because scikit-learn was missing, so the accuracy bars cannot be scored. H is not decided.">
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a3218;
+    color: #e6d48a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_2_specified_prereg.html">Specified pre-reg</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_2_gate.html">V5.2 spline (parked)</a> ·
+  <a href="v5_1_coverage.html">V5.1 coverage</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_SPECIFIED_GATE_RESULTS.md">Full results</a>
+</p>
+
+<h1>TRACE v5.2 specified-family: the gate ran, but the rivals did not, so H is not decided</h1>
+<p><span class="status" style="background:#3a3218;color:#e6d48a">INCOMPLETE (rivals unavailable)</span> &nbsp; <span class="muted">2026-11-13, 3:23 PM ET · prereg <code>cc8c1d7</code> · implementation merge <code>1aab477</code></span></p>
+
+<div class="callout warn">
+<strong>Short version.</strong> After the owner's dated approval on 2026-11-13, the implementation
+was merged (it ran nothing on the gate seeds) and the frozen test was run once. The method
+under test finished all 140 tasks, in 1.3 seconds, well under the 30-minute cap. It passed
+the role check on all four cells. The two rivals, DFL and CFM, every one of them, failed
+with <code>No module named 'sklearn'</code>: the run environment was missing a library they
+need. The pre-registered accuracy bars compare TRACE against those rivals. Without them,
+the bars cannot be scored, and scoring TRACE as “best” against a missing rival would have
+been a false pass. The honest verdict is <strong>INCOMPLETE (rivals unavailable)</strong>.
+The hypothesis is <em>not decided</em>. This is not a fail, and it is not a park. The seeds
+were not retried.
+</div>
+
+<h2>What was asked</h2>
+<p>V5.1 passed its four-cell gate with a straight-line mean, on a simulator whose mean is
+itself a straight line. That result does not show what happens when the mean is curved.
+This follow-up asks one narrower question: if the mean is curved <em>and</em> the location
+model is the correct family (least squares on the straight-line terms plus the exact two
+curved terms), does the same mixture still pass the same gate?</p>
+<p>A pass requires every cell to be BEST or NON-INFERIOR against DFL and CFM after Holm,
+and to pass the role check. The kill rule parks the claim if a cell fails accuracy, fails
+the role check, or runs out of time. A missing-rival outcome is not in that list; it is
+treated the same way as a calibration stop: H is left undecided, and no park file is written.</p>
+
+<h2>What finished, and what did not</h2>
+<table>
+  <thead>
+    <tr><th>Cell</th><th>n</th><th>p</th><th>Reps</th><th>TRACE mean error (descriptive)</th><th>Role check</th><th>Accuracy vs rivals</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>skew_comp</code></td><td>2,000</td><td>5</td><td>50</td><td>0.01314</td><td class="pass">PASS</td><td>not scored</td></tr>
+    <tr><td><code>tail_comp</code></td><td>2,000</td><td>5</td><td>50</td><td>0.01136</td><td class="pass">PASS</td><td>not scored</td></tr>
+    <tr><td><code>skew_comp</code></td><td>20,000</td><td>20</td><td>20</td><td>0.005438</td><td class="pass">PASS</td><td>not scored</td></tr>
+    <tr><td><code>tail_comp</code></td><td>20,000</td><td>20</td><td>20</td><td>0.004112</td><td class="pass">PASS</td><td>not scored</td></tr>
+  </tbody>
+</table>
+<p>The TRACE errors are descriptive only. They are not a gate verdict. On
+<code>tail_comp</code>, the mean composition piece (0.00072 at n = 2,000; 0.00209 at
+n = 20,000) sits well below the planted value of 0.00338, and the mean error is large
+relative to the non-inferiority margin. That is reported honestly. It cannot be turned
+into BEST, NON-INFERIOR, or FAIL without the rivals.</p>
+
+<h2>Why the rivals failed, and why they were not retried</h2>
+<p>The pass ran in a fresh Python 3.13 environment that had the TRACE library, numpy and
+scipy, but not scikit-learn. Both rivals import it. That should have been checked before
+the pass started. It was not. A different environment on the same machine already had
+scikit-learn 1.9.1. This is an environment miss, not a method failure.</p>
+<p>The pre-registration says no task is dropped, retried, or re-run, and there are no
+re-runs to chase a bar. The 140 TRACE fits and the 280 rival error records are the
+official pass. Seeds 11000–11049 and 11100–11119 are spent. A complete accuracy test
+against DFL and CFM would need a new pre-registration on fresh seeds. This page does not
+open one.</p>
+
+<h2>What this does not change</h2>
+<ul>
+  <li>The v5.1 linear-mean accuracy claim is unchanged. It still rests on the
+      <a href="v5_1_gate.html">v5.1 gate</a>.</li>
+  <li>The v5.2 spline claim stays <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">parked</a>.</li>
+  <li>The <a href="v5_1_coverage.html">v5.1 coverage</a> PASS is a separate study, already complete.</li>
+  <li>Seeds 9600–9619 were not touched. Seeds 10400–10799 were not used on this pass.</li>
+</ul>
+
+<p>The owner approved the study on 2026-11-13 at 2:59 PM ET, in his own words:
+<em>“You have my approval for all trace stuff - you are running the lab on this -
+I’m more an advisor on that project.”</em>
+Calibration of the simulator was feasible, so the gate seeds were eligible to run.
+Implementation merge:
+<a href="https://github.com/jgridifier/traceot/pull/58">PR #58</a> at <code>1aab477</code>.</p>
+
+<p class="muted">Full results:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_SPECIFIED_GATE_RESULTS.md">V5_2_SPECIFIED_GATE_RESULTS.md</a>
+· pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md">PREREG_V5_2_SPECIFIED.md</a>
+· freeze SHA <code>cc8c1d7</code> · plain-language pre-reg:
+<a href="v5_2_specified_prereg.html">v5_2_specified_prereg.html</a>.</p>
+</body>
+</html>

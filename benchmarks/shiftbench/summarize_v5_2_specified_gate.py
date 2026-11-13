@@ -25,7 +25,7 @@ OUT_MD = ROOT / "docs" / "benchmark" / "V5_2_SPECIFIED_GATE_RESULTS.md"
 OUT_JSON = RES / "v5_2_specified_gate_summary.json"
 PREREG_SHA = "cc8c1d7afc9c58a8b97b8b3b28b6ad6fd1704920"
 # Filled after the implementation PR is merged (order of work §9 step 4).
-IMPL_SHA = "SET_AFTER_IMPLEMENTATION_MERGE"
+IMPL_SHA = "1aab4778abf8f84c8c8f7d9603eb8c322f1ba3c9"
 REPS = {2000: 50, 20000: 20}
 CELLS = [("skew_comp", 2000), ("tail_comp", 2000), ("skew_comp", 20000), ("tail_comp", 20000)]
 TRUTH_FILE = RES / "shiftbench_truth_shape_v5_2_specified.json"
@@ -132,6 +132,7 @@ def main():
             cell["verdict"] = "INCOMPLETE"
             cell["verdict_ci"] = "INCOMPLETE"
             cell["falsifier"] = "INCOMPLETE"
+            cell["incomplete_reason"] = "wall_cap"
             cell["note"] = f"{len(rs)}/{REPS[n]} reps finished inside the 30-minute cap"
             cells.append(cell)
             continue
@@ -152,6 +153,48 @@ def main():
             eriv.append(best)
             names.append(bn)
         e5, eriv = np.array(e5), np.array(eriv)
+        mc, ms = float(np.mean(np.abs(c_hat))), float(np.mean(np.abs(s_hat)))
+        swap_rescue = float(np.mean(e_swap)) <= float(np.mean(e5))
+        fals = "PASS" if (mc > ms and not swap_rescue) else "FAIL"
+        n_rival = int(np.isfinite(eriv).sum())
+        rival_msgs = sorted(
+            {
+                f"{nm}: {r['rivals'][nm]['error']}"
+                for r in rs
+                for nm in ("DFL", "CFM")
+                if "error" in r["rivals"].get(nm, {})
+            }
+        )
+        cell.update(
+            {
+                "mean_err_specified": float(e5.mean()),
+                "mean_abs_comp_hat": mc,
+                "mean_abs_struct_hat": ms,
+                "mean_comp_hat": float(np.mean(c_hat)),
+                "mean_struct_hat": float(np.mean(s_hat)),
+                "mean_err_roles_swapped": float(np.mean(e_swap)),
+                "falsifier": fals,
+                "n_rivals_ok": n_rival,
+                "rival_errors": rival_msgs,
+                "sec_specified_mean": float(np.mean([r[METHOD]["sec"] for r in rs])),
+                "sec_cfm_mean": float(np.mean([r["rivals"]["CFM"]["sec"] for r in rs])),
+                "sec_dfl_mean": float(np.mean([r["rivals"]["DFL"]["sec"] for r in rs])),
+            }
+        )
+        if n_rival == 0:
+            # TRACE finished; rivals recorded only errors. Accuracy bars cannot
+            # be scored (and must not be scored as BEST against an infinite
+            # rival error). Role check is still scored. H is not decided on
+            # the accuracy bars. This is not a wall-cap INCOMPLETE.
+            cell["verdict"] = "INCOMPLETE (rivals unavailable)"
+            cell["verdict_ci"] = "INCOMPLETE"
+            cell["incomplete_reason"] = "rivals"
+            cell["note"] = (
+                "every DFL and CFM call in this cell recorded an error; "
+                "accuracy bars cannot be scored"
+            )
+            cells.append(cell)
+            continue
         d = e5 - eriv
         verd_ci, ci, hi = ci_verdict(d, delta)
         se = d.std(ddof=1) / np.sqrt(len(d))
@@ -159,27 +202,23 @@ def main():
         p_ni = float(stats.t.sf((delta - d.mean()) / se, dof))
         p_best = float(stats.t.sf((0 - d.mean()) / se, dof))
         rival_err = {}
+        rival_c, rival_s = {}, {}
         for nm in ("DFL", "CFM"):
-            ev = [graded_err(r["rivals"][nm].get("lsplit"), sh, k) for r in rs]
+            ev, ac, as_ = [], [], []
+            for r in rs:
+                rv = r["rivals"][nm]
+                if "error" in rv or "lsplit" not in rv:
+                    ev.append(np.nan)
+                    continue
+                ev.append(graded_err(rv["lsplit"], sh, k))
+                ls = normalize_lsplit(rv["lsplit"])
+                ac.append(abs(ls["comp"][k]))
+                as_.append(abs(ls["struct"][k]))
             rival_err[nm] = float(np.nanmean(ev))
-        rival_c = {
-            nm: float(
-                np.mean([abs(normalize_lsplit(r["rivals"][nm]["lsplit"])["comp"][k]) for r in rs])
-            )
-            for nm in ("DFL", "CFM")
-        }
-        rival_s = {
-            nm: float(
-                np.mean([abs(normalize_lsplit(r["rivals"][nm]["lsplit"])["struct"][k]) for r in rs])
-            )
-            for nm in ("DFL", "CFM")
-        }
-        mc, ms = float(np.mean(np.abs(c_hat))), float(np.mean(np.abs(s_hat)))
-        swap_rescue = float(np.mean(e_swap)) <= float(np.mean(e5))
-        fals = "PASS" if (mc > ms and not swap_rescue) else "FAIL"
+            rival_c[nm] = float(np.mean(ac)) if ac else float("nan")
+            rival_s[nm] = float(np.mean(as_)) if as_ else float("nan")
         cell.update(
             {
-                "mean_err_specified": float(e5.mean()),
                 "mean_err_rivals": rival_err,
                 "best_rival_mode": max(set(names), key=names.count) if names else None,
                 "mean_d": ci["mean"],
@@ -189,17 +228,8 @@ def main():
                 "verdict_ci": verd_ci,
                 "p_ni_unadj": p_ni,
                 "p_best_unadj": p_best,
-                "mean_abs_comp_hat": mc,
-                "mean_abs_struct_hat": ms,
-                "mean_comp_hat": float(np.mean(c_hat)),
-                "mean_struct_hat": float(np.mean(s_hat)),
                 "rival_mean_abs_comp": rival_c,
                 "rival_mean_abs_struct": rival_s,
-                "mean_err_roles_swapped": float(np.mean(e_swap)),
-                "falsifier": fals,
-                "sec_specified_mean": float(np.mean([r[METHOD]["sec"] for r in rs])),
-                "sec_cfm_mean": float(np.mean([r["rivals"]["CFM"]["sec"] for r in rs])),
-                "sec_dfl_mean": float(np.mean([r["rivals"]["DFL"]["sec"] for r in rs])),
             }
         )
         cells.append(cell)
@@ -221,10 +251,24 @@ def main():
 
     acc = [c["verdict"] for c in cells]
     fal = [c.get("falsifier", "INCOMPLETE") for c in cells]
+    wall_incomplete = any(
+        c.get("incomplete_reason") == "wall_cap"
+        or (c.get("verdict") == "INCOMPLETE" and "cap" in c.get("note", ""))
+        for c in cells
+    )
+    rivals_incomplete = any(
+        c.get("incomplete_reason") == "rivals" or "rivals unavailable" in str(c.get("verdict", ""))
+        for c in cells
+    )
     if wall.get("stop") == "calibration_incomplete":
         overall = "INCOMPLETE (calibration)"
-    elif any(v == "FAIL" for v in acc + fal) or any(v == "INCOMPLETE" for v in acc + fal):
+    elif any(v == "FAIL" for v in acc + fal) or wall_incomplete:
         # Wall-cap INCOMPLETE, accuracy FAIL, or role-check FAIL: H is rejected.
+        overall = "FAIL"
+    elif rivals_incomplete:
+        # Harness did not produce rival numbers. H is not decided. Not a park.
+        overall = "INCOMPLETE (rivals unavailable)"
+    elif any(v == "INCOMPLETE" for v in acc + fal):
         overall = "FAIL"
     else:
         overall = "PASS"
@@ -243,7 +287,8 @@ def main():
         f"**Prereg SHA:** `{PREREG_SHA}` "
         "([PREREG_V5_2_SPECIFIED.md](../research/PREREG_V5_2_SPECIFIED.md)).",
         f"**Implementation merge SHA:** `{IMPL_SHA}`.",
-        f"**Gate verdict:** **{overall}**.",
+        f"**Gate verdict:** **{overall}**."
+        + (" H is not decided." if "INCOMPLETE" in overall else ""),
         f"**Wall time:** {wall.get('wall_sec', float('nan')):.1f} s on "
         f"{wall.get('workers', '?')} workers (cap {wall.get('cap_sec', 1800)} s); "
         f"{wall.get('tasks_done', 0)}/{wall.get('tasks_total', 140)} tasks finished.",
@@ -265,10 +310,18 @@ def main():
     ]
     for c in cells:
         pp = 5 if c["n"] == 2000 else 20
-        if c["verdict"] == "INCOMPLETE" and "mean_d" not in c:
+        if "mean_d" not in c:
+            err5 = c.get("mean_err_specified")
+            err5s = "—" if err5 is None else f"{err5:.4g}"
+            mc = c.get("mean_abs_comp_hat")
+            ms = c.get("mean_abs_struct_hat")
+            mcs = "—" if mc is None else f"{mc:.4g}"
+            mss = "—" if ms is None else f"{ms:.4g}"
+            role = c.get("falsifier", "INCOMPLETE")
             L.append(
-                f"| {c['scen']} | {c['n']} | {pp} | {c.get('reps', 0)} | — | — | — | — | — | — | "
-                f"{c.get('delta', float('nan')):.4g} | INCOMPLETE | — | — | INCOMPLETE | — | — |"
+                f"| {c['scen']} | {c['n']} | {pp} | {c.get('reps', 0)} | {err5s} | "
+                f"— | — | — | — | — | {c.get('delta', float('nan')):.4g} | "
+                f"**{c['verdict']}** | {mcs} | {mss} | **{role}** | — | — |"
             )
             continue
         L.append(
@@ -306,6 +359,14 @@ def main():
         "   it does not change V5.1's linear-mean claim. Indices 9600–9619 were not",
         "   touched; 10400–10799 were not used.",
     ]
+    if overall.startswith("INCOMPLETE (rivals"):
+        L += [
+            "6. **Rivals unavailable.** Every DFL and CFM call on this pass recorded an",
+            "   error. Accuracy bars (BEST / NON-INFERIOR after Holm) cannot be scored,",
+            "   and must not be scored as BEST against a missing rival. Role checks are",
+            "   scored from TRACE alone and are reported. H is not decided. This is not",
+            "   a wall-cap INCOMPLETE and is not a park. Gate seeds were not retried.",
+        ]
     OUT_MD.write_text("\n".join(L) + "\n")
     print("\n".join(L))
 

@@ -354,10 +354,15 @@ mean \(|\hat s|\). The `tail_comp` cells sit closer to their bars than `skew_com
 terms because the planted λ4 effect is roughly an order of magnitude smaller than the λ3 one (δ = 0.0004586 against
 0.004025). Holm-adjusted p values stay below 0.05 in all four cells. Two things the table does
 not show: whether a band around \(\hat c,\hat s\) would have the stated coverage (no band was
-computed; the coverage study is pre-registered, held, not approved and not run — see
-[PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md) and
-[HOLD_V5_1_COVERAGE.md](../research/HOLD_V5_1_COVERAGE.md)), and
-anything about non-linear means (§6).
+computed in the gate itself; a later coverage study on seeds 10400–10799 **PASSES**, all four
+units inside [344, 374] of 400 — see
+[V5_1_COVERAGE_RESULTS.md](../benchmark/V5_1_COVERAGE_RESULTS.md) and
+[v5_1_coverage.html](../learn/v5_1_coverage.html)), and
+anything about non-linear means (§6). A later specified-family test of a correctly specified
+non-linear mean (seeds 11000–11049 and 11100–11119) is **INCOMPLETE (rivals unavailable)**;
+H is not decided — see
+[V5_2_SPECIFIED_GATE_RESULTS.md](../benchmark/V5_2_SPECIFIED_GATE_RESULTS.md) and
+[v5_2_specified.html](../learn/v5_2_specified.html).
 
 **Figure 1.** Paired \(d_r=\mathrm{err}_{\mathrm{v5.1},r}-\mathrm{err}_{\mathrm{best\,rival},r}\)
 on the graded channel, one point per committed replication.
@@ -418,17 +423,24 @@ final, and changes no other returned value. Small values do not show the mean is
   code only, no new run).
 * [x] Linear-mean check in the application: residual-vs-fit check, report only, no gating claim
   (`linear_mean_check`, 2026-11-10; diagnostic only, §7).
-* [ ] Release tag against the gate's implementation merge SHA
-  `665939bd4aa78ffc7474b91d482d18ac0191d595` (decision plan item; not tagged yet).
-* [ ] Non-linear means: pre-registered in [PREREG_V5_2_SPECIFIED.md](../research/PREREG_V5_2_SPECIFIED.md)
-  (2026-11-13), **not approved, not run**. Hypothesis taken from PREREG_V5_1 §7 (the mixture
-  given a correctly specified location family, now under a non-linear mean), not from the
-  v5.2 cell-level outcomes ([PARK_V5_2.md](../research/PARK_V5_2.md)). Fresh seeds 11000–11049
-  and 11100–11119. Nothing runs until the owner's own dated approval is in that file's
-  header. Learn page: [v5_2_specified_prereg.html](../learn/v5_2_specified_prereg.html).
-* [ ] Out-of-scope suites in PREREG_V5_1 §6 (struct cells, coverage, ShiftBench, speed,
+* [x] Release tag against the gate's implementation merge SHA
+  `665939bd4aa78ffc7474b91d482d18ac0191d595` (v5.1.0, 2026-11-13;
+  [release](https://github.com/jgridifier/traceot/releases/tag/v5.1.0)).
+  `main` had moved on; the tag is on that SHA anyway.
+* [x] Non-linear means: pre-registered in [PREREG_V5_2_SPECIFIED.md](../research/PREREG_V5_2_SPECIFIED.md)
+  (2026-11-13), approved and run the same day. Verdict **INCOMPLETE (rivals unavailable)**;
+  H is not decided. TRACE finished 140/140 tasks and passed the role check; every DFL and
+  CFM call recorded a missing-library error, so the accuracy bars cannot be scored. Seeds
+  were not retried. Not a fail and not a park. Record:
+  [V5_2_SPECIFIED_GATE_RESULTS.md](../benchmark/V5_2_SPECIFIED_GATE_RESULTS.md).
+  Learn page: [v5_2_specified.html](../learn/v5_2_specified.html).
+  Hypothesis taken from PREREG_V5_1 §7, not from the v5.2 cell-level outcomes
+  ([PARK_V5_2.md](../research/PARK_V5_2.md)); that park stays in force.
+* [x] Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md),
+  held on 2026-11-11, approved and run 2026-11-13. Verdict **PASS** (all four units inside
+  [344, 374] of 400). Record: [V5_1_COVERAGE_RESULTS.md](../benchmark/V5_1_COVERAGE_RESULTS.md).
+  Learn page: [v5_1_coverage.html](../learn/v5_1_coverage.html). The 2026-11-11 hold is
+  historical ([HOLD_V5_1_COVERAGE.md](../research/HOLD_V5_1_COVERAGE.md)).
+* [ ] Remaining out-of-scope suites in PREREG_V5_1 §6 (struct cells, ShiftBench, speed,
   per-feature shares) each need their own pre-registration before any claim.
-  Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md),
-  **held** on 2026-11-11 (the owner's words, verbatim: *"Not yet, hold the coverage study."*),
-  not approved, not run. Record: [HOLD_V5_1_COVERAGE.md](../research/HOLD_V5_1_COVERAGE.md).
 * [ ] Indices 9600–9619 stay sealed; no holdout confirmation of v5.1 is permitted by its prereg.
