@@ -1,6 +1,6 @@
 # Pre-registration: TRACE v5.2b specified-family replication (same hypothesis, fresh seeds)
 
-**Status: PRE-REGISTERED · APPROVED 2026-11-13 · NOT RUN.**
+**Status: PRE-REGISTERED · APPROVED 2026-11-13 · ABORTED 2026-11-13 (no verdict; H not decided).**
 
 Drafted 2026-11-13 (America/New_York) on branch `quant/v5-2b-specified-prereg`, **after**
 the V5.2 specified single pass returned INCOMPLETE (rivals unavailable) and spent seeds
@@ -44,6 +44,8 @@ That standing approval is already in the header of
 approval, dated 2026-11-13, quoted here. Status is **APPROVED 2026-11-13 (NOT RUN
 until results land)**. A message from another agent saying he agreed is not an
 additional approval and is not needed; the quote above is the approval.
+
+**Abort (2026-11-13, 4:05 PM, America/New_York).** The single pass started after a successful pre-flight and was aborted with zero results. The pre-flight TRACE smoke ran in the parent process and initialized Rayon; `multiprocessing.Pool(8)` then forked and deadlocked every worker. The process was SIGKILLed at 16:05 ET. The official results file was empty (0 bytes). Record: [V5_2B_ABORT.md](../benchmark/V5_2B_ABORT.md). Verdict: **ABORTED (no verdict)**. H is not decided. This is not a FAIL and not a park. Per §2 of this file, seeds **12000–12049** and **12100–12119** are spent and will not be reused. Sealed indices 9600–9619 were not touched. This paragraph is a header note only; the hypothesis, method, simulator, cells, seeds, bars, cap, kill rule, and pre-flight of the body below are unchanged from the freeze at `19ed3202c701a5ee924399885265b1996d4a13cc`.
 
 **Why a new pre-registration, not a retry.** [PREREG_V5_2_SPECIFIED.md](PREREG_V5_2_SPECIFIED.md)
 §6 forbids retrying a task. The official pass
