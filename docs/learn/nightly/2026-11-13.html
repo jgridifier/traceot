@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-13 · traceot</title>
+<meta name="description" content="V5.2 specified-family non-linear mean pre-registered (not approved, not run). Coverage study still held. Next: the v5.1 release tag.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="../../assets/brief.css">
+<!-- TRACE Learn home-screen / PWA tags. Paste into <head> of every TRACE nightly page.
+     The nightly routine should include this block so future nightly pages inherit it.
+     Paths are root-absolute so they resolve under https://jgridifier.github.io/traceot/
+     from both learn/nightly.html and learn/nightly/YYYY-MM-DD.html. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
+</head>
+<body>
+<main>
+<header class="mast">
+  <p class="date">Nightly · 2026-11-13 · America/New_York (EST)</p>
+  <h1>TRACE nightly</h1>
+  <p class="dek">One new pre-registration, docs only. Nothing ran. Previous: <a href="2026-11-12.html">2026-11-12</a>.</p>
+  <nav>
+    <a href="../../index.html">Learn home</a> ·
+    <a href="../research_board.html">Research board</a> ·
+    <a href="../v5_1_paper.html">V5.1 paper</a> ·
+    <a href="../v5_2_specified_prereg.html">V5.2 specified prereg</a>
+  </nav>
+</header>
+
+<div class="tldr">
+  <p><strong>Short version:</strong> PR #54 froze a single-hypothesis follow-up. It asks whether the v5.1 mixture still passes the same four-cell gate when the mean is curved and the location model is the correct family. It is <em>pre-registered, not approved, not run</em>. The coverage study is still held. There are no new runs and no new numbers. The release tag from yesterday's plan hasn't been cut yet.</p>
+</div>
+
+<section id="new">
+<div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">Pre-registration</span></div>
+  <p><strong>V5.2 specified-family non-linear mean</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/54">#54</a>, merged 2026-11-13 06:31 EST, CI green on rust and python 3.10/3.13, main <code>cc8c1d7</code>). The header status reads <em>PRE-REGISTERED · NOT APPROVED · NOT RUN</em>. Running it needs your own dated approval quoted in the header of <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md"><code>PREREG_V5_2_SPECIFIED.md</code></a>. No runner has been written.</p>
+  <ul>
+    <li><strong>Where it comes from:</strong> the known limitation in PREREG_V5_1 §7. The v5.1 simulator's mean is linear, so a linear location fit is correct by construction, and robustness to curved means was never shown.</li>
+    <li><strong>The single change:</strong> each period's location fit becomes ordinary least squares on the v5.1 linear terms plus the two exact curved terms of the true mean (<code>x₃²</code> and <code>sin(x₅)</code>). There's no penalty, no knots, and nothing to tune. Everything downstream (residual law, four hybrids, L-moments, two-player Shapley split) is unchanged.</li>
+    <li><strong>The simulator:</strong> the curvature sits only on columns the composition scenarios do not shift. That keeps "curved mean" separate from "extrapolating a curve along a shifted covariate".</li>
+    <li><strong>The gate:</strong> the same four cells as V5.1 (<code>skew_comp</code>, <code>tail_comp</code> × n = 2000 / 20 000) and the same BEST / NON-INFERIOR bars plus the role check. It uses fresh seeds 11000–11049 and 11100–11119.</li>
+  </ul>
+  <p class="note">This is <em>not</em> a second spline gate. The earlier V5.2 spline test failed, and its park stays in force. The new hypothesis is taken from V5.1 §7, not from that run's cell outcomes. Seeds 9600–9619 stay sealed, and 10400–10799 stay reserved for the held coverage study. The plain-language page is at <a href="../v5_2_specified_prereg.html">v5_2_specified_prereg.html</a>.</p>
+</div>
+
+<div class="card teal">
+  <div class="card-top"><span class="tag">Reading a shift report</span></div>
+  <p><strong>Why this matters when you read a report.</strong> TRACE splits a change into composition (who is in the data) and response (how outcomes behave given inputs). It does that by fitting a location model per period and treating what's left as the residual law. If the true mean is curved but the fit is a straight line, the missed curve lands in the residuals. A shape change can then be attributed to the wrong piece. For now, v5.1 attributions are only claimed where a linear mean is plausible. The report-only <code>linear_mean_check</code> diagnostic (PR #47) is a hint, not a pass/fail. The new pre-registration is the first planned test of what happens when the location model is curved and correct.</p>
+</div>
+
+<p>Nothing else changed. No PRs are open, there are no new branches beyond #54, no tags exist yet, and there are no new results or failures in the method.</p>
+</section>
+
+<section id="blocker">
+<div class="sec-head"><span class="n">02</span><h2>What's still open</h2><span class="line"></span></div>
+<div class="card red">
+  <ul>
+    <li><strong>Waiting on your go:</strong> the V5.1 coverage study is held (your 2026-11-11 “Not yet, hold the coverage study.”). The V5.2 specified-family study is not approved. Each moves only once your own dated words are committed to its header (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_COVERAGE.md">coverage prereg</a>, <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2_SPECIFIED.md">V5.2 specified prereg</a>).</li>
+    <li><strong>Release tag:</strong> this is item 3 of the approved plan in <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DECISION_2026-11-04.md"><code>DECISION_2026-11-04.md</code></a>. It is still unchecked in paper §8, and the repo has no tags.</li>
+    <li><strong>Other out-of-scope suites</strong> (struct cells, ShiftBench, speed, per-feature shares) each still need their own pre-registration.</li>
+  </ul>
+</div>
+<p class="note">Seeds 9600–9619 remain sealed and untouched. Seeds 10400–10799 and 11000–11119 are unused.</p>
+</section>
+
+<section id="tomorrow">
+<div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>Carried over from last night: tag <code>v5.1.0</code> on the gate's implementation merge <code>665939b</code> (PR <a href="https://github.com/jgridifier/traceot/pull/29">#29</a>). Write release notes drawn only from the paper and <code>V5_1_GATE_RESULTS.md</code>, covering the linear-mean scope, the four-cell gate, the coverage hold, and the new V5.2 specified prereg as "planned, not approved". Then tick the box in paper §8. This is docs and release only, with no new numbers. Neither held study runs without your go.</p>
+</section>
+
+<section id="archive">
+<div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<ol reversed>
+  <li><a href="2026-11-13.html">2026-11-13</a> (this one)</li>
+  <li><a href="2026-11-12.html">2026-11-12</a></li>
+  <li><a href="2026-11-11.html">2026-11-11</a></li>
+  <li><a href="2026-11-10.html">2026-11-10</a></li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+</section>
+
+<footer>
+  <p>Dated <strong>2026-11-13</strong>, America/New_York (EST), written against main <code>cc8c1d7</code>. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+</footer>
+</main>
+</body>
+</html>
