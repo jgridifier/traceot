@@ -30,7 +30,7 @@ PREFLIGHT_PATH = RES / "v5_2c_specified_gate_preflight.json"
 PREREG_SHA = "f022ba3e42ebe4b7cee1dbdf2bf1c254b248b1f6"
 IMPL_SHA = "1aab4778abf8f84c8c8f7d9603eb8c322f1ba3c9"
 # Filled after the runner PR is merged (order of work §4 step 3).
-RUNNER_SHA = ""
+RUNNER_SHA = "1048c78e986c005e771d18f8c8eb27a8f9b69870"
 REPS = {2000: 50, 20000: 20}
 CELLS = [("skew_comp", 2000), ("tail_comp", 2000), ("skew_comp", 20000), ("tail_comp", 20000)]
 TRUTH_FILE = RES / "shiftbench_truth_shape_v5_2_specified.json"

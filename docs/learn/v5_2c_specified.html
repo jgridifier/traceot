@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.2c specified-family replication — results in plain language</title>
+<meta name="description" content="The frozen TRACE v5.2c specified-family replication ran once, after a successful pre-flight and rehearsal. Two cells passed; both heavy-tail cells failed the accuracy bar after Holm. The hypothesis is rejected and the claim is parked.">
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a1e1c;
+    color: #e08a7a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_2c_specified_prereg.html">V5.2c pre-reg</a> ·
+  <a href="v5_2_specified.html">V5.2 specified (INCOMPLETE)</a> ·
+  <a href="v5_2b_specified_prereg.html">V5.2b (ABORTED)</a> ·
+  <a href="v5_1_gate.html">V5.1 gate</a> ·
+  <a href="v5_2_gate.html">V5.2 spline (parked)</a> ·
+  <a href="v5_1_coverage.html">V5.1 coverage</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2C_SPECIFIED_GATE_RESULTS.md">Full results</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">Park</a>
+</p>
+
+<h1>TRACE v5.2c specified-family: the gate ran once, and H is rejected</h1>
+<p><span class="status">FAIL · claim parked</span> &nbsp; <span class="muted">2026-11-13, 4:29 PM ET · prereg <code>f022ba3</code> · implementation <code>1aab477</code> · runner <code>1048c78</code></span></p>
+
+<div class="callout bad">
+<strong>Short version.</strong> After a successful pre-flight (in a spawned child, with
+scikit-learn present) and a successful rehearsal of the full pipeline on throwaway
+seeds 97 and 98, the frozen test ran once, on fresh seeds 13000–13049 and
+13100–13119. All 140 tasks finished in 12.7 seconds, well under the 30-minute cap.
+The two skewed-composition cells passed: TRACE was <strong>BEST</strong> against DFL
+and CFM after Holm, and the role check passed. Both heavy-tail cells
+(<code>tail_comp</code>) <strong>failed</strong> the accuracy bar after Holm. The
+role check passed on all four cells. Under the pre-registered kill rule, that is a
+<strong>FAIL</strong>: the hypothesis is rejected, and the specified-family claim is
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">parked</a>.
+The seeds were not retried. Nothing is amended.
+</div>
+
+<h2>What was asked</h2>
+<p>This is a <em>replication</em> of the
+<a href="v5_2_specified_prereg.html">V5.2 specified-family</a> test, on fresh seeds,
+with a spawn-safe harness, a mandatory rehearsal, and a five-minute watchdog. The
+question is unchanged: if the mean is curved <em>and</em> the location model is the
+correct family (least squares on the straight-line terms plus the exact two curved
+terms), does the v5.1 mixture still pass the same four-cell gate against DFL and
+CFM?</p>
+<p>A pass requires every cell to be BEST or NON-INFERIOR after Holm, and to pass
+the role check. Both the confidence-interval verdict and the matching
+Holm-adjusted p-value must hold. The kill rule parks the claim if any cell fails
+accuracy, fails the role check, or runs out of time.</p>
+
+<h2>The four cells</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Cell</th><th>n</th><th>p</th><th>Reps</th>
+      <th>TRACE error</th><th>DFL</th><th>CFM</th>
+      <th>Mean d</th><th>Upper bound</th><th>δ</th>
+      <th>Accuracy</th><th>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>skew_comp</code></td><td>2,000</td><td>5</td><td>50</td>
+      <td>0.01321</td><td>0.06854</td><td>0.01771</td>
+      <td>−0.00451</td><td>−0.002249</td><td>0.003322</td>
+      <td class="pass">BEST</td><td class="pass">PASS</td>
+    </tr>
+    <tr>
+      <td><code>tail_comp</code></td><td>2,000</td><td>5</td><td>50</td>
+      <td>0.01043</td><td>0.01509</td><td>0.01172</td>
+      <td>+0.000731</td><td>0.002399</td><td>0.0003562</td>
+      <td class="fail">FAIL</td><td class="pass">PASS</td>
+    </tr>
+    <tr>
+      <td><code>skew_comp</code></td><td>20,000</td><td>20</td><td>20</td>
+      <td>0.006248</td><td>0.06911</td><td>0.008546</td>
+      <td>−0.002298</td><td>−0.000725</td><td>0.003322</td>
+      <td class="pass">BEST</td><td class="pass">PASS</td>
+    </tr>
+    <tr>
+      <td><code>tail_comp</code></td><td>20,000</td><td>20</td><td>20</td>
+      <td>0.003511</td><td>0.009134</td><td>0.004315</td>
+      <td>−0.000719</td><td>0.000291</td><td>0.0003562</td>
+      <td class="fail">FAIL</td><td class="pass">PASS</td>
+    </tr>
+  </tbody>
+</table>
+<p>The best rival in every cell was CFM. Mean d is TRACE's error minus the
+best rival's error: negative means TRACE was more accurate on average.
+“Upper bound” is the larger of the one-sided 95% t and bootstrap bounds.
+BEST requires that bound to be below zero, and the Holm p-value for a BEST
+claim to be below 0.05. NON-INFERIOR requires the bound to be below δ and
+the Holm p-value for a non-inferiority claim to be below 0.05. Both the
+bound and the p-value are required.</p>
+
+<h2>Why the two heavy-tail cells failed</h2>
+<p>On <code>tail_comp</code> at n = 2,000, TRACE's mean error (0.01043) was
+slightly <em>worse</em> than CFM’s (0.01172). The average gap is small
+(+0.00073), but the upper bound (0.00240) sits well above a tight
+non-inferiority margin (δ = 0.000356). The interval itself is a fail.
+The Holm p-values (0.646 for non-inferiority, 0.767 for best) agree.</p>
+<p>On <code>tail_comp</code> at n = 20,000, TRACE was better on average
+(0.003511 against CFM’s 0.004315). The upper bound (0.000291) is under δ
+(0.000356), which would be NON-INFERIOR on the interval alone. The
+Holm-adjusted p-value for that non-inferiority claim is 0.0814, which is
+not below 0.05. The frozen rule requires both, so the cell is a fail. This
+is not a close-enough, and it is not rounded to a pass.</p>
+
+<h2>How the pass was run</h2>
+<ul>
+  <li><strong>Pre-flight:</strong> ran in a spawned child, before any gate seed
+      was touched. TRACE, DFL, CFM and scikit-learn 1.9.1 all imported and
+      completed a smoke fit on non-gate seed 99. The parent process never
+      called TRACE.</li>
+  <li><strong>Rehearsal:</strong> the full parallel pipeline, all three methods,
+      on throwaway seeds 98 and 97 (8 tasks, same n and p as the cells),
+      finished 8/8 in 2.9 seconds. Those records are in a separate file and
+      were not scored.</li>
+  <li><strong>Gate:</strong> a spawn pool of 8 workers, 140 tasks, 12.7 seconds,
+      30-minute cap, five-minute watchdog (it did not trip). No task was
+      dropped, retried, or re-run. Seeds 13000–13049 and 13100–13119 are spent.</li>
+</ul>
+
+<h2>What this does not change</h2>
+<ul>
+  <li>The v5.1 linear-mean accuracy claim is unchanged. It still rests on the
+      <a href="v5_1_gate.html">v5.1 gate</a>.</li>
+  <li>The v5.2 spline claim stays
+      <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2.md">parked</a>.
+      This failure does not add a new charge against that park.</li>
+  <li>The first specified-family pass remains
+      <a href="v5_2_specified.html">INCOMPLETE (rivals unavailable)</a>;
+      H was not decided there. The
+      <a href="v5_2b_specified_prereg.html">V5.2b pass</a> remains ABORTED,
+      with no verdict.</li>
+  <li>The <a href="v5_1_coverage.html">v5.1 coverage</a> PASS is a separate
+      study, already complete.</li>
+  <li>Seeds 9600–9619 were not touched. Seeds 10400–10799, 11000–11119, and
+      12000–12119 were not re-run.</li>
+</ul>
+
+<div class="callout warn">
+<strong>No amendment.</strong> Under the park, these cells are not re-run, re-seeded,
+or re-tuned, and no new basis term is added. Any further specified-family work
+would need a new pre-registration on fresh seeds, and its hypothesis must not be
+chosen by looking at this run beyond what is written in the
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">park file</a>.
+This page does not open one.
+</div>
+
+<p>The owner's standing approval of 2026-11-13 at 2:59 PM ET, in his own words:
+<em>“You have my approval for all trace stuff - you are running the lab on this -
+I’m more an advisor on that project.”</em>
+Pre-flight and rehearsal both succeeded, so the gate seeds were eligible to run.
+Implementation (reused):
+<a href="https://github.com/jgridifier/traceot/pull/58">PR #58</a> at <code>1aab477</code>.
+Runner:
+<a href="https://github.com/jgridifier/traceot/pull/66">PR #66</a> at <code>1048c78</code>.
+Pre-registration freeze:
+<a href="https://github.com/jgridifier/traceot/pull/64">PR #64</a> at <code>f022ba3</code>.</p>
+
+<p class="muted">Full results:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2C_SPECIFIED_GATE_RESULTS.md">V5_2C_SPECIFIED_GATE_RESULTS.md</a>
+· park:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>
+· pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_2C_SPECIFIED_REPLICATION.md">PREREG_V5_2C_SPECIFIED_REPLICATION.md</a>
+· freeze SHA <code>f022ba3</code> · plain-language pre-reg:
+<a href="v5_2c_specified_prereg.html">v5_2c_specified_prereg.html</a>.
+A secondary, not-scored table of TRACE-only composition estimates is in the
+results file; it does not enter the verdict.</p>
+</body>
+</html>

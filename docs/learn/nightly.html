@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-13 evening · traceot</title>
-<meta name="description" content="V5.1 coverage PASS. V5.2 specified-family gate INCOMPLETE (rivals unavailable): H is not decided. Both studies ran once after the owner's dated approval.">
+<title>TRACE nightly · 2026-11-13 late · traceot</title>
+<meta name="description" content="V5.2c specified-family replication FAIL: the claim is parked. V5.1 coverage PASS. V5.2 specified INCOMPLETE. V5.2b ABORTED. Sealed seeds untouched.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -25,71 +25,79 @@
 <body>
 <main>
 <header class="mast">
-  <p class="date">Nightly · 2026-11-13 evening · America/New_York (EST)</p>
+  <p class="date">Nightly · 2026-11-13 late afternoon · America/New_York (EST)</p>
   <h1>TRACE nightly</h1>
-  <p class="dek">Both frozen studies ran once. Coverage passes. The specified-family gate is incomplete. Morning snapshot: <a href="nightly/2026-11-13.html">2026-11-13 morning</a>. Previous: <a href="nightly/2026-11-12.html">2026-11-12</a>.</p>
+  <p class="dek">The specified-family replication ran once and failed; the claim is parked. Coverage still passes. Earlier this afternoon: <a href="nightly/2026-11-13-evening.html">2026-11-13 evening</a>. Morning: <a href="nightly/2026-11-13.html">2026-11-13 morning</a>. Previous: <a href="nightly/2026-11-12.html">2026-11-12</a>.</p>
   <nav>
     <a href="../index.html">Learn home</a> ·
     <a href="research_board.html">Research board</a> ·
     <a href="v5_1_paper.html">V5.1 paper</a> ·
     <a href="v5_1_coverage.html">V5.1 coverage (PASS)</a> ·
-    <a href="v5_2_specified.html">V5.2 specified (INCOMPLETE)</a>
+    <a href="v5_2c_specified.html">V5.2c specified (FAIL, parked)</a>
   </nav>
 </header>
 
 <div class="tldr">
-  <p><strong>Short version:</strong> This afternoon the owner said, quoted verbatim, <em>“You have my approval for all trace stuff - you are running the lab on this - I’m more an advisor on that project.”</em> Both pre-registered studies then ran once, on their own seeds. The <a href="v5_1_coverage.html">V5.1 coverage</a> study <strong>PASSES</strong>: all four units of a 90% bootstrap band landed inside the frozen interval [344, 374] of 400. The <a href="v5_2_specified.html">V5.2 specified-family gate</a> is <strong>INCOMPLETE (rivals unavailable)</strong>: TRACE finished all 140 tasks and passed the role check, but every rival call failed because scikit-learn was missing from the run environment, so the accuracy bars cannot be scored. The hypothesis is not decided. Seeds were not retried. This is not a fail and not a park. The v5.1 accuracy claim is unchanged. The v5.2 spline park stays in force. Sealed seeds were not touched.</p>
+  <p><strong>Short version:</strong> The <a href="v5_2c_specified.html">V5.2c specified-family replication</a> ran once this afternoon, at 4:29 PM ET, after a successful pre-flight and a successful rehearsal. All 140 tasks finished in 12.7 seconds. The two skewed-composition cells were BEST after Holm. Both heavy-tail cells failed the accuracy bar after Holm. All four role checks passed. The verdict is <strong>FAIL</strong>. The hypothesis is rejected, and the specified-family claim is <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">parked</a>. Seeds were not retried. The v5.1 accuracy claim is unchanged. The v5.2 spline park stays in force. Sealed seeds were not touched.</p>
 </div>
 
 <section id="new">
-<div class="sec-head"><span class="n">01</span><h2>New since this morning</h2><span class="line"></span></div>
+<div class="sec-head"><span class="n">01</span><h2>New since this evening</h2><span class="line"></span></div>
 
 <div class="card">
-  <div class="card-top"><span class="tag">Approval</span></div>
-  <p>On 2026-11-13 at 2:59 PM ET the owner gave standing approval for TRACE work, in his own words (PR <a href="https://github.com/jgridifier/traceot/pull/56">#56</a>). The 2026-11-11 coverage hold is lifted. The frozen scientific content of both pre-registrations is unchanged.</p>
+  <div class="card-top"><span class="tag">FAIL</span></div>
+  <p><strong>V5.2c specified-family replication</strong> (prereg PR <a href="https://github.com/jgridifier/traceot/pull/64">#64</a> at freeze <code>f022ba3</code>, harness PR <a href="https://github.com/jgridifier/traceot/pull/65">#65</a>, runner PR <a href="https://github.com/jgridifier/traceot/pull/66">#66</a> at <code>1048c78</code>, implementation reused from PR <a href="https://github.com/jgridifier/traceot/pull/58">#58</a> at <code>1aab477</code>). The same hypothesis as the first specified-family gate, on fresh seeds 13000–13049 and 13100–13119. Pre-flight ran in a spawned child: scikit-learn 1.9.1, TRACE, DFL and CFM all imported and completed a smoke fit on seed 99. The rehearsal (8 tasks, throwaway seeds 97 and 98, all three methods) finished 8/8 in 2.9 seconds and was not scored. The gate then ran once, 140/140 tasks, wall 12.7 seconds (cap 30 minutes). The five-minute watchdog did not trip.</p>
+  <ul>
+    <li><code>skew_comp</code>, n = 2,000: <strong>BEST</strong> after Holm (TRACE error 0.01321, best rival CFM 0.01771; Holm p BEST 0.00317). Role PASS.</li>
+    <li><code>tail_comp</code>, n = 2,000: <strong>FAIL</strong>. TRACE 0.01043, CFM 0.01172. TRACE was slightly worse on average; the upper bound 0.00240 is above δ = 0.000356. Holm p NI 0.646. Role PASS.</li>
+    <li><code>skew_comp</code>, n = 20,000: <strong>BEST</strong> after Holm (TRACE 0.006248, CFM 0.008546; Holm p BEST 0.0309). Role PASS.</li>
+    <li><code>tail_comp</code>, n = 20,000: <strong>FAIL</strong>. TRACE 0.003511, CFM 0.004315, better on average, and the upper bound 0.000291 is under δ, but the Holm-adjusted p-value for non-inferiority is 0.0814, which is not below 0.05. Both are required. Role PASS.</li>
+  </ul>
+  <p>Under the kill rule, H is rejected. Every failure is in <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>. No amendment, no re-run. Plain-language page: <a href="v5_2c_specified.html">v5_2c_specified.html</a>. Full write-up: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2C_SPECIFIED_GATE_RESULTS.md">V5_2C_SPECIFIED_GATE_RESULTS.md</a>.</p>
 </div>
 
 <div class="card">
+  <div class="card-top"><span class="tag">ABORTED</span></div>
+  <p><strong>V5.2b, recorded this afternoon</strong> (PR <a href="https://github.com/jgridifier/traceot/pull/63">#63</a>). The earlier replication, on seeds 12000–12049 and 12100–12119, had a successful pre-flight and then deadlocked: the pre-flight TRACE smoke ran in the parent and initialized Rayon, after which a forked worker pool never completed a task. The process was SIGKILLed at 16:05 ET with zero results. Verdict: <strong>ABORTED (no verdict)</strong>. H was not decided. Those seeds are spent and were not reused. Record: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2B_ABORT.md">V5_2B_ABORT.md</a>. The V5.2c harness (spawn, not fork; rehearsal before the gate; five-minute watchdog) is the fix that file called for.</p>
+</div>
+</section>
+
+<section id="stood">
+<div class="sec-head"><span class="n">02</span><h2>What still stands from earlier today</h2><span class="line"></span></div>
+
+<div class="card">
   <div class="card-top"><span class="tag">PASS</span></div>
-  <p><strong>V5.1 coverage of a 90% bootstrap band</strong> (runner PR <a href="https://github.com/jgridifier/traceot/pull/57">#57</a>, results PR <a href="https://github.com/jgridifier/traceot/pull/59">#59</a>, freeze <code>dfaaf72</code>). Single pass on seeds 10400–10799, 800/800 tasks, wall 350 seconds (cap 60 minutes). All four units PASS:</p>
-  <ul>
-    <li><code>skew_comp</code> composition: 365/400 (0.9125)</li>
-    <li><code>skew_comp</code> response: 361/400 (0.9025)</li>
-    <li><code>tail_comp</code> composition: 356/400 (0.8900)</li>
-    <li><code>tail_comp</code> response: 360/400 (0.9000)</li>
-  </ul>
-  <p>Pooled coverage, report only: 1,442/1,600 (0.90125). Failed refits: 0. This is a band claim only; it does not change the v5.1 accuracy result. Plain-language page: <a href="v5_1_coverage.html">v5_1_coverage.html</a>. Full write-up: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_COVERAGE_RESULTS.md">V5_1_COVERAGE_RESULTS.md</a>.</p>
+  <p><strong>V5.1 coverage of a 90% bootstrap band</strong> still <strong>PASSES</strong>: all four units landed inside the frozen interval [344, 374] of 400, on seeds 10400–10799. This is a band claim only; it does not change the v5.1 accuracy result. <a href="v5_1_coverage.html">v5_1_coverage.html</a>.</p>
 </div>
 
 <div class="card">
   <div class="card-top"><span class="tag">INCOMPLETE</span></div>
-  <p><strong>V5.2 specified-family non-linear mean</strong> (implementation PR <a href="https://github.com/jgridifier/traceot/pull/58">#58</a> at <code>1aab477</code>, freeze <code>cc8c1d7</code>). Calibration of σ<sub>B</sub> was feasible, so the gate seeds were eligible. Single pass on seeds 11000–11049 and 11100–11119, 140/140 TRACE tasks, wall 1.3 seconds (cap 30 minutes). TRACE passed the role check on all four cells. Every one of the 140 DFL calls and the 140 CFM calls recorded <code>No module named 'sklearn'</code>: the run used a fresh Python environment that had TRACE, numpy and scipy, but not scikit-learn, which both rivals need. That should have been checked before the pass started. It was not.</p>
-  <p>The accuracy bars compare TRACE against those rivals. Without them, the bars cannot be scored, and treating TRACE as “best” against a missing rival would have been a false pass. The official verdict is <strong>INCOMPLETE (rivals unavailable)</strong>. H is not decided. The pre-registration forbids retrying a task, so the seeds were not re-run. Seeds 11000–11119 are spent. A complete accuracy test would need a new pre-registration on fresh seeds; one is not opened here. No park file (the kill rule parks only when H is rejected). Plain-language page: <a href="v5_2_specified.html">v5_2_specified.html</a>. Full write-up: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_2_SPECIFIED_GATE_RESULTS.md">V5_2_SPECIFIED_GATE_RESULTS.md</a>.</p>
-  <p class="note">Descriptive TRACE-only numbers, not a gate bar: on <code>tail_comp</code> the mean composition piece sits well below the planted value, and the mean error is large relative to the non-inferiority margin. That is reported honestly in the results file. It is not BEST, NON-INFERIOR, or FAIL, because those verdicts need the rivals.</p>
+  <p><strong>V5.2 specified-family, first pass</strong> remains <strong>INCOMPLETE (rivals unavailable)</strong>: TRACE finished and passed the role check on seeds 11000–11119, but every rival call failed because scikit-learn was missing, so those accuracy bars were never scored. H was not decided there, and those seeds were not retried. <a href="v5_2_specified.html">v5_2_specified.html</a>.</p>
 </div>
 </section>
 
 <section id="blocker">
-<div class="sec-head"><span class="n">02</span><h2>What's still open</h2><span class="line"></span></div>
+<div class="sec-head"><span class="n">03</span><h2>What's still open</h2><span class="line"></span></div>
 <div class="card red">
   <ul>
-    <li><strong>Specified-family hypothesis, undecided.</strong> A complete accuracy test against DFL and CFM would need a new pre-registration on fresh seeds. That is a later decision, not a re-run of this pass.</li>
-    <li><strong>Release tag, done:</strong> <code>v5.1.0</code> is on the V5.1 implementation merge <code>665939b</code> (PR <a href="https://github.com/jgridifier/traceot/pull/29">#29</a>), 2026-11-13. <code>main</code> had moved; the tag is on that commit anyway. <a href="https://github.com/jgridifier/traceot/releases/tag/v5.1.0">GitHub release</a>.</li>
+    <li><strong>Specified-family claim, parked.</strong> The hypothesis is rejected. Under the park, these cells are not re-run, re-seeded, or re-tuned, and no new basis term is added. A new pre-registration is not opened here.</li>
+    <li><strong>Release tag, done:</strong> <code>v5.1.0</code> is on the V5.1 implementation merge <code>665939b</code> (PR <a href="https://github.com/jgridifier/traceot/pull/29">#29</a>), 2026-11-13. <a href="https://github.com/jgridifier/traceot/releases/tag/v5.1.0">GitHub release</a>.</li>
     <li><strong>Other out-of-scope suites</strong> (struct cells, ShiftBench, speed, per-feature shares) each still need their own pre-registration.</li>
   </ul>
 </div>
-<p class="note">Seeds 9600–9619 remain sealed and untouched. Seeds 10400–10799 (coverage) and 11000–11049 / 11100–11119 (specified-family) are spent.</p>
+<p class="note">Seeds 9600–9619 remain sealed and untouched. Spent and not reused: 10400–10799 (coverage, PASS), 11000–11049 / 11100–11119 (specified-family, INCOMPLETE), 12000–12049 / 12100–12119 (V5.2b, ABORTED), 13000–13049 / 13100–13119 (V5.2c, FAIL).</p>
 </section>
 
 <section id="tomorrow">
-<div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
-<p>The <code>v5.1.0</code> tag is cut: <a href="https://github.com/jgridifier/traceot/releases/tag/v5.1.0">github.com/jgridifier/traceot/releases/tag/v5.1.0</a>, at <code>665939b</code>. A complete accuracy test of the specified-family hypothesis against DFL and CFM would need a new pre-registration on fresh seeds. That is a later decision, not a re-run of today's pass, and it is not opened here.</p>
+<div class="sec-head"><span class="n">04</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>The specified-family claim is parked. There is no amendment and no follow-up study opened from this run. V5.1’s linear-mean claim stands exactly as stated, and the v5.2 spline park is unchanged. The next concrete step is whatever the lab takes up that is not a retry of these cells.</p>
 </section>
 
 <section id="archive">
-<div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<div class="sec-head"><span class="n">05</span><h2>All nightly snapshots</h2><span class="line"></span></div>
 <ol reversed>
-  <li><a href="nightly/2026-11-13-evening.html">2026-11-13 evening</a> (this one)</li>
+  <li><a href="nightly/2026-11-13-late.html">2026-11-13 late afternoon</a> (this one)</li>
+  <li><a href="nightly/2026-11-13-evening.html">2026-11-13 evening</a></li>
   <li><a href="nightly/2026-11-13.html">2026-11-13 morning</a></li>
   <li><a href="nightly/2026-11-12.html">2026-11-12</a></li>
   <li><a href="nightly/2026-11-11.html">2026-11-11</a></li>
@@ -112,7 +120,7 @@
 </section>
 
 <footer>
-  <p>Dated <strong>2026-11-13 evening</strong>, America/New_York (EST), written after the two study passes. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
+  <p>Dated <strong>2026-11-13 late afternoon</strong>, America/New_York (EST), written after the V5.2c single pass. Rules that stay: Rust core with a thin Python layer; no neural nets.</p>
 </footer>
 </main>
 </body>

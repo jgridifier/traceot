@@ -447,13 +447,20 @@ final, and changes no other returned value. Small values do not show the mean is
   seeds are spent and will not be reused. Not a fail and not a park. Record:
   [V5_2B_ABORT.md](../benchmark/V5_2B_ABORT.md).
   Learn page: [v5_2b_specified_prereg.html](../learn/v5_2b_specified_prereg.html).
-* [ ] Specified-family replication (V5.2c): pre-registered in
+* [x] Specified-family replication (V5.2c): pre-registered in
   [PREREG_V5_2C_SPECIFIED_REPLICATION.md](../research/PREREG_V5_2C_SPECIFIED_REPLICATION.md)
   (2026-11-13), same hypothesis, on fresh seeds 13000–13049 and 13100–13119,
   with the V5.2b pre-flight, a spawn-safe harness, a mandatory rehearsal, and
   a five-minute no-completion watchdog. Approved under the same 2026-11-13
-  standing approval. Not run. Spent V5.2b seeds 12000–12119 are not reused.
-  Learn page: [v5_2c_specified_prereg.html](../learn/v5_2c_specified_prereg.html).
+  standing approval and run once the same day, 4:29 PM ET. Verdict **FAIL**.
+  Both `skew_comp` cells BEST after Holm; both `tail_comp` cells failed
+  accuracy after Holm; all four role checks passed. 140/140 tasks, 12.7 s.
+  H is rejected. The specified-family claim is parked:
+  [PARK_V5_2C_SPECIFIED.md](../research/PARK_V5_2C_SPECIFIED.md).
+  Record: [V5_2C_SPECIFIED_GATE_RESULTS.md](../benchmark/V5_2C_SPECIFIED_GATE_RESULTS.md).
+  Learn page: [v5_2c_specified.html](../learn/v5_2c_specified.html).
+  Spent V5.2b seeds 12000–12119 were not reused. The V5.1 linear-mean claim
+  and the V5.2 spline park are unchanged.
 * [x] Coverage: pre-registered in [PREREG_V5_1_COVERAGE.md](../research/PREREG_V5_1_COVERAGE.md),
   held on 2026-11-11, approved and run 2026-11-13. Verdict **PASS** (all four units inside
   [344, 374] of 400). Record: [V5_1_COVERAGE_RESULTS.md](../benchmark/V5_1_COVERAGE_RESULTS.md).

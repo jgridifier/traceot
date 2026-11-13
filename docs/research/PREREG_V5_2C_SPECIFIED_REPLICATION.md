@@ -1,6 +1,6 @@
 # Pre-registration: TRACE v5.2c specified-family replication (same hypothesis, fresh seeds, spawn-safe harness, rehearsal, watchdog)
 
-**Status: PRE-REGISTERED · APPROVED 2026-11-13 · NOT RUN.**
+**Status: PRE-REGISTERED · APPROVED 2026-11-13 · RUN 2026-11-13 (FAIL; specified-family claim parked).**
 
 Drafted 2026-11-13 (America/New_York) on branch `quant/v5-2c-specified-prereg`, **after**
 the V5.2b specified-family pass aborted with zero results and spent seeds
@@ -88,6 +88,8 @@ parent, and with a rehearsal that would have caught that deadlock before any
 gate seed was submitted. That is this file. It is not a re-run, not an
 amendment of the frozen V5.2 specified or V5.2b protocols, and not a second
 hypothesis.
+
+**Run (2026-11-13, 4:29 PM, America/New_York).** Single pass on seeds 13000–13049 and 13100–13119, after a successful pre-flight in a spawned child and a successful rehearsal (8/8 tasks on throwaway seeds 98 and 97, 2.9 s). Results: [V5_2C_SPECIFIED_GATE_RESULTS.md](../benchmark/V5_2C_SPECIFIED_GATE_RESULTS.md). Verdict: **FAIL**. H is rejected. Both `skew_comp` cells were BEST after Holm and passed the role check; both `tail_comp` cells failed accuracy after Holm (role checks passed). Every failure is recorded in [PARK_V5_2C_SPECIFIED.md](PARK_V5_2C_SPECIFIED.md). 140/140 tasks finished in 12.7 s (cap 1800 s). Seeds were not retried. This paragraph is a pointer only; the hypothesis, method, seeds, bars, cap, kill rule, pre-flight, spawn-safe harness, rehearsal, and watchdog are unchanged.
 
 Parent claim: the same as [PREREG_V5_2_SPECIFIED.md](PREREG_V5_2_SPECIFIED.md)
 ([PREREG_V5_1.md](PREREG_V5_1.md) @ `b33f507`, implementation `665939b`, the known
