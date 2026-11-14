@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-14 · traceot</title>
+<meta name="description" content="No change since the 2026-11-13 late-afternoon snapshot. Blocker: no next pre-registration chosen after the V5.2c park.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="../../assets/brief.css">
+<!-- TRACE Learn home-screen / PWA tags. Paste into <head> of every TRACE nightly page.
+     The nightly routine should include this block so future nightly pages inherit it.
+     Paths are root-absolute so they resolve under https://jgridifier.github.io/traceot/
+     from both learn/nightly.html and learn/nightly/YYYY-MM-DD.html. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
+</head>
+<body>
+<main>
+<header class="mast">
+  <p class="date">Nightly · 2026-11-14 · America/New_York (EST)</p>
+  <h1>TRACE nightly</h1>
+  <p class="dek">Quiet day: nothing new merged, opened, or run since the last snapshot. Previous: <a href="2026-11-13-late.html">2026-11-13 late afternoon</a>.</p>
+  <nav>
+    <a href="../../index.html">Learn home</a> ·
+    <a href="../research_board.html">Research board</a> ·
+    <a href="../v5_1_paper.html">V5.1 paper</a> ·
+    <a href="../v5_2c_specified.html">V5.2c specified (FAIL, parked)</a>
+  </nav>
+</header>
+
+<div class="tldr">
+  <p><strong>Short version:</strong> Nothing meaningful changed. <code>main</code> is still at <code>c8df64a</code> (merge of PR <a href="https://github.com/jgridifier/traceot/pull/67">#67</a>, 2026-11-13 4:37 PM ET). No PRs are open, no branch has commits after that merge, and no study ran. CI and Pages on <code>main</code> were green. The full state is in the <a href="2026-11-13-late.html">2026-11-13 late-afternoon snapshot</a>. <strong>Blocker:</strong> after the V5.2c park, the lab has not chosen the next pre-registration.</p>
+</div>
+
+<section id="new">
+<div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+<div class="card">
+  <div class="card-top"><span class="tag">NO CHANGE</span></div>
+  <p>Checked on 2026-11-14 at about 2:20 PM ET: the <code>main</code> log, open PRs (none), remote branches (newest is <code>quant/v5-2c-specified-results</code>, 4:35 PM ET 2026-11-13, already merged as #67), <code>docs/learn/</code>, and <code>docs/research/</code>. No new results, failures, decisions, or design changes.</p>
+</div>
+</section>
+
+<section id="blocker">
+<div class="sec-head"><span class="n">02</span><h2>Blocker</h2><span class="line"></span></div>
+<div class="card">
+  <p>The specified-family claim is parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>). Its cells are not re-run, re-seeded or re-tuned. Every remaining out-of-scope suite (struct cells, ShiftBench, speed, per-feature shares) needs its own pre-registration before any run, and none has been drafted. The lab has standing authority to pick one. This nightly only reports, so it did not open one.</p>
+</div>
+</section>
+
+<section id="tomorrow">
+<div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>Pick one out-of-scope suite and open a docs-only pre-registration PR for it. The PR should give the hypothesis, metric, margin, kill rule and fresh seeds that skip every spent range and the sealed 9600–9619. It should not run anything. Until that PR exists, the next nightly will be another no-change page.</p>
+<p class="note">Seeds 9600–9619 remain sealed and untouched. Spent ranges are listed in the <a href="2026-11-13-late.html">previous snapshot</a>. Rust core with a thin Python layer; no neural nets.</p>
+</section>
+
+<section id="archive">
+<div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<ol reversed>
+  <li><a href="2026-11-14.html">2026-11-14</a> (this one)</li>
+  <li><a href="2026-11-13-late.html">2026-11-13 late afternoon</a></li>
+  <li><a href="2026-11-13-evening.html">2026-11-13 evening</a></li>
+  <li><a href="2026-11-13.html">2026-11-13 morning</a></li>
+  <li><a href="2026-11-12.html">2026-11-12</a></li>
+  <li><a href="2026-11-11.html">2026-11-11</a></li>
+  <li><a href="2026-11-10.html">2026-11-10</a></li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+</section>
+</main>
+</body>
+</html>
