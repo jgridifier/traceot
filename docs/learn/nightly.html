@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRACE nightly · 2026-11-14 · traceot</title>
+<title>TRACE nightly · 2026-11-15 · traceot</title>
 <meta name="description" content="No change since the 2026-11-13 late-afternoon snapshot. Blocker: no next pre-registration chosen after the V5.2c park.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,9 +25,9 @@
 <body>
 <main>
 <header class="mast">
-  <p class="date">Nightly · 2026-11-14 · America/New_York (EST)</p>
+  <p class="date">Nightly · 2026-11-15 · America/New_York (EST)</p>
   <h1>TRACE nightly</h1>
-  <p class="dek">Quiet day: nothing new merged, opened, or run since the last snapshot. Previous: <a href="nightly/2026-11-13-late.html">2026-11-13 late afternoon</a>.</p>
+  <p class="dek">Quiet day: nothing new merged, opened, or run since the last snapshot. Previous: <a href="nightly/2026-11-14.html">2026-11-14</a>.</p>
   <nav>
     <a href="../index.html">Learn home</a> ·
     <a href="research_board.html">Research board</a> ·
@@ -37,34 +37,35 @@
 </header>
 
 <div class="tldr">
-  <p><strong>Short version:</strong> Nothing meaningful changed. <code>main</code> is still at <code>c8df64a</code> (merge of PR <a href="https://github.com/jgridifier/traceot/pull/67">#67</a>, 2026-11-13 4:37 PM ET). No PRs are open, no branch has commits after that merge, and no study ran. CI and Pages on <code>main</code> were green. The full state is in the <a href="nightly/2026-11-13-late.html">2026-11-13 late-afternoon snapshot</a>. <strong>Blocker:</strong> after the V5.2c park, the lab has not chosen the next pre-registration.</p>
+  <p><strong>Short version:</strong> Second quiet day in a row. <code>main</code> is at <code>fc4fff8</code>, the merge of the 2026-11-14 nightly (PR <a href="https://github.com/jgridifier/traceot/pull/68">#68</a>, 2:19 PM ET). That nightly was docs-only; the last research change is still PR <a href="https://github.com/jgridifier/traceot/pull/67">#67</a> (V5.2c FAIL, parked, 2026-11-13). No PRs are open, no branch has newer commits, and no study ran. CI and Pages on <code>main</code> were green. <strong>Blocker (unchanged):</strong> no pre-registration has been drafted for the next out-of-scope suite.</p>
 </div>
 
 <section id="new">
 <div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
 <div class="card">
   <div class="card-top"><span class="tag">NO CHANGE</span></div>
-  <p>Checked on 2026-11-14 at about 2:20 PM ET: the <code>main</code> log, open PRs (none), remote branches (newest is <code>quant/v5-2c-specified-results</code>, 4:35 PM ET 2026-11-13, already merged as #67), <code>docs/learn/</code>, and <code>docs/research/</code>. No new results, failures, decisions, or design changes.</p>
+  <p>Checked on 2026-11-15 at about 2:30 PM ET: the <code>main</code> log (only <a href="https://github.com/jgridifier/traceot/pull/68">#68</a>, the 2026-11-14 nightly, since the last page), open PRs (none), remote branches (newest is <code>main</code>, 2:18 PM ET 2026-11-14), issues (none open), CI runs (all green), <code>docs/learn/</code> and <code>docs/research/</code>. No new results, failures, decisions or design changes.</p>
 </div>
 </section>
 
 <section id="blocker">
 <div class="sec-head"><span class="n">02</span><h2>Blocker</h2><span class="line"></span></div>
 <div class="card">
-  <p>The specified-family claim is parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>). Its cells are not re-run, re-seeded or re-tuned. Every remaining out-of-scope suite (struct cells, ShiftBench, speed, per-feature shares) needs its own pre-registration before any run, and none has been drafted. The lab has standing authority to pick one. This nightly only reports, so it did not open one.</p>
+  <p>The specified-family claim is parked (<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_2C_SPECIFIED.md">PARK_V5_2C_SPECIFIED.md</a>). Its cells are not re-run, re-seeded or re-tuned. Every remaining out-of-scope suite (struct cells, ShiftBench, speed, per-feature shares) needs its own pre-registration before any run, and none has been drafted. The lab has standing authority to pick one. This nightly only reports, so it did not open one. This is now the second day the blocker has stood.</p>
 </div>
 </section>
 
 <section id="tomorrow">
 <div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
 <p>Pick one out-of-scope suite and open a docs-only pre-registration PR for it. The PR should give the hypothesis, metric, margin, kill rule and fresh seeds that skip every spent range and the sealed 9600–9619. It should not run anything. Until that PR exists, the next nightly will be another no-change page.</p>
-<p class="note">Seeds 9600–9619 remain sealed and untouched. Spent ranges are listed in the <a href="nightly/2026-11-13-late.html">previous snapshot</a>. Rust core with a thin Python layer; no neural nets.</p>
+<p class="note">Seeds 9600–9619 remain sealed and untouched. Spent ranges are listed in the <a href="nightly/2026-11-13-late.html">2026-11-13 late-afternoon snapshot</a>. Rust core with a thin Python layer; no neural nets.</p>
 </section>
 
 <section id="archive">
 <div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
 <ol reversed>
-  <li><a href="nightly/2026-11-14.html">2026-11-14</a> (this one)</li>
+  <li><a href="nightly/2026-11-15.html">2026-11-15</a> (this one)</li>
+  <li><a href="nightly/2026-11-14.html">2026-11-14</a></li>
   <li><a href="nightly/2026-11-13-late.html">2026-11-13 late afternoon</a></li>
   <li><a href="nightly/2026-11-13-evening.html">2026-11-13 evening</a></li>
   <li><a href="nightly/2026-11-13.html">2026-11-13 morning</a></li>
