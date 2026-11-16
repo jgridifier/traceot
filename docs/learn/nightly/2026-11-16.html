@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-16 · traceot</title>
+<meta name="description" content="Blocker cleared: the struct-cells suite for TRACE v5.1 is pre-registered (PR #70). Next: its runner PR, then rehearsal, then one pass.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="../../assets/brief.css">
+<!-- TRACE Learn home-screen / PWA tags. Paste into <head> of every TRACE nightly page.
+     The nightly routine should include this block so future nightly pages inherit it.
+     Paths are root-absolute so they resolve under https://jgridifier.github.io/traceot/
+     from both learn/nightly.html and learn/nightly/YYYY-MM-DD.html. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
+</head>
+<body>
+<main>
+<header class="mast">
+  <p class="date">Nightly · 2026-11-16 · America/New_York (EST)</p>
+  <h1>TRACE nightly</h1>
+  <p class="dek">The two-day blocker is cleared. The next study is frozen on paper: does V5.1 keep its edge when the shift is structure-only or mixed? Nothing has run yet. Previous: <a href="2026-11-15.html">2026-11-15</a>.</p>
+  <nav>
+    <a href="../../index.html">Learn home</a> ·
+    <a href="../research_board.html">Research board</a> ·
+    <a href="../v5_1_paper.html">V5.1 paper</a> ·
+    <a href="../v5_2c_specified.html">V5.2c specified (FAIL, parked)</a>
+  </nav>
+</header>
+
+<div class="tldr">
+  <p><strong>Short version:</strong> PR <a href="https://github.com/jgridifier/traceot/pull/70">#70</a> merged at 5:54 AM ET. It pre-registers one hypothesis, docs-only: <code>TRACE_V5_1</code>, unchanged, is BEST or NON-INFERIOR to the best of DFL/CFM on the three cells V5.1 has never been run on (<code>skew_struct</code>, <code>tail_struct</code>, <code>shape_mixed</code>, each at n = 2000 and 20 000). It must also pass role checks on all six cells and a false-attribution check on the four structure-only ones. The freeze point is merge commit <code>85a8fcc</code>. No seeds were run. CI and Pages on <code>main</code> are green, no PRs are open, and <code>main</code> is the only branch.</p>
+</div>
+
+<section id="new">
+<div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">MERGED · DECISION</span></div>
+  <h3>Next suite chosen: struct cells (PR <a href="https://github.com/jgridifier/traceot/pull/70">#70</a>)</h3>
+  <p><a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_STRUCT.md">PREREG_V5_1_STRUCT.md</a> picks struct cells from the four out-of-scope suites. The reason: right now a method that labelled <em>every</em> shift “composition” would also pass the V5.1 gate. Cells where the composition truth is about 0 (structure-only), or where both roles are planted with opposite signs (mixed), are the direct test of that. A PASS widens the claim from “BEST on composition cells” to “separates composition from structure across the H7 shape family”.</p>
+  <p>Why the other suites are not first: ShiftBench needs a new channel adapter and has a heteroskedastic scenario that V5.1 excludes by design. Speed alone isn’t a claim. Per-feature shares need a new oracle and a new rival, and the doc names them as the <strong>next</strong> suite after this one.</p>
+</div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">DESIGN · FROZEN</span></div>
+  <h3>What is frozen</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>scenario</th><th>channel</th><th>truth comp</th><th>truth struct</th><th>margin δ</th></tr></thead>
+    <tbody>
+      <tr><td><code>skew_struct</code></td><td>λ₃</td><td>−0.000351</td><td>0.050369</td><td>0.005072</td></tr>
+      <tr><td><code>tail_struct</code></td><td>λ₄</td><td>0.0000851</td><td>0.009742</td><td>0.0009827</td></tr>
+      <tr><td><code>shape_mixed</code></td><td>λ₃</td><td>0.039513</td><td>−0.053466</td><td>0.009298</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Truth comes from the committed <code>shiftbench_truth_shape.json</code> (oracle seed 99) and is not recomputed. δ = 0.10 × (|c| + |s|).</p>
+  <ul>
+    <li><strong>Seeds:</strong> 14000–14049 (n = 2000, p = 5, 50 reps) and 14100–14119 (n = 20 000, p = 20, 20 reps), for 210 tasks. 14050–14099 is left unused. The runner must carry a <code>FORBIDDEN</code> set that names 9600–9619 (sealed) and 10400–10799 (coverage study).</li>
+    <li><strong>Bars:</strong> the inherited paired t + bootstrap upper bound (the larger is used), and Holm across the six accuracy tests. On mixed cells the role check is about signs, not dominance: ĉ must be positive and ŝ negative. On the four structure-only cells the upper bound of mean |ĉ| must be &lt; δ, after Holm.</li>
+    <li><strong>Kill rule:</strong> any cell failing any check, or left INCOMPLETE, rejects H. In that case the docs write <code>PARK_V5_1_STRUCT.md</code>, and the README, paper and learn pages restate V5.1 as a claim about composition-only cells. There are no re-runs.</li>
+    <li><strong>Harness:</strong> spawn-safe, with a mandatory pre-flight and a rehearsal on seeds 97/98, a 5-minute no-progress watchdog and a 30-minute cap. One pass with no interim look.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">KNOWN RISK</span></div>
+  <p>The doc names the risk up front. The only earlier numbers on these cells come from v4 (a different method; all FAIL) and from V5.2’s spline (a different simulator, parked). Neither was used to tune anything. It also adds one descriptive readout: on <code>tail_struct</code>, whether the λ₄ composition piece is biased when its truth is about 0. That speaks to the <code>tail_comp</code> under-estimate still open from V5.2b.</p>
+</div>
+</section>
+
+<section id="check">
+<div class="sec-head"><span class="n">02</span><h2>One thing found while checking</h2><span class="line"></span></div>
+<div class="card">
+  <div class="card-top"><span class="tag">ACTION FOR RUNNER PR</span></div>
+  <p>Prereg §2 says the runner PR must report whether any commit after the V5.1 implementation merge <code>665939b</code> touched the <code>explain_v5</code> OLS path in <code>crates/core</code>. Four commits after it touched <code>crates/core</code>: <code>5db5806</code> (V5.2 spline), <code>3b8a1d4</code> (V5.1 made the default), <code>3b382f0</code> (report-only fit check) and <code>4cf9754</code> (V5.2 specified model). So the runner PR can’t skip the check. It has to show that <code>explain_v5_1</code> output on one <code>skew_struct</code> draw at oracle seed 99 is bit-identical between <code>665939b</code> and the runner SHA. If it isn’t, the work stops: that counts as a method change and needs its own pre-registration.</p>
+</div>
+</section>
+
+<section id="tomorrow">
+<div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>Open the runner PR (prereg §9 step 1), which runs no gate seeds. It needs: <code>benchmarks/shiftbench/run_v5_1_struct_gate.py</code> and its summariser, built on <code>run_v5_1_gate.py</code>, <code>summarize_v5_1_gate.py</code> and <code>spawn_safe.py</code>; the <code>FORBIDDEN</code> seed set and the range assertion; and the seed-99 bit-identity check against <code>665939b</code> described above. CI must be green. After that comes the pre-flight and the rehearsal on 97/98, then the single pass.</p>
+<p class="note">Seeds 9600–9619 stay sealed and untouched. Rust core with a thin Python layer; no neural nets.</p>
+</section>
+
+<section id="archive">
+<div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<ol reversed>
+  <li><a href="2026-11-16.html">2026-11-16</a> (this one)</li>
+  <li><a href="2026-11-15.html">2026-11-15</a></li>
+  <li><a href="2026-11-14.html">2026-11-14</a></li>
+  <li><a href="2026-11-13-late.html">2026-11-13 late afternoon</a></li>
+  <li><a href="2026-11-13-evening.html">2026-11-13 evening</a></li>
+  <li><a href="2026-11-13.html">2026-11-13 morning</a></li>
+  <li><a href="2026-11-12.html">2026-11-12</a></li>
+  <li><a href="2026-11-11.html">2026-11-11</a></li>
+  <li><a href="2026-11-10.html">2026-11-10</a></li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+</section>
+</main>
+</body>
+</html>
