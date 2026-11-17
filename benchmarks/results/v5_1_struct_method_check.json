@@ -1,0 +1,202 @@
+{
+  "description": "Bit-identity record for PREREG_V5_1_STRUCT.md \u00a72. explain_v5_1 output on one centred skew_struct draw (n=2000, p=5, oracle seed 99) at the V5.1 implementation merge versus current main. Timings and the later report-only linear_mean_check / dropped_cols fields are excluded: they do not enter the split.",
+  "impl_sha": "665939bd4aa78ffc7474b91d482d18ac0191d595",
+  "compared_against_sha": "6e58f089f57a356620a494cd9e14bd340a183d87",
+  "compared_against_sha_full": null,
+  "prereg_sha": "85a8fccfac44b6a1506037d785d4be6cf56c3bdb",
+  "core_commits_after_impl_touching_crates_core": [
+    {
+      "sha": "5db58067e4356035eab43078ec80ccff97ecb304",
+      "subject": "feat(v5.2): TRACE_V5_2 additive restricted-cubic-spline location model, curved simulator, truth (PREREG_V5_2 \u00a72-3)"
+    },
+    {
+      "sha": "3b8a1d4c827444bbbb86ba2ffa5149897e179746",
+      "subject": "feat(v5): make TRACE_V5_1 (OLS location) the explain_v5 default"
+    },
+    {
+      "sha": "3b382f0f47426f4f6f1c1badcd452aeb25936378",
+      "subject": "feat(v5): report-only residual-vs-fit linear-mean check; paper \u00a71/\u00a72/\u00a75 text"
+    },
+    {
+      "sha": "4cf9754ff4deeb7ed1da9d2a0267529563ed87b3",
+      "subject": "feat(v5.2-specified): LocationModel::Specified, simulator, truth, and gate runner (not run)"
+    }
+  ],
+  "draw": {
+    "scenario": "skew_struct",
+    "n": 2000,
+    "p": 5,
+    "seed": 99,
+    "centred": true,
+    "inputs_npz": "v5_1_struct_method_check_inputs.npz",
+    "input_sha256": {
+      "XA": "4dd0aa6be740cf468276a85326cb24db8c23e2aa3deab838c1e4f34f7f257284",
+      "yA": "788fc46125acbc5b9ff35b59af70139da6a0c5019dd2ffb4066b78f5b7e3ecbe",
+      "XB": "098702388e70ed77e5b08cf716b07ba637ab4f8fac9feb9f92f3b8156d69081a",
+      "yB": "fa1ae9ad6b03afb93e87354b14569e3b64decc93a28774fd9fc7ca7dfc783f23"
+    }
+  },
+  "toolchain": {
+    "rustc": "1.99.0 (b940084d7 2026-09-28)",
+    "cargo": "1.99.0 (5f94df478 2026-08-27)",
+    "numpy_main_build": "2.5.5",
+    "python": "3.13.5",
+    "profile": "release"
+  },
+  "bit_identical": true,
+  "new_keys_on_later_sha_ignored": [
+    "linear_mean_check",
+    "dropped_cols_a",
+    "dropped_cols_b",
+    "seconds_fit",
+    "seconds_mixture",
+    "seconds_total"
+  ],
+  "reference": {
+    "lsplit_comp": {
+      "list": [
+        -0.005157078744462584,
+        0.012256259953421944,
+        0.0019302222879466636,
+        -0.0027869602852081954
+      ],
+      "sha256": "3694122487610a3def7e6fd4a4fad99af800338743f542bf64d20a449891b17d",
+      "shape": [
+        4
+      ]
+    },
+    "lsplit_struct": {
+      "list": [
+        0.017840150922348585,
+        0.032216586701513616,
+        0.056854401105669666,
+        0.025081080515775872
+      ],
+      "sha256": "5b8c26af11a6e96c9e6cd94e4a3fd263b31b7b4805df17425ab34565f69cd05c",
+      "shape": [
+        4
+      ]
+    },
+    "aa": {
+      "q_mix": {
+        "sha256": "984e3c33f92de7ae9fd6c3cefdddfa8caac7513fbee1c26ade2c91d454d79c52",
+        "shape": [
+          64
+        ]
+      },
+      "q_bary": {
+        "sha256": "14d4a088d7ef5fff0dfd4561f8b14c3123ccce7fb5f314949a0dfbb927339dff",
+        "shape": [
+          64
+        ]
+      },
+      "lmom": {
+        "sha256": "2812e4735a55448d044efcb33fbe159d5bf9a3b1ece895eea92d7a43977c8d3e",
+        "shape": [
+          4
+        ]
+      },
+      "lmom_bary": {
+        "sha256": "3ea817d9d63ec0289080c91d09b2d6305d7e32397649edec311d260cd352c3c1",
+        "shape": [
+          4
+        ]
+      },
+      "mixing_residual": {
+        "sha256": "dd1e956954c99e89406fdeb2789f842885ee87795730d1d23bef5aee6c5a2577",
+        "shape": []
+      }
+    },
+    "ab": {
+      "q_mix": {
+        "sha256": "2008028df46cdd10b26712fbd567bd5f266898b1a41624af45e341f88192414c",
+        "shape": [
+          64
+        ]
+      },
+      "q_bary": {
+        "sha256": "ea2a37623559aa303be7fb5ba05e5ae0f90a5c643395b29a4339529901e45d83",
+        "shape": [
+          64
+        ]
+      },
+      "lmom": {
+        "sha256": "2698a7fd6acb57fc6083ad453d9a0800c184e27f5eceba12ece99aefce3c8ec9",
+        "shape": [
+          4
+        ]
+      },
+      "lmom_bary": {
+        "sha256": "f48b0df1ae785aafe7120df99ba4f57f686454bd895b3e2abc1cd452afea2e97",
+        "shape": [
+          4
+        ]
+      },
+      "mixing_residual": {
+        "sha256": "f0269f21fcc845a7e55a895000242249964e9dd0e570fad9d7836bd17aaf9c34",
+        "shape": []
+      }
+    },
+    "ba": {
+      "q_mix": {
+        "sha256": "3acf43dd8582a32310607d59a6641be5823fc4ee10a72606e5b19491dd7cb89b",
+        "shape": [
+          64
+        ]
+      },
+      "q_bary": {
+        "sha256": "3a1ef922d6dffe138acc3fe7c6d54ff3dc8dcff91afc280276a41a926ef7f873",
+        "shape": [
+          64
+        ]
+      },
+      "lmom": {
+        "sha256": "8e625ed84229aa060d6d8879d946da4c6ecbf6e72eff1370d1946b0e66d87d3f",
+        "shape": [
+          4
+        ]
+      },
+      "lmom_bary": {
+        "sha256": "d1f46a30ad9ce121907e462c6541670ce333bec0dfa0e68921ea714e37a34c2d",
+        "shape": [
+          4
+        ]
+      },
+      "mixing_residual": {
+        "sha256": "c1e9120b0b3ec7789930cf30344c5450b00c5e5bf91b2e5f0483e39f25cc4aa5",
+        "shape": []
+      }
+    },
+    "bb": {
+      "q_mix": {
+        "sha256": "a63728b487f9747ccfc027cb82e8140d02ea82f08f22d1a36eab955460fcd098",
+        "shape": [
+          64
+        ]
+      },
+      "q_bary": {
+        "sha256": "b6f499c605f33ea4693600dba7785a8863c65c81cd0d7455dfd96648b770aac5",
+        "shape": [
+          64
+        ]
+      },
+      "lmom": {
+        "sha256": "c6a790460ebec098503717f0b1caefffab71996ce132bffd240185820bf67f01",
+        "shape": [
+          4
+        ]
+      },
+      "lmom_bary": {
+        "sha256": "1ff9757f09c7b791850f7a3ca3a7fa1018e24dc015c04106146766821dee1c82",
+        "shape": [
+          4
+        ]
+      },
+      "mixing_residual": {
+        "sha256": "0fd9b9f0184b459a156e407d1e6ec6bcfa0d026fcb791f9ef113bdbf99a31371",
+        "shape": []
+      }
+    }
+  },
+  "compared_against_short": "6e58f08"
+}
