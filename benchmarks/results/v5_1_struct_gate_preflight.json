@@ -1,0 +1,54 @@
+{
+  "versions": {
+    "python": "3.13.5 (main, Aug 10 2026, 12:06:59) [GCC 14.2.0]",
+    "traceot": "0.1.0",
+    "numpy": "2.5.5",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1"
+  },
+  "imports": {
+    "sklearn": "ok",
+    "traceot": "ok",
+    "DFL": "ok",
+    "CFM": "ok"
+  },
+  "smoke": {
+    "TRACE": "ok",
+    "DFL": "ok",
+    "CFM": "ok"
+  },
+  "method_identity": {
+    "ok": true,
+    "impl_sha": "665939bd4aa78ffc7474b91d482d18ac0191d595",
+    "core_commits_after_impl": [
+      "5db58067e4356035eab43078ec80ccff97ecb304",
+      "3b8a1d4c827444bbbb86ba2ffa5149897e179746",
+      "3b382f0f47426f4f6f1c1badcd452aeb25936378",
+      "4cf9754ff4deeb7ed1da9d2a0267529563ed87b3"
+    ],
+    "seed": 99,
+    "scen": "skew_struct",
+    "input_sha256": {
+      "XA": "4dd0aa6be740cf468276a85326cb24db8c23e2aa3deab838c1e4f34f7f257284",
+      "yA": "788fc46125acbc5b9ff35b59af70139da6a0c5019dd2ffb4066b78f5b7e3ecbe",
+      "XB": "098702388e70ed77e5b08cf716b07ba637ab4f8fac9feb9f92f3b8156d69081a",
+      "yB": "fa1ae9ad6b03afb93e87354b14569e3b64decc93a28774fd9fc7ca7dfc783f23"
+    },
+    "lsplit_comp_sha256": "3694122487610a3def7e6fd4a4fad99af800338743f542bf64d20a449891b17d",
+    "lsplit_struct_sha256": "5b8c26af11a6e96c9e6cd94e4a3fd263b31b7b4805df17425ab34565f69cd05c",
+    "mismatches": []
+  },
+  "ok": true,
+  "smoke_seed": 99,
+  "smoke_scen": "skew_struct",
+  "smoke_n": 2000,
+  "smoke_p": 5,
+  "prereg_sha": "85a8fccfac44b6a1506037d785d4be6cf56c3bdb",
+  "impl_sha": "665939bd4aa78ffc7474b91d482d18ac0191d595",
+  "core_commits_after_impl": [
+    "5db58067e4356035eab43078ec80ccff97ecb304",
+    "3b8a1d4c827444bbbb86ba2ffa5149897e179746",
+    "3b382f0f47426f4f6f1c1badcd452aeb25936378",
+    "4cf9754ff4deeb7ed1da9d2a0267529563ed87b3"
+  ]
+}

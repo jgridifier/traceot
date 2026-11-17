@@ -36,6 +36,10 @@ all four pure-composition cells, and passed the role check in all four
 ([V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md)). The simulator's mean is linear,
 so this result says nothing about non-linear means; a follow-up that tried curved means was
 pre-registered, run once, and parked ([PARK_V5_2.md](../research/PARK_V5_2.md)).
+A later pre-registered suite on the structure-only and mixed cells of the same simulator
+ran once on 2026-11-17 and **failed**; the widened claim is parked
+([PARK_V5_1_STRUCT.md](../research/PARK_V5_1_STRUCT.md)). The public V5.1 accuracy claim
+is therefore **composition-only cells**.
 
 ## 1. Problem
 
@@ -175,6 +179,7 @@ and the mixing residual \(\lVert Q_{[s,t]}-\bar Q_{[s,t]}\rVert_{L^2(0,1)}\); th
 | v5 failure diagnosis | — | **EXPLORATORY**, not a gate, no claim; spent dev seeds 9500–9549 only | [V5_DIAGNOSIS.md](../research/V5_DIAGNOSIS.md) |
 | **v5.1** (OLS location fit) | `b33f507` | **PASS** — all four cells BEST, all role checks PASS | [V5_1_GATE_RESULTS.md](../benchmark/V5_1_GATE_RESULTS.md), [PREREG_V5_1.md](../research/PREREG_V5_1.md) |
 | v5.2 (curved means, additive spline) | `df5aff8` | **FAIL** — curved-mean claim parked | [V5_2_GATE_RESULTS.md](../benchmark/V5_2_GATE_RESULTS.md), [PARK_V5_2.md](../research/PARK_V5_2.md) |
+| v5.1 structure/mixed cells | `85a8fcc` | **FAIL** — widened claim parked; V5.1 accuracy claim restated as composition-only | [V5_1_STRUCT_GATE_RESULTS.md](../benchmark/V5_1_STRUCT_GATE_RESULTS.md), [PARK_V5_1_STRUCT.md](../research/PARK_V5_1_STRUCT.md) |
 
 Notes, quoted:
 
@@ -183,6 +188,7 @@ Notes, quoted:
   `PARK_V5.md`; the record is V5_GATE1_RESULTS.md.
 * v5.2 park: "V5.1's linear-mean claim stands exactly as stated in V5_1_GATE_RESULTS.md. This
   failure neither strengthens nor weakens it." ([PARK_V5_2.md](../research/PARK_V5_2.md))
+* v5.1 struct park (2026-11-17): H is rejected. Mixed cells BEST after Holm; structure-only cells failed false-attribution (and `tail_struct` at n = 2 000 failed accuracy). "The validated V5.1 claim is restated as composition-only cells." ([PARK_V5_1_STRUCT.md](../research/PARK_V5_1_STRUCT.md))
 * Holdout: "9600–9619 belong to the closed PREREG_V5 gate; they stay sealed and are not reused"
   (PREREG_V5_1 §3); "There is no separate holdout in this freeze; the gate seeds above are the
   test." (PREREG_V5_1 §6)
@@ -466,6 +472,15 @@ final, and changes no other returned value. Small values do not show the mean is
   [344, 374] of 400). Record: [V5_1_COVERAGE_RESULTS.md](../benchmark/V5_1_COVERAGE_RESULTS.md).
   Learn page: [v5_1_coverage.html](../learn/v5_1_coverage.html). The 2026-11-11 hold is
   historical ([HOLD_V5_1_COVERAGE.md](../research/HOLD_V5_1_COVERAGE.md)).
-* [ ] Remaining out-of-scope suites in PREREG_V5_1 §6 (struct cells, ShiftBench, speed,
-  per-feature shares) each need their own pre-registration before any claim.
+* [x] Struct cells: pre-registered in [PREREG_V5_1_STRUCT.md](../research/PREREG_V5_1_STRUCT.md)
+  (PR #70, freeze `85a8fcc`), runner PR #72, run once 2026-11-17, 8:09 AM ET.
+  Verdict **FAIL**. Both `shape_mixed` cells BEST after Holm; all six role checks passed;
+  `tail_struct` at n = 2 000 failed accuracy; three of four structure-only cells failed
+  false-attribution. 210/210 tasks, 19.3 s. H is rejected. The public V5.1 accuracy claim
+  is restated as composition-only cells. Park:
+  [PARK_V5_1_STRUCT.md](../research/PARK_V5_1_STRUCT.md).
+  Record: [V5_1_STRUCT_GATE_RESULTS.md](../benchmark/V5_1_STRUCT_GATE_RESULTS.md).
+  Learn page: [v5_1_struct.html](../learn/v5_1_struct.html).
+* [ ] Remaining out-of-scope suites in PREREG_V5_1 §6 (ShiftBench, speed, per-feature
+  shares) each need their own pre-registration before any claim.
 * [ ] Indices 9600–9619 stay sealed; no holdout confirmation of v5.1 is permitted by its prereg.

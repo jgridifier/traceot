@@ -106,11 +106,14 @@ had the roles backwards. With the straight-line mean, the composition piece is n
 to 5 times the response piece.</p>
 
 <div class="callout warn">
-<strong>What this does not show.</strong> The test data has a straight-line mean, so a
+<strong>What this does and does not show.</strong> The test data has a straight-line mean, so a
 straight-line fit is the right shape by construction. The pass shows the v5 mixture works
-<em>once the mean model is right</em>. It says nothing yet about curved (non-linear) means,
-structure-only cells, coverage, real-data benchmarks, or speed. Those need their own
-pre-registered tests.
+<em>once the mean model is right</em>, on these <strong>composition-only</strong> cells.
+A follow-up on structure-only and mixed cells ran once on 2026-11-17 and
+<strong>failed</strong> (<a href="v5_1_struct.html">results</a>;
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_1_STRUCT.md">park</a>).
+The public V5.1 accuracy claim is therefore composition-only cells. This page does not
+change. It also says nothing about curved (non-linear) means, ShiftBench, or speed.
 </div>
 
 <h2>How to use it</h2>
