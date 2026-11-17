@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-17 evening · traceot</title>
+<meta name="description" content="Next TRACE idea designed from the struct-cells failure: a zero-gated composition piece (V5.1-ZG). Design note only; nothing run, no seeds drawn.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="../../assets/brief.css">
+<!-- TRACE Learn home-screen / PWA tags. Paste into <head> of every TRACE nightly page.
+     The nightly routine should include this block so future nightly pages inherit it.
+     Paths are root-absolute so they resolve under https://jgridifier.github.io/traceot/
+     from both learn/nightly.html and learn/nightly/YYYY-MM-DD.html. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
+</head>
+<body>
+<main>
+<header class="mast">
+  <p class="date">Nightly · 2026-11-17 evening · America/New_York (EST)</p>
+  <h1>TRACE nightly</h1>
+  <p class="dek">This morning’s snapshot already covered the struct-cells FAIL. New tonight: the next idea, designed from that failure — report the composition piece only when its validated band excludes zero. Design note only; nothing run. Previous: <a href="2026-11-17.html">2026-11-17 morning</a>.</p>
+  <nav>
+    <a href="../../index.html">Learn home</a> ·
+    <a href="../research_board.html">Research board</a> ·
+    <a href="../v5_1_struct.html">V5.1 structure/mixed (FAIL, parked)</a> ·
+    <a href="../v5_1_coverage.html">V5.1 coverage (PASS)</a> ·
+    <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DESIGN_V5_1_ZG.md">Design: V5.1-ZG</a>
+  </nav>
+</header>
+
+<div class="tldr">
+  <p><strong>Short version:</strong> No run, result, or merge landed after results PR <a href="https://github.com/jgridifier/traceot/pull/73">#73</a> (8:13 AM ET), which the morning snapshot reported. Tonight adds a design note, <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DESIGN_V5_1_ZG.md">DESIGN_V5_1_ZG.md</a>. Reading only the published summary tables, the false-attribution misses look like ordinary sampling noise, not bias: on <code>skew_struct</code> the signed composition piece is 1.7–3.2% of its absolute size, and its absolute size falls about √10 when rows grow 10×. A noisy-but-unbiased piece will always miss a fixed absolute bar at small n. So the proposed fix is in what TRACE <em>reports</em>: <strong>zero the composition piece when its 90% bootstrap band covers 0, and move it into structure so the two still add up to the total</strong>. Bars stay exactly as strict. <code>tail_struct</code> at n = 2 000 is written down in advance as a likely FAIL even with the fix. Not frozen, not run, no seeds drawn.</p>
+</div>
+
+<section id="new">
+<div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">DESIGN · NOT RUN</span></div>
+  <h3>What the failure showed (published summaries only)</h3>
+  <p>The park says a new hypothesis may not be picked by looking at this run beyond what is written there. So the note uses only the six-cell tables in <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_STRUCT_GATE_RESULTS.md">V5_1_STRUCT_GATE_RESULTS.md</a>, not the per-replication file.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>cell</th><th>n</th><th>mean ĉ</th><th>mean |ĉ|</th><th>signed/abs</th><th>δ</th><th>FA</th></tr></thead>
+    <tbody>
+      <tr><td><code>skew_struct</code></td><td>2 000</td><td>0.000116</td><td>0.00670</td><td>1.7%</td><td>0.00507</td><td>FAIL</td></tr>
+      <tr><td><code>tail_struct</code></td><td>2 000</td><td>0.000857</td><td>0.00370</td><td>23%</td><td>0.000983</td><td>FAIL</td></tr>
+      <tr><td><code>skew_struct</code></td><td>20 000</td><td>−0.0000679</td><td>0.00210</td><td>3.2%</td><td>0.00507</td><td>PASS</td></tr>
+      <tr><td><code>tail_struct</code></td><td>20 000</td><td>0.000214</td><td>0.00110</td><td>19%</td><td>0.000983</td><td>FAIL</td></tr>
+    </tbody>
+  </table></div>
+  <p>Mean |ĉ| shrinks 3.20× (<code>skew</code>) and 3.35× (<code>tail</code>) from n = 2 000 to 20 000, against √10 ≈ 3.16. This suggests 1/√n noise, but p also changes (5 → 20), so it is not a test. <code>tail_struct</code> also carries a small positive shift: about 0.79 δ at n = 2 000. That is the open <code>tail_comp</code> under-estimate seen from the other side, and gating cannot remove it.</p>
+</div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">PROPOSED METHOD</span></div>
+  <h3>V5.1-ZG: a zero-gated composition piece</h3>
+  <p>Per graded channel k: run <code>explain_v5_1</code> unchanged, then compute the already-validated band <code>BAND_V5_1_PB90</code> (90% two-sample percentile bootstrap, B = 500; coverage <a href="../v5_1_coverage.html">PASSED</a> on composition cells). Then:</p>
+  <pre><code>if lo_k &lt;= 0 &lt;= hi_k:   c̃_k = 0,     s̃_k = ŝ_k + ĉ_k     # total kept exactly
+else:                    c̃_k = ĉ_k,   s̃_k = ŝ_k</code></pre>
+  <p>This is a pre-test (hard-threshold) estimator. It accepts a little bias when composition is small but real, in exchange for much less made-up composition when there is none. It adds no new knob: 90% and B = 500 are the settings that were already validated. Planned home: the Rust core next to <code>percentile_bands</code>, with a thin Python binding.</p>
+</div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">EXPECTATIONS · WRITTEN BEFORE ANY RUN</span></div>
+  <h3>What should happen, and where it can still fail</h3>
+  <p>If the null piece is centred and roughly normal with sd σ, and the band is calibrated, then ungated E|ĉ| = √(2/π)σ ≈ 0.798σ. Gated, E|c̃| ≈ 2φ(1.645)σ ≈ 0.206σ, about 3.9× smaller. Applying that factor to the published means is arithmetic, not a result:</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>cell</th><th>n</th><th>idealised gated mean |c̃|</th><th>δ</th><th>read</th></tr></thead>
+    <tbody>
+      <tr><td><code>skew_struct</code></td><td>2 000</td><td>≈ 0.0017</td><td>0.00507</td><td>comfortable</td></tr>
+      <tr><td><code>tail_struct</code></td><td>2 000</td><td>≈ 0.00096</td><td>0.000983</td><td><strong>borderline; FAIL is live</strong></td></tr>
+      <tr><td><code>tail_struct</code></td><td>20 000</td><td>≈ 0.00029</td><td>0.000983</td><td>comfortable</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The scored bar is an upper bound, not the mean, so real margins are thinner. The 0.79 δ shift on <code>tail_struct</code> at n = 2 000 makes the band exclude 0 more often than 10%. That cell stays in the suite; dropping it would mean choosing cells from this run. Other risks: the band has never been coverage-checked on structure-only cells or at n = 20 000, and any firing on <code>shape_mixed</code> or the composition cells costs accuracy directly. The pre-registration has to score both.</p>
+</div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">PREREG SHAPE · NOT FROZEN</span></div>
+  <h3>What the pre-registration will lock</h3>
+  <ul>
+    <li><strong>H (draft):</strong> V5.1-ZG has to do three things. (a) Pass the PREREG_V5_1_STRUCT §5 false-attribution bar, unchanged, on all four structure-only cells. (b) Be BEST or NON-INFERIOR after Holm against DFL and CFM on all six struct/mixed cells, with the role check. (c) Stay BEST or NON-INFERIOR on the four composition cells, so the claim that already stands is not lost.</li>
+    <li><strong>No bar loosening:</strong> the false-attribution check stays on mean |c̃| with the same δ, and does not switch to a rate.</li>
+    <li><strong>Fresh seeds (proposed):</strong> 15000–15049 and 15100–15119. On <code>main</code> @ <code>edea650</code>, <code>git grep</code> finds no use, and no <code>rep</code> in <code>benchmarks/results/*.jsonl</code> falls in 15000–15119. <code>FORBIDDEN</code> must name 9600–9619 (sealed), 10400–10799, 14000–14049 and 14100–14119.</li>
+    <li><strong>Sizing</strong> uses per-task medians already on record: about 3.3 s per task at n = 2 000 and 34 s at n = 20 000 with B = 500. Over ten cells that is about 4 200 core-seconds, or about 9 minutes on 8 workers. Proposed cap: 45 min.</li>
+  </ul>
+  <p class="note">Full note: <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/DESIGN_V5_1_ZG.md">docs/research/DESIGN_V5_1_ZG.md</a> (this nightly’s PR). Morning snapshot: <a href="2026-11-17.html">2026-11-17 morning</a>.</p>
+</div>
+</section>
+
+<section id="tomorrow">
+<div class="sec-head"><span class="n">02</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>Rust first. Add <code>gate_composition(point, band) → (c̃, s̃, fired)</code> next to <code>percentile_bands</code>, with unit tests: a band that contains 0 fires and moves the piece into structure, and the sum is preserved bit-for-bit. Add a thin Python binding and a parity test showing the library band equals the harness <code>BAND_V5_1_PB90</code> on one throwaway draw (seed 97). Then freeze <code>PREREG_V5_1_ZG.md</code> from the note’s §4. The runner and the single pass come after the freeze, never before.</p>
+<p class="note">No re-run or amendment of the parked struct suite. Seeds 9600–9619 stay sealed and untouched. Rust core with a thin Python layer; no neural nets.</p>
+</section>
+
+<section id="archive">
+<div class="sec-head"><span class="n">03</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<ol reversed>
+  <li><a href="2026-11-17-evening.html">2026-11-17 evening</a> (latest)</li>
+  <li><a href="2026-11-17.html">2026-11-17 morning</a></li>
+  <li><a href="2026-11-16.html">2026-11-16</a></li>
+  <li><a href="2026-11-15.html">2026-11-15</a></li>
+  <li><a href="2026-11-14.html">2026-11-14</a></li>
+  <li><a href="2026-11-13-late.html">2026-11-13 late afternoon</a></li>
+  <li><a href="2026-11-13-evening.html">2026-11-13 evening</a></li>
+  <li><a href="2026-11-13.html">2026-11-13 morning</a></li>
+  <li><a href="2026-11-12.html">2026-11-12</a></li>
+  <li><a href="2026-11-11.html">2026-11-11</a></li>
+  <li><a href="2026-11-10.html">2026-11-10</a></li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+</section>
+</main>
+</body>
+</html>
