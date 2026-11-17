@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRACE nightly · 2026-11-17 · traceot</title>
+<meta name="description" content="The struct-cells suite ran once and failed. Mixed cells passed; structure-only cells failed false-attribution (and one accuracy bar). The V5.1 accuracy claim is restated as composition-only cells.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="../../assets/brief.css">
+<!-- TRACE Learn home-screen / PWA tags. Paste into <head> of every TRACE nightly page.
+     The nightly routine should include this block so future nightly pages inherit it.
+     Paths are root-absolute so they resolve under https://jgridifier.github.io/traceot/
+     from both learn/nightly.html and learn/nightly/YYYY-MM-DD.html. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
+</head>
+<body>
+<main>
+<header class="mast">
+  <p class="date">Nightly · 2026-11-17 · America/New_York (EST)</p>
+  <h1>TRACE nightly</h1>
+  <p class="dek">The struct-cells suite ran once this morning and failed. Mixed cells passed; structure-only cells did not clear false-attribution. The public V5.1 accuracy claim is now composition-only cells. Previous: <a href="2026-11-16.html">2026-11-16</a>.</p>
+  <nav>
+    <a href="../../index.html">Learn home</a> ·
+    <a href="../research_board.html">Research board</a> ·
+    <a href="../v5_1_paper.html">V5.1 paper</a> ·
+    <a href="../v5_1_gate.html">V5.1 composition-cell gate (PASS)</a> ·
+    <a href="../v5_1_struct.html">V5.1 structure/mixed (FAIL, parked)</a>
+  </nav>
+</header>
+
+<div class="tldr">
+  <p><strong>Short version:</strong> Runner PR <a href="https://github.com/jgridifier/traceot/pull/72">#72</a> merged at 8:08 AM ET (CI green). Pre-flight showed <code>explain_v5_1</code> is bit-identical to the V5.1 merge <code>665939b</code> on one seed-99 <code>skew_struct</code> draw, despite four later core commits. Rehearsal on seeds 97/98 finished 12/12 tasks in 2.9 s. The single confirmatory pass then ran on 14000–14049 and 14100–14119: 210/210 tasks in 19.3 s. Verdict <strong>FAIL</strong>. Both <code>shape_mixed</code> cells were BEST after Holm and all six role checks passed, but <code>tail_struct</code> at n = 2 000 failed accuracy and three of the four structure-only cells failed false-attribution. H is rejected. The widened claim is parked. The validated V5.1 accuracy claim is restated as composition-only cells. Sealed seeds 9600–9619 were not touched. There are no re-runs.</p>
+</div>
+
+<section id="new">
+<div class="sec-head"><span class="n">01</span><h2>New since last nightly</h2><span class="line"></span></div>
+
+<div class="card">
+  <div class="card-top"><span class="tag">MERGED · RUN · FAIL</span></div>
+  <h3>Struct-cells suite: one pass, H rejected (PRs <a href="https://github.com/jgridifier/traceot/pull/72">#72</a> and results)</h3>
+  <p>The runner is spawn-safe, with a 5-minute watchdog, a 30-minute cap, and a <code>FORBIDDEN</code> set that names 9600–9619 and 10400–10799. Gate seeds are refused unless <code>--confirmatory</code> is passed. Pre-flight ran in a spawned child. The four core commits after <code>665939b</code> (<code>5db5806</code>, <code>3b8a1d4</code>, <code>3b382f0</code>, <code>4cf9754</code>) did touch <code>crates/core</code>, so the bit-identity check was required; it passed.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>cell</th><th>n</th><th>verdict</th><th>role</th><th>false-attr.</th></tr></thead>
+    <tbody>
+      <tr><td><code>skew_struct</code></td><td>2 000</td><td>NON-INFERIOR</td><td>PASS</td><td>FAIL</td></tr>
+      <tr><td><code>tail_struct</code></td><td>2 000</td><td>FAIL</td><td>PASS</td><td>FAIL</td></tr>
+      <tr><td><code>shape_mixed</code></td><td>2 000</td><td>BEST</td><td>PASS</td><td>—</td></tr>
+      <tr><td><code>skew_struct</code></td><td>20 000</td><td>NON-INFERIOR</td><td>PASS</td><td>PASS</td></tr>
+      <tr><td><code>tail_struct</code></td><td>20 000</td><td>NON-INFERIOR</td><td>PASS</td><td>FAIL</td></tr>
+      <tr><td><code>shape_mixed</code></td><td>20 000</td><td>BEST</td><td>PASS</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">On the two n = 20 000 structure-only cells the interval itself was BEST, but Holm p BEST was 0.074 and 0.11, so those cells are NON-INFERIOR, not BEST. Full numbers: <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_STRUCT_GATE_RESULTS.md">V5_1_STRUCT_GATE_RESULTS.md</a>. Park: <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_1_STRUCT.md">PARK_V5_1_STRUCT.md</a>. Plain-language page: <a href="../v5_1_struct.html">v5_1_struct.html</a>.</p>
+</div>
+</section>
+
+<section id="check">
+<div class="sec-head"><span class="n">02</span><h2>One thing found while checking</h2><span class="line"></span></div>
+<div class="card">
+  <div class="card-top"><span class="tag">DESCRIPTIVE · NOT SCORED</span></div>
+  <p>On the structure-only cells the <em>signed</em> mean composition piece stays close to the planted near-zero truth. The scored false-attribution bar is on the mean of the <em>absolute</em> value, and that is what missed δ on three of four cells. This note cannot rescue or sink H. It is recorded because it speaks to the open <code>tail_comp</code> composition under-estimate, as the pre-registration asked.</p>
+</div>
+</section>
+
+<section id="tomorrow">
+<div class="sec-head"><span class="n">03</span><h2>Tomorrow’s concrete step</h2><span class="line"></span></div>
+<p>No re-run, no amendment, no new location model on these cells. Seeds 14000–14049 and 14100–14119 are spent. The remaining out-of-scope suites from the original V5.1 freeze are ShiftBench, speed, and per-feature shares; each still needs its own pre-registration before any claim. Per-feature shares were already named as the recommended next suite after this one, but that recommendation assumed a PASS. A later attempt to widen V5.1 beyond composition-only cells would need a new pre-registration on fresh seeds.</p>
+<p class="note">Seeds 9600–9619 stay sealed and untouched. Rust core with a thin Python layer; no neural nets.</p>
+</section>
+
+<section id="archive">
+<div class="sec-head"><span class="n">04</span><h2>All nightly snapshots</h2><span class="line"></span></div>
+<ol reversed>
+  <li><a href="2026-11-17.html">2026-11-17</a> (latest)</li>
+  <li><a href="2026-11-16.html">2026-11-16</a></li>
+  <li><a href="2026-11-15.html">2026-11-15</a></li>
+  <li><a href="2026-11-14.html">2026-11-14</a></li>
+  <li><a href="2026-11-13-late.html">2026-11-13 late afternoon</a></li>
+  <li><a href="2026-11-13-evening.html">2026-11-13 evening</a></li>
+  <li><a href="2026-11-13.html">2026-11-13 morning</a></li>
+  <li><a href="2026-11-12.html">2026-11-12</a></li>
+  <li><a href="2026-11-11.html">2026-11-11</a></li>
+  <li><a href="2026-11-10.html">2026-11-10</a></li>
+  <li><a href="2026-11-09.html">2026-11-09</a></li>
+  <li><a href="2026-11-08.html">2026-11-08</a></li>
+  <li><a href="2026-11-07.html">2026-11-07</a></li>
+  <li><a href="2026-11-06.html">2026-11-06</a></li>
+  <li><a href="2026-11-05.html">2026-11-05</a></li>
+  <li><a href="2026-11-04.html">2026-11-04</a></li>
+  <li><a href="2026-11-03.html">2026-11-03</a></li>
+  <li><a href="2026-11-02.html">2026-11-02</a></li>
+  <li><a href="2026-11-01.html">2026-11-01</a></li>
+  <li><a href="2026-10-31.html">2026-10-31</a></li>
+  <li><a href="2026-10-30.html">2026-10-30</a></li>
+  <li><a href="2026-10-29.html">2026-10-29</a></li>
+  <li><a href="2026-10-27.html">2026-10-27</a></li>
+  <li><a href="2026-10-26.html">2026-10-26</a></li>
+</ol>
+</section>
+</main>
+</body>
+</html>

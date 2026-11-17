@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRACE v5.1 structure/mixed-cell gate — results in plain language</title>
+<meta name="description" content="The frozen TRACE v5.1 structure/mixed-cell gate ran once, after a successful pre-flight and rehearsal. Mixed cells passed; structure-only cells failed false-attribution (and one accuracy bar). The hypothesis is rejected. The V5.1 claim stays composition-only.">
+<link rel="apple-touch-icon" sizes="180x180" href="/traceot/learn/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/traceot/learn/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/traceot/learn/icons/icon-192.png">
+<link rel="manifest" href="/traceot/learn/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="TRACE Learn">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F1912">
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family: system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem 3rem;
+    line-height: 1.6;
+    color: #e6eaf2;
+    background: #0f1218;
+  }
+  a{ color: #8ab4ff; }
+  a:visited{ color: #b9a0ff; }
+  h1,h2,h3{ color: #f2f5fb; line-height: 1.25; }
+  table{ border-collapse: collapse; display: block; overflow-x: auto; font-size: .9em; margin: 1rem 0; }
+  td,th{ border: 1px solid #2a3140; padding: 6px 10px; vertical-align: top; }
+  th{ background: #1a2030; color: #d7deea; text-align: left; }
+  tr:nth-child(even) td{ background: #141924; }
+  code{ background: #1c2333; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .nav{ font-size: .92em; opacity: .9; margin-bottom: 1.5rem; }
+  .callout{
+    background: #161c2a;
+    border-left: 3px solid #5b8cff;
+    padding: .9rem 1rem;
+    margin: 1.2rem 0;
+  }
+  .warn{ border-left-color: #e0a050; }
+  .good{ border-left-color: #4caf8f; }
+  .bad{ border-left-color: #e08a7a; }
+  .muted{ color: #9aa3b5; font-size: .92em; }
+  .status{
+    display: inline-block;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    background: #3a1e1c;
+    color: #e08a7a;
+  }
+  ul{ padding-left: 1.2rem; }
+  li{ margin: .35rem 0; }
+  .pass{ color: #4caf8f; font-weight: 600; }
+  .fail{ color: #e08a7a; font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="nav">
+  <a href="../index.html">Learn home</a> ·
+  <a href="v5_1_gate.html">V5.1 composition-cell gate (PASS)</a> ·
+  <a href="v5_1_coverage.html">V5.1 coverage (PASS)</a> ·
+  <a href="v5_2c_specified.html">V5.2c specified (FAIL, parked)</a> ·
+  <a href="nightly.html">Nightly</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_STRUCT_GATE_RESULTS.md">Full results</a> ·
+  <a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_1_STRUCT.md">Park</a>
+</p>
+
+<h1>TRACE v5.1 on structure-only and mixed cells: the gate ran once, and H is rejected</h1>
+<p><span class="status">FAIL · claim parked</span> &nbsp; <span class="muted">2026-11-17, 8:09 AM ET · prereg <code>85a8fcc</code> · implementation <code>665939b</code> · runner <code>5562b22</code></span></p>
+
+<div class="callout bad">
+<strong>Short version.</strong> After a successful pre-flight — including a bit-identity
+check of <code>explain_v5_1</code> against the V5.1 merge on one seed-99
+<code>skew_struct</code> draw — and a successful rehearsal of the full pipeline on
+throwaway seeds 97 and 98, the frozen test ran once, on fresh seeds 14000–14049
+and 14100–14119. All 210 tasks finished in 19.3 seconds, well under the 30-minute
+cap. The two mixed cells passed: TRACE was <strong>BEST</strong> against DFL and CFM
+after Holm, and it got the signs right. All six role checks passed. But three of
+the four structure-only cells failed the false-attribution check (the composition
+piece was not small enough when its planted truth is about 0), and
+<code>tail_struct</code> at n = 2 000 also failed the accuracy bar. Under the
+pre-registered kill rule, that is a <strong>FAIL</strong>: the hypothesis is
+rejected, and the widened claim is
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_1_STRUCT.md">parked</a>.
+The validated V5.1 claim remains the one on <strong>composition-only cells</strong>.
+There are no re-runs.
+</div>
+
+<h2>Why this test existed</h2>
+<p>The original V5.1 gate only used composition cells: the covariates change and
+the residual law stays put. A method that labelled <em>every</em> shift
+“composition” would also have passed that gate. This suite was the direct
+check of that hole. On structure-only cells the covariates have the same law
+in both periods and only the residual law changes, so the composition truth is
+about 0. On the mixed cell both roles are planted, with opposite signs.</p>
+<p>Nothing in the method was changed for this test. Four later commits had
+touched the Rust core, so pre-flight first showed that <code>explain_v5_1</code>
+output on the seed-99 draw was bit-identical to the V5.1 merge. Sealed seeds
+9600–9619 were not used. The coverage study seeds 10400–10799 were not used.</p>
+
+<h2>Results</h2>
+<table>
+<tr>
+  <th>cell</th><th>n</th><th>error v5.1</th><th>error DFL</th><th>error CFM</th>
+  <th>mean d</th><th>upper bound</th><th>δ</th><th>verdict</th>
+  <th>|ĉ|</th><th>|ŝ|</th><th>role</th><th>false-attr.</th>
+</tr>
+<tr>
+  <td>skew_struct</td><td>2,000</td><td>0.01176</td><td>0.01161</td><td>0.01995</td>
+  <td>+0.00202</td><td>0.00437</td><td>0.00507</td>
+  <td class="pass">NON-INFERIOR</td>
+  <td>0.00670</td><td>0.0479</td><td class="pass">PASS</td>
+  <td class="fail">FAIL</td>
+</tr>
+<tr>
+  <td>tail_struct</td><td>2,000</td><td>0.00679</td><td>0.00811</td><td>0.01138</td>
+  <td>+0.00018</td><td>0.00168</td><td>0.00098</td>
+  <td class="fail">FAIL</td>
+  <td>0.00370</td><td>0.00941</td><td class="pass">PASS</td>
+  <td class="fail">FAIL</td>
+</tr>
+<tr>
+  <td>shape_mixed</td><td>2,000</td><td>0.01302</td><td>0.08165</td><td>0.02754</td>
+  <td>−0.01447</td><td>−0.01129</td><td>0.00930</td>
+  <td class="pass">BEST</td>
+  <td>0.0408</td><td>0.0509</td><td class="pass">PASS</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>skew_struct</td><td>20,000</td><td>0.00400</td><td>0.00541</td><td>0.01706</td>
+  <td>−0.00141</td><td>−0.00032</td><td>0.00507</td>
+  <td class="pass">NON-INFERIOR</td>
+  <td>0.00210</td><td>0.0500</td><td class="pass">PASS</td>
+  <td class="pass">PASS</td>
+</tr>
+<tr>
+  <td>tail_struct</td><td>20,000</td><td>0.00204</td><td>0.00286</td><td>0.00747</td>
+  <td>−0.00068</td><td>−0.00006</td><td>0.00098</td>
+  <td class="pass">NON-INFERIOR</td>
+  <td>0.00110</td><td>0.0103</td><td class="pass">PASS</td>
+  <td class="fail">FAIL</td>
+</tr>
+<tr>
+  <td>shape_mixed</td><td>20,000</td><td>0.00404</td><td>0.08059</td><td>0.02206</td>
+  <td>−0.01803</td><td>−0.01613</td><td>0.00930</td>
+  <td class="pass">BEST</td>
+  <td>0.0403</td><td>0.0536</td><td class="pass">PASS</td>
+  <td>—</td>
+</tr>
+</table>
+<p class="muted">
+Upper bound = the larger of the t and bootstrap bounds. “After Holm” means the
+interval verdict and the matching Holm-adjusted p-value (p BEST or p NI) both
+have to hold. On <code>skew_struct</code> and <code>tail_struct</code> at n = 20 000
+the interval itself was BEST, but Holm p BEST was 0.074 and 0.11, so those cells
+are NON-INFERIOR, not BEST. False-attribution is only scored on the four
+structure-only cells: the upper bound of mean |ĉ| must be below δ, and Holm p
+&lt; 0.05. Full table:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/benchmark/V5_1_STRUCT_GATE_RESULTS.md">V5_1_STRUCT_GATE_RESULTS.md</a>.
+</p>
+
+<h2>How to read this</h2>
+<p>The mixed cells are the clean pass: when both roles are planted with opposite
+signs, V5.1 is clearly better than DFL and CFM, and it assigns a positive
+composition piece and a negative structure piece, as planted. The role check
+also passed on every structure-only cell: the structure piece was larger than
+the composition piece, and swapping the two labels made the error worse, not
+better.</p>
+<p>The scored miss is false attribution. On a structure-only cell the planted
+composition truth is about 0, so the composition piece is supposed to stay
+inside a small margin δ. The <em>signed</em> average of that piece is in fact
+close to zero. The bar, though, is on the average of the <em>absolute</em>
+value. That average was not small enough on three of the four structure-only
+cells. Separately, on <code>tail_struct</code> at n = 2 000, TRACE was slightly
+worse on average than the best rival (DFL), and the upper bound sat above δ, so
+accuracy failed as well.</p>
+<p>Those failures sink the hypothesis. The two cells that passed every check
+cannot rescue it. Nothing was retried.</p>
+
+<div class="callout warn">
+<strong>What this does not undo.</strong> The original V5.1 gate on
+<code>skew_comp</code> and <code>tail_comp</code> still stands
+(<a href="v5_1_gate.html">composition-cell results</a>): BEST against DFL and
+CFM, role check passing, linear-mean simulator only. The coverage PASS is also
+untouched. This failure narrows the public claim to those composition-only
+cells. It says nothing new about curved means (V5.2 and V5.2c remain parked),
+ShiftBench, speed, or per-feature shares.
+</div>
+
+<p class="muted">
+Pre-registration:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PREREG_V5_1_STRUCT.md">PREREG_V5_1_STRUCT.md</a>.
+Park:
+<a href="https://github.com/jgridifier/traceot/blob/main/docs/research/PARK_V5_1_STRUCT.md">PARK_V5_1_STRUCT.md</a>.
+Seeds 14000–14049 and 14100–14119 are spent and will not be reused. 9600–9619
+stay sealed.
+</p>
+</body>
+</html>

@@ -19,10 +19,19 @@ All numerics in a Rust core, thin scikit-learn-style Python API, test-only numpy
 | **ADOPT** | Faithful re-implementation of *ADOPT: Additive Optimal Transport Regression* (Song & Müller, AISTATS 2026, [PMLR 300:1558–1566](https://proceedings.mlr.press/v300/song26c.html)), written from the paper alone (no public code). Wasserstein-2 and log-Cholesky (SPD) responses. | Milestone 1: done; simulation study reproduced, partly matching (see below) |
 | **TRACE** | Our own **unpublished** method: a binned additive model of the conditional quantile function (location, scale and shape channels), with oddness scores and leakage/placebo checks. Scales to millions of rows. | v0 in `TraceRegressor`. Design: [docs/TRACE_DESIGN.md](docs/TRACE_DESIGN.md). Simulations: [docs/TRACE_SIMS.md](docs/TRACE_SIMS.md) |
 
+The current validated TRACE v5.1 accuracy claim is **composition-only cells**
+(`skew_comp`, `tail_comp`) on a linear-mean simulator
+([gate](https://jgridifier.github.io/traceot/learn/v5_1_gate.html)). A
+pre-registered follow-up on structure-only and mixed cells ran once on
+2026-11-17 and **failed**; that widened claim is
+[parked](https://jgridifier.github.io/traceot/learn/v5_1_struct.html).
+
 Learn the ideas:
 
 - **[docs/learn/adopt.html](https://jgridifier.github.io/traceot/learn/adopt.html)**: OT regression, additive transport, ADOPT's components, our reproduction.
 - **[docs/learn/trace.html](https://jgridifier.github.io/traceot/learn/trace.html)**: EBMs, TRACE versus a mean model, how the fit works, checks and oddness.
+- **[docs/learn/v5_1_gate.html](https://jgridifier.github.io/traceot/learn/v5_1_gate.html)**: V5.1 composition-cell gate (PASS).
+- **[docs/learn/v5_1_struct.html](https://jgridifier.github.io/traceot/learn/v5_1_struct.html)**: V5.1 structure/mixed-cell gate (FAIL, parked).
 
 ## Reproduction at a glance
 
